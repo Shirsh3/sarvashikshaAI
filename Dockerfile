@@ -12,9 +12,11 @@ RUN mvn package -DskipTests -B
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
+# Production profile: secrets from env (Railway Variables)
+ENV SPRING_PROFILES_ACTIVE=prod
 # Railway sets PORT; Spring Boot reads it via server.port=${PORT:8080}
 ENV PORT=8080
 EXPOSE 8080
 
 COPY --from=build /app/target/*.jar app.jar
-ENTRYPOINT ["sh", "-c", "java -Dserver.port=${PORT} -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "java -Dspring.profiles.active=prod -Dserver.port=${PORT} -jar app.jar"]

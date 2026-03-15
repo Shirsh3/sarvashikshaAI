@@ -11,9 +11,12 @@ target/
 
 # Local config and secrets (do not commit)
 application-local.properties
+**/application-local.properties
 *.local
 .env
 .env.local
+secrets.local
+**/secrets.local
 
 # H2 data (local dev only)
 *.db
