@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Students — SarvashikshaAI</title>
+    <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { min-height: 100vh; }
+        .students-header {
+            background: linear-gradient(135deg, var(--dark), #1a4d5c);
+            color: white; padding: 16px 24px;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+        }
+        .students-header h1 { font-size: 1.2rem; font-family: var(--font-heading); display: flex; align-items: center; gap: 8px; }
+        .students-header nav { display: flex; gap: 12px; align-items: center; }
+        .students-header a { color: var(--light); opacity: 0.95; font-size: 0.85rem; text-decoration: none; }
+        .students-header a:hover { text-decoration: underline; opacity: 1; }
+        main { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+        .toolbar {
+            display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; gap: 12px; margin-bottom: 20px;
+        }
+        .toolbar h2 { font-size: 1.1rem; font-family: var(--font-heading); color: var(--dark); display: flex; align-items: center; gap: 8px; }
+        .badge { background: var(--surface2); color: var(--dark); border-radius: 20px; padding: 3px 12px; font-size: 0.8rem; font-weight: 600; }
+        .search-box {
+            padding: 8px 14px; border: 2px solid var(--surface2); border-radius: 10px;
+            font-size: 0.9rem; width: 220px; background: var(--surface); color: var(--text);
+        }
+        .search-box:focus { outline: none; border-color: var(--primary); }
+        .btn { padding: 8px 16px; border: none; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-secondary { background: var(--card-key); color: var(--dark); }
+        .btn-secondary:hover { background: #cce5ff; }
+        .card { background: var(--surface); border-radius: 16px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.875rem; min-width: 600px; }
+        th { background: var(--surface2); color: var(--dark); padding: 10px 14px; text-align: left; border-bottom: 2px solid var(--surface2); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+        td { padding: 10px 14px; border-bottom: 1px solid var(--surface2); vertical-align: top; color: var(--text); }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: var(--light); }
+        .name-cell { font-weight: 600; color: var(--dark); }
+        .grade-badge { background: #ede9fe; color: #5b21b6; border-radius: 6px; padding: 2px 8px; font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
+        .strength { color: #15803d; font-size: 0.82rem; }
+        .weakness { color: #dc2626; font-size: 0.82rem; }
+        .notes-cell { color: var(--muted); font-size: 0.82rem; font-style: italic; }
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+        .empty-state i { font-size: 3rem; margin-bottom: 12px; display: block; }
+        .sync-info { font-size: 0.78rem; color: #94a3b8; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/loader :: loader}"></div>
+<header class="students-header">
+    <h1><i class="fa-solid fa-users"></i> Students</h1>
+    <nav>
+        <a href="/teacher/setup"><i class="fa-solid fa-gear"></i> Setup</a>
+        <a href="/"><i class="fa-solid fa-chalkboard"></i> Classroom</a>
+        <a href="/logout"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</a>
+    </nav>
+</header>
+
+<main>
+
+    <div class="toolbar">
+        <div>
+            <h2>
+                <i class="fa-solid fa-users"></i> All Students
+                <span class="badge" th:text="${students.size()} + ' active'"></span>
+            </h2>
+            <div class="sync-info" th:if="${lastSync}">
+                Last synced: <span th:text="${#temporals.format(lastSync, 'dd MMM yyyy, hh:mm a')}"></span>
+                &nbsp;—&nbsp;
+                <a href="/teacher/sync" style="color:#0d9488;">Sync now</a>
+            </div>
+        </div>
+        <input type="text" class="search-box" placeholder="Search by name..." id="searchInput" oninput="filterStudents()"/>
+    </div>
+
+    <div class="card">
+        <table id="studentTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Grade</th>
+                    <th>Strength</th>
+                    <th>Weakness</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody id="studentBody">
+                <tr th:if="${#lists.isEmpty(students)}">
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <i class="fa-solid fa-user-slash"></i>
+                            <p>No students loaded yet.</p>
+                            <p><a href="/teacher/setup" style="color:var(--primary);">Go to Setup</a> to connect your Google Sheet.</p>
+                        </div>
+                    </td>
+                </tr>
+                <tr th:each="s, stat : ${students}" th:attr="data-name=${s.name.toLowerCase()}">
+                    <td th:text="${stat.count}" style="color:var(--muted);"></td>
+                    <td class="name-cell" th:text="${s.name}"></td>
+                    <td><span class="grade-badge" th:text="${s.grade}"></span></td>
+                    <td class="strength" th:text="${s.strength}"></td>
+                    <td class="weakness" th:text="${s.weakness}"></td>
+                    <td class="notes-cell" th:text="${s.notes}"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</main>
+
+<script>
+    function filterStudents() {
+        const q = document.getElementById('searchInput').value.toLowerCase();
+        document.querySelectorAll('#studentBody tr[data-name]').forEach(row => {
+            row.style.display = row.getAttribute('data-name').includes(q) ? '' : 'none';
+        });
+    }
+</script>
+</body>
+</html>

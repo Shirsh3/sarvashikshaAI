@@ -1,0 +1,8 @@
+# Copy this file to application-local.properties and fill in your values.
+# application-local.properties is gitignored — never commit real secrets.
+# Run locally with: spring.profiles.active=local (or set in IDE/command line).
+
+openai.api-key=your-openai-api-key
+youtube.dataKey=your-youtube-data-api-key
+spring.security.oauth2.client.registration.google.client-id=your-google-client-id.apps.googleusercontent.com
+spring.security.oauth2.client.registration.google.client-secret=your-google-client-secret

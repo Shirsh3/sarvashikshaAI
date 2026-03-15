@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+  Shared tab bar fragment.
+  Usage: th:replace="~{fragments/tabs :: tabBar('classroom')}"
+  activePage values: 'assembly' | 'classroom' | 'reading' | 'attendance' | 'teacher'
+-->
+<div th:fragment="tabBar(activePage)">
+    <div class="top-nav">
+        <a href="/" class="top-nav-brand" style="text-decoration:none; color:inherit;">
+            <i class="fa-solid fa-chalkboard-user"></i>
+            <span>SarvashikshaAI</span>
+        </a>
+        <nav class="tab-bar">
+        <a href="/assembly"
+           class="tab-item"
+           th:classappend="${activePage == 'assembly'} ? ' tab-active'">
+            <i class="fa-solid fa-sun"></i>
+            <span>Assembly</span>
+        </a>
+        <a href="/"
+           class="tab-item"
+           th:classappend="${activePage == 'classroom'} ? ' tab-active'">
+            <i class="fa-solid fa-chalkboard"></i>
+            <span>Classroom</span>
+        </a>
+        <a href="/reading"
+           class="tab-item"
+           th:classappend="${activePage == 'reading'} ? ' tab-active'">
+            <i class="fa-solid fa-book-open"></i>
+            <span>Reading</span>
+        </a>
+        <a href="/quiz/teacher"
+           class="tab-item"
+           th:classappend="${activePage == 'quiz'} ? ' tab-active'">
+            <i class="fa-solid fa-circle-question"></i>
+            <span>Quiz</span>
+        </a>
+        <a href="/attendance"
+           class="tab-item"
+           th:classappend="${activePage == 'attendance'} ? ' tab-active'">
+            <i class="fa-solid fa-clipboard-check"></i>
+            <span>Attendance</span>
+        </a>
+        <a href="/teacher/setup"
+           class="tab-item"
+           th:classappend="${activePage == 'teacher'} ? ' tab-active'">
+            <i class="fa-solid fa-gear"></i>
+            <span>Teacher</span>
+        </a>
+        </nav>
+    </div>
+    <!-- Soothing pastel rainbow strip (kid-oriented) -->
+    <div class="rainbow-strip" aria-hidden="true"></div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,26 @@
+---
+description: Restart the Spring Boot app after code or config changes
+alwaysApply: true
+---
+
+# Restart After Changes
+
+After making **any code or configuration changes** to this project (Java, templates, CSS, application.properties, etc.), **restart the application** so changes take effect.
+
+## What to do
+
+1. **Stop** any process using port 8080 (e.g. existing Spring Boot instance).
+2. **Start** the app again in the background: `mvn spring-boot:run -q` from the project root.
+
+## Commands (PowerShell)
+
+```powershell
+cd d:\sarvsikshaai
+$p = Get-NetTCPConnection -LocalPort 8080 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique
+if ($p) { Stop-Process -Id $p -Force }
+mvn spring-boot:run -q
+```
+
+Run the last command (`mvn spring-boot:run -q`) in the **background** so the server keeps running.
+
+Do **not** restart when the only edits were to documentation (e.g. README, PRIVACY_AND_LEGAL.md) or to this rule file.

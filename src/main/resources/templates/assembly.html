@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Morning Assembly — SarvashikshaAI</title>
+    <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { min-height: 100vh; }
+
+        /* ── Header (Kider theme) ── */
+        .assembly-header {
+            background: var(--surface);
+            border-bottom: 2px solid var(--surface2);
+            padding: 14px 24px;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+        }
+        .assembly-header h1 { font-size: 1.1rem; font-family: var(--font-heading); display: flex; align-items: center; gap: 8px; color: var(--dark); }
+        .assembly-header a  { color: var(--muted); font-size: 0.85rem; text-decoration: none; }
+        .assembly-header a:hover { color: var(--primary); }
+
+        /* ── Thought of the Day ── */
+        .thought-hero {
+            background: linear-gradient(135deg, #1e3a5f, #0f4c75);
+            padding: 36px 24px; text-align: center;
+            border-bottom: 2px solid rgba(255,255,255,0.08);
+        }
+        .thought-label {
+            font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.14em;
+            color: #7dd3fc; font-weight: 700; margin-bottom: 18px;
+        }
+        .thought-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+            max-width: 860px; margin: 0 auto 20px;
+        }
+        @media(max-width:600px){ .thought-grid { grid-template-columns: 1fr; } }
+        .thought-card {
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px; padding: 20px;
+        }
+        .thought-lang { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: #7dd3fc; margin-bottom: 8px; }
+        .thought-text { font-size: clamp(1rem, 2.5vw, 1.25rem); font-weight: 600; line-height: 1.7; color: #f0f9ff; }
+        .read-btn-sm {
+            margin-top: 12px; display: inline-flex; align-items: center; gap: 6px;
+            padding: 7px 16px; border-radius: 50px; border: none;
+            background: rgba(255,255,255,0.12); color: #e2e8f0;
+            font-size: 0.82rem; cursor: pointer; transition: all 0.2s;
+        }
+        .read-btn-sm:hover { background: rgba(255,255,255,0.2); }
+        .read-btn-sm.speaking { animation: pulse 1.2s infinite; }
+
+        /* ── Section card ── */
+        .section {
+            padding: 32px 24px;
+            border-bottom: 1px solid var(--surface2);
+            color: var(--text);
+        }
+        .section:nth-child(even) { background: var(--surface2); }
+
+        .section-header {
+            display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; gap: 12px; margin-bottom: 20px;
+        }
+        .section-title {
+            font-size: 1.1rem; font-weight: 700; color: var(--text);
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        /* ── YouTube embed ── */
+        .video-wrap {
+            position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;
+            border-radius: 14px; margin-bottom: 20px;
+            background: #000;
+        }
+        .video-wrap iframe {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            border: none; border-radius: 14px;
+        }
+        .no-video {
+            background: var(--surface2);
+            border: 2px dashed var(--muted);
+            border-radius: 14px; padding: 28px; text-align: center;
+            color: var(--muted); margin-bottom: 20px;
+        }
+        .no-video a { color: var(--primary); text-decoration: none; }
+        .no-video a:hover { text-decoration: underline; }
+
+        /* ── Read-along text box ── */
+        .text-box {
+            background: var(--surface);
+            border: 1px solid var(--surface2);
+            border-radius: 14px; padding: 24px;
+            font-size: clamp(1rem, 2.5vw, 1.15rem);
+            line-height: 2.1; color: var(--text);
+            white-space: pre-line;
+        }
+        .meaning-box {
+            background: rgba(14,116,144,0.15);
+            border: 1px solid rgba(14,116,144,0.3);
+            border-radius: 14px; padding: 20px;
+            margin-top: 14px;
+            font-size: 0.88rem; line-height: 1.8; color: #a5f3fc;
+            white-space: pre-line;
+        }
+        .meaning-label {
+            font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em;
+            color: #67e8f9; font-weight: 700; margin-bottom: 8px;
+        }
+
+        /* ── Read Aloud button ── */
+        .read-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 22px; border: none; border-radius: 50px;
+            font-size: 0.9rem; font-weight: 600; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .read-btn-anthem { background: #f59e0b; color: #1c1917; }
+        .read-btn-pledge { background: #10b981; color: white; }
+        .read-btn-prayer { background: #8b5cf6; color: white; }
+        .read-btn:hover { transform: scale(1.04); opacity: 0.92; }
+        .read-btn.speaking { animation: pulse 1.2s infinite; }
+
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+        /* ── Bottom nav ── */
+        .bottom-nav {
+            padding: 24px; text-align: center;
+            display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;
+        }
+        .nav-btn {
+            padding: 12px 24px; border: 1px solid var(--surface2);
+            border-radius: 50px; background: var(--surface);
+            color: var(--text); font-size: 0.9rem; cursor: pointer;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .nav-btn:hover { background: var(--surface2); color: var(--primary); }
+
+        @media(max-width:600px){
+            .section { padding: 24px 16px; }
+            .text-box { font-size: 1rem; padding: 18px; }
+        }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/loader :: loader}"></div>
+<div th:replace="~{fragments/tabs :: tabBar('assembly')}"></div>
+
+<!-- ══ Thought of the Day ══ -->
+<div class="thought-hero">
+    <div class="thought-label"><i class="fa-solid fa-lightbulb"></i> &nbsp;Today's Thought &nbsp;·&nbsp; आज का विचार</div>
+    <div class="thought-grid">
+        <div class="thought-card">
+            <div class="thought-lang">हिन्दी</div>
+            <div class="thought-text" id="thoughtHi" th:text="${thoughtHi}"></div>
+            <button class="read-btn-sm" onclick="readText('thoughtHi', this, 'hi-IN')">
+                <i class="fa-solid fa-volume-high"></i> सुनाओ
+            </button>
+        </div>
+        <div class="thought-card">
+            <div class="thought-lang">English</div>
+            <div class="thought-text" id="thoughtEn" th:text="${thoughtEn}"></div>
+            <button class="read-btn-sm" onclick="readText('thoughtEn', this, 'en-IN')">
+                <i class="fa-solid fa-volume-high"></i> Listen
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ══ National Anthem ══ -->
+<div class="section">
+    <div class="section-header">
+        <div class="section-title">🇮🇳 &nbsp;राष्ट्रीय गान — जन गण मन</div>
+        <button class="read-btn read-btn-anthem" onclick="readText('anthemText', this, 'hi-IN')">
+            <i class="fa-solid fa-volume-high"></i> सुनाओ / गाओ
+        </button>
+    </div>
+
+    <!-- YouTube video -->
+    <div th:if="${videoAnthem != null}" class="video-wrap">
+        <iframe th:src="'https://www.youtube.com/embed/' + ${videoAnthem} + '?rel=0&modestbranding=1'"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                allowfullscreen></iframe>
+    </div>
+    <div th:if="${videoAnthem == null}" class="no-video">
+        <i class="fa-solid fa-circle-info"></i> &nbsp;No video set yet.
+        <a href="/teacher/setup">Add a YouTube link in Teacher Setup → Assembly tab in your Google Sheet.</a>
+    </div>
+
+    <!-- Read-along text -->
+    <div class="text-box" id="anthemText" th:text="${anthem}"></div>
+    <div class="meaning-box" th:if="${anthemMeaning != null and !anthemMeaning.isBlank()}">
+        <div class="meaning-label"><i class="fa-solid fa-book-open"></i> &nbsp;अर्थ</div>
+        <span th:text="${anthemMeaning}"></span>
+    </div>
+</div>
+
+<!-- ══ Pledge ══ -->
+<div class="section">
+    <div class="section-header">
+        <div class="section-title">✊ &nbsp;राष्ट्रीय प्रतिज्ञा</div>
+        <button class="read-btn read-btn-pledge" onclick="readText('pledgeText', this, 'hi-IN')">
+            <i class="fa-solid fa-volume-high"></i> बोलो / सुनाओ
+        </button>
+    </div>
+
+    <div th:if="${videoPledge != null}" class="video-wrap">
+        <iframe th:src="'https://www.youtube.com/embed/' + ${videoPledge} + '?rel=0&modestbranding=1'"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                allowfullscreen></iframe>
+    </div>
+    <div th:if="${videoPledge == null}" class="no-video">
+        <i class="fa-solid fa-circle-info"></i> &nbsp;No video set yet.
+        <a href="/teacher/setup">Add "Pledge" row in the Assembly tab of your Google Sheet.</a>
+    </div>
+
+    <div class="text-box" id="pledgeText" th:text="${pledge}"></div>
+</div>
+
+<!-- ══ Morning Prayer (Saraswati Vandana) ══ -->
+<div class="section">
+    <div class="section-header">
+        <div class="section-title">🙏 &nbsp;प्रातःकालीन प्रार्थना — सरस्वती वंदना</div>
+        <button class="read-btn read-btn-prayer" onclick="readText('prayerText', this, 'hi-IN')">
+            <i class="fa-solid fa-volume-high"></i> पढ़ो / सुनाओ
+        </button>
+    </div>
+
+    <div th:if="${videoPrayer != null}" class="video-wrap">
+        <iframe th:src="'https://www.youtube.com/embed/' + ${videoPrayer} + '?rel=0&modestbranding=1'"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                allowfullscreen></iframe>
+    </div>
+    <div th:if="${videoPrayer == null}" class="no-video">
+        <i class="fa-solid fa-circle-info"></i> &nbsp;No video set yet.
+        <a href="/teacher/setup">Add "Morning Prayer" row in the Assembly tab of your Google Sheet.</a>
+    </div>
+
+    <div class="text-box" id="prayerText" th:text="${prayer}"></div>
+    <div class="meaning-box" th:if="${prayerMeaning != null and !prayerMeaning.isBlank()}">
+        <div class="meaning-label"><i class="fa-solid fa-book-open"></i> &nbsp;अर्थ</div>
+        <span th:text="${prayerMeaning}"></span>
+    </div>
+</div>
+
+<!-- ══ Hindi Prayer (extra slot) ══ -->
+<div class="section" th:if="${videoHindi != null}">
+    <div class="section-header">
+        <div class="section-title">🕉️ &nbsp;हिन्दी प्रार्थना</div>
+    </div>
+    <div class="video-wrap">
+        <iframe th:src="'https://www.youtube.com/embed/' + ${videoHindi} + '?rel=0&modestbranding=1'"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                allowfullscreen></iframe>
+    </div>
+</div>
+
+
+<script>
+    let activeSpeech = null;
+    let activeBtn    = null;
+
+    function getVoice(lang) {
+        const voices = window.speechSynthesis.getVoices();
+        if (lang === 'hi-IN') {
+            return voices.find(v => v.name === 'Google हिन्दी')
+                || voices.find(v => v.name.toLowerCase().includes('google') && v.lang.startsWith('hi'))
+                || voices.find(v => v.lang.startsWith('hi'))
+                || null;
+        }
+        return voices.find(v => v.lang.startsWith('en-IN'))
+            || voices.find(v => v.lang.startsWith('en'))
+            || null;
+    }
+
+    function stopSpeaking() {
+        window.speechSynthesis.cancel();
+        if (activeBtn) {
+            activeBtn.classList.remove('speaking');
+            activeBtn.querySelector('i').className = 'fa-solid fa-volume-high';
+        }
+        activeSpeech = null; activeBtn = null;
+    }
+
+    function readText(elementId, btn, lang) {
+        if (activeSpeech) { stopSpeaking(); return; }
+        const text = document.getElementById(elementId)?.textContent?.trim();
+        if (!text) return;
+
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang  = lang || 'hi-IN';
+        utter.rate  = (elementId === 'anthemText') ? 0.78 : 0.88;
+        const voice = getVoice(lang);
+        if (voice) utter.voice = voice;
+
+        utter.onend = utter.onerror = () => {
+            btn.classList.remove('speaking');
+            btn.querySelector('i').className = 'fa-solid fa-volume-high';
+            activeSpeech = null; activeBtn = null;
+        };
+
+        btn.classList.add('speaking');
+        btn.querySelector('i').className = 'fa-solid fa-circle-stop';
+        activeSpeech = utter; activeBtn = btn;
+
+        window.speechSynthesis.cancel();
+        setTimeout(() => window.speechSynthesis.speak(utter), 80);
+    }
+
+    // Prime voice list on load
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    window.speechSynthesis.getVoices();
+</script>
+</body>
+</html>

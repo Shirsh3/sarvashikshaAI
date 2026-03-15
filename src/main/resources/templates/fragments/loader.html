@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="loader">
+<div id="global-loader" aria-hidden="true">
+    <div class="loader-spinner"></div>
+    <span class="loader-text">SarvashikshaAI</span>
+</div>
+<script>
+(function(){
+    function hideLoader(){
+        var el = document.getElementById('global-loader');
+        if (el) el.classList.add('hide');
+    }
+    if (document.readyState === 'complete') hideLoader();
+    else window.addEventListener('load', hideLoader);
+    document.addEventListener('DOMContentLoaded', hideLoader);
+    setTimeout(hideLoader, 1500);
+})();
+</script>
+</th:block>
+</body>
+</html>

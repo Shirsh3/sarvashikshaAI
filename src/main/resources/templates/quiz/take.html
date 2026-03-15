@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Take Quiz</title>
+    <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+    <style>
+        body { }
+        .quiz-wrap { max-width:680px; margin:0 auto; padding:20px 20px 60px; }
+
+        .quiz-topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:10px; }
+        .quiz-title  { font-size:1.1rem; font-weight:800; color:var(--text); }
+        .quiz-meta   { font-size:0.78rem; color:var(--muted); }
+
+        /* Student picker */
+        .student-bar { display:flex; align-items:center; gap:12px; margin-bottom:24px; flex-wrap:wrap; }
+        .student-select { flex:1; min-width:200px; padding:10px 14px; border-radius:10px; border:1px solid var(--surface2); background:var(--surface); color:var(--text); font-size:0.9rem; }
+        .student-select option { background:var(--surface); color:var(--text); }
+
+        /* Progress bar */
+        .progress-bar { height:6px; border-radius:3px; background:rgba(255,255,255,0.07); margin-bottom:24px; overflow:hidden; }
+        .progress-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,#6366f1,#8b5cf6); transition:width 0.4s; }
+        .progress-label { font-size:0.75rem; color:var(--muted); margin-bottom:8px; }
+
+        /* Question card */
+        .q-card { background:var(--surface); border:1px solid var(--surface2); border-radius:18px; padding:28px 24px; margin-bottom:20px; color:var(--text); }
+        .q-type-tag { font-size:0.85rem; text-transform:uppercase; letter-spacing:0.08em; font-weight:700; color:var(--primary); margin-bottom:10px; }
+        .q-text { font-size:1.05rem; font-weight:700; color:var(--text); line-height:1.5; margin-bottom:20px; }
+        .read-q-btn { background:none; border:none; color:#6366f1; font-size:0.78rem; cursor:pointer; padding:0; margin-bottom:16px; }
+        .read-q-btn:hover { color:#818cf8; }
+
+        /* MCQ options */
+        .mcq-options { display:flex; flex-direction:column; gap:10px; }
+        .mcq-opt {
+            padding:14px 18px; border-radius:12px; border:2px solid var(--surface2);
+            background:var(--surface); color:var(--text); font-size:0.95rem;
+            cursor:pointer; transition:all 0.15s; text-align:left; width:100%;
+        }
+        .mcq-opt:hover  { border-color:#6366f1; background:rgba(99,102,241,0.1); }
+        .mcq-opt.selected { border-color:#6366f1; background:rgba(99,102,241,0.15); }
+        .mcq-opt.correct  { border-color:#10b981; background:rgba(16,185,129,0.15); color:#34d399; }
+        .mcq-opt.wrong    { border-color:#ef4444; background:rgba(239,68,68,0.12); color:#f87171; }
+
+        /* TF buttons */
+        .tf-btns { display:flex; gap:14px; }
+        .tf-btn { flex:1; padding:16px; border-radius:14px; border:2px solid rgba(255,255,255,0.08); font-size:1rem; font-weight:800; cursor:pointer; transition:all 0.15s; }
+        .tf-true  { background:rgba(16,185,129,0.1); color:#34d399; border-color:rgba(16,185,129,0.25); }
+        .tf-false { background:rgba(239,68,68,0.1);  color:#f87171; border-color:rgba(239,68,68,0.2); }
+        .tf-true.selected  { background:#10b981; color:white; }
+        .tf-false.selected { background:#ef4444; color:white; }
+        .tf-true.correct   { background:#10b981; color:white; border-color:#10b981; }
+        .tf-false.correct  { background:#10b981; color:white; }
+        .tf-true.wrong, .tf-false.wrong { background:#ef4444; color:white; }
+
+        /* Short answer */
+        .short-input { width:100%; padding:12px 16px; border-radius:10px; border:1px solid var(--surface2); background:var(--surface); color:var(--text); font-size:1rem; }
+        .short-input:focus { outline:none; border-color:var(--primary); }
+
+        /* Nav buttons */
+        .nav-btns { display:flex; gap:12px; margin-top:8px; }
+        .btn-next { flex:1; padding:14px; border-radius:12px; border:none; background:#6366f1; color:white; font-size:0.95rem; font-weight:800; cursor:pointer; }
+        .btn-next:hover { background:#4f46e5; }
+        .btn-next:disabled { opacity:0.4; cursor:not-allowed; }
+
+        /* Score screen */
+        .score-screen { display:none; text-align:center; padding:40px 20px; }
+        .score-screen.visible { display:block; }
+        .score-circle { width:140px; height:140px; border-radius:50%; background:linear-gradient(135deg,#6366f1,#8b5cf6); display:flex; align-items:center; justify-content:center; margin:0 auto 24px; flex-direction:column; }
+        .score-num { font-size:2.4rem; font-weight:900; color:white; }
+        .score-pct { font-size:0.85rem; color:rgba(255,255,255,0.7); }
+        .score-title { font-size:1.5rem; font-weight:900; margin-bottom:8px; }
+        .score-sub { color:var(--muted); margin-bottom:28px; font-size:0.9rem; }
+        .review-list { text-align:left; margin-bottom:24px; }
+        .review-item { padding:10px 14px; border-radius:10px; margin-bottom:8px; font-size:0.88rem; }
+        .review-right { background:rgba(16,185,129,0.1); border-left:3px solid #10b981; color:#a7f3d0; }
+        .review-wrong { background:rgba(239,68,68,0.08); border-left:3px solid #ef4444; color:#fca5a5; }
+        .review-q { font-weight:600; margin-bottom:3px; }
+        .review-ans { color:var(--muted); font-size:0.82rem; }
+        .btn-done { padding:13px 32px; border-radius:12px; border:none; background:#6366f1; color:white; font-size:0.95rem; font-weight:800; cursor:pointer; }
+        .spinner { display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,0.3); border-top-color:white; border-radius:50%; animation:spin 0.7s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+
+        /* View past attempts (at the end of page; only students who attempted this quiz) */
+        .view-attempts { margin-top:32px; margin-bottom:24px; padding:20px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; }
+        .view-attempts h4 { font-size:0.85rem; font-weight:700; color:var(--muted); margin-bottom:10px; }
+        .view-attempts-msg { font-size:0.88rem; color:var(--muted); margin:0 0 10px 0; }
+        .view-attempts .attempt-select { width:100%; max-width:320px; padding:10px 12px; border-radius:10px; border:1px solid var(--surface2); background:var(--surface); color:var(--text); font-size:0.9rem; }
+        .view-attempts .attempt-select option { background:var(--surface); color:var(--text); }
+        .view-attempts .attempt-feedback { display:none; margin-top:16px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.08); }
+        .view-attempts .attempt-feedback.visible { display:block; }
+        .view-attempts .attempt-score { font-size:1rem; font-weight:800; color:#c7d2fe; margin-bottom:12px; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/loader :: loader}"></div>
+<div th:replace="~{fragments/tabs :: tabBar('quiz')}"></div>
+
+<div class="quiz-wrap">
+    <!-- Quiz header -->
+    <div class="quiz-topbar">
+        <div>
+            <div class="quiz-title" th:text="${quiz.title}"></div>
+            <div class="quiz-meta">
+                <span th:if="${quiz.subject != null and !quiz.subject.isBlank()}" th:text="${quiz.subject + ' · '}"></span>
+                <span th:text="${quiz.questionCount + ' questions'}"></span>
+            </div>
+        </div>
+        <a href="/quiz/teacher" style="color:var(--muted); font-size:0.82rem; text-decoration:none;">
+            <i class="fa-solid fa-arrow-left"></i> Back
+        </a>
+    </div>
+
+    <!-- Student name picker (for taking the quiz) -->
+    <div class="student-bar">
+        <select class="student-select" id="studentSelect"
+                th:if="${studentList != null and !studentList.isEmpty()}">
+            <option value="">— Select student name —</option>
+            <option th:each="s : ${studentList}" th:value="${s.name}" th:text="${s.name}"></option>
+        </select>
+        <input type="text" class="student-select" id="studentSelect" placeholder="Enter student name"
+               th:if="${studentList == null or studentList.isEmpty()}"/>
+    </div>
+
+    <!-- Quiz player -->
+    <div id="quizPlayer">
+        <div class="progress-label" id="progressLabel">Question 1 of <span th:text="${quiz.questionCount}"></span></div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width:0%"></div>
+        </div>
+        <div class="q-card" id="qCard">
+            <div class="q-type-tag" id="qType"></div>
+            <div class="q-text" id="qText"></div>
+            <button class="read-q-btn" onclick="readQuestion()">
+                <i class="fa-solid fa-volume-high"></i> Read question aloud
+            </button>
+            <div id="qInputArea"></div>
+        </div>
+        <div class="nav-btns">
+            <button class="btn-next" id="nextBtn" onclick="nextQuestion()">
+                Next <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Score screen -->
+    <div class="score-screen" id="scoreScreen">
+        <div class="score-circle">
+            <div class="score-num" id="scoreNum"></div>
+            <div class="score-pct" id="scorePct"></div>
+        </div>
+        <div class="score-title" id="scoreTitle"></div>
+        <div class="score-sub" id="scoreSub"></div>
+        <div class="review-list" id="reviewList"></div>
+        <button class="btn-done" onclick="location.href='/quiz/teacher'">
+            <i class="fa-solid fa-house"></i> Back to Quizzes
+        </button>
+    </div>
+
+    <!-- View past attempts (at the end): only students who have attempted this quiz -->
+    <div class="view-attempts" id="viewAttemptsSection">
+        <h4><i class="fa-solid fa-chart-column"></i> View attempt by student</h4>
+        <p class="view-attempts-msg" id="viewAttemptsMsg">Loading…</p>
+        <select class="attempt-select" id="attemptSelect" onchange="showAttemptFeedback(this)" style="display:none;">
+            <option value="">— Select student to view result —</option>
+        </select>
+        <div class="attempt-feedback" id="attemptFeedback">
+            <div class="attempt-score" id="attemptScore"></div>
+            <div class="review-list" id="attemptReviewList"></div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+const QUIZ_ID    = /*[[${quiz.id}]]*/   0;
+const QUIZ_JSON  = /*[[${quiz.questionsJson}]]*/  '[]';
+const questions  = JSON.parse(QUIZ_JSON);
+let currentIdx   = 0;
+let givenAnswers = [];
+let quizResults  = [];  // list of { studentName, score, totalQuestions, answersJson, takenAt } for this quiz
+
+window.onload = () => {
+    renderQuestion(0);
+    loadQuizResults();
+};
+async function loadQuizResults() {
+    const msgEl = document.getElementById('viewAttemptsMsg');
+    const sel = document.getElementById('attemptSelect');
+    if (msgEl) { msgEl.textContent = 'Loading…'; msgEl.style.display = 'block'; }
+    if (sel) sel.style.display = 'none';
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const r = await fetch('/quiz/' + QUIZ_ID + '/results', { signal: controller.signal });
+        clearTimeout(timeoutId);
+        const data = await r.json();
+        quizResults = Array.isArray(data.results) ? data.results : (Array.isArray(data) ? data : (data && typeof data === 'object' && !Array.isArray(data) ? [data] : []));
+        if (msgEl) msgEl.style.display = 'none';
+        if (sel) sel.style.display = '';
+        if (!sel) return;
+        sel.innerHTML = '<option value="">— Select student to view result —</option>';
+        if (quizResults.length === 0) {
+            if (msgEl) { msgEl.textContent = 'No attempts yet. Results will appear here after students take this quiz.'; msgEl.style.display = 'block'; }
+            sel.style.display = 'none';
+        } else {
+            quizResults.forEach((row, i) => {
+                const total = row.totalQuestions != null ? row.totalQuestions : (row.total_questions != null ? row.total_questions : 0);
+                const score = row.score != null ? row.score : 0;
+                const name = row.studentName != null ? row.studentName : (row.student_name != null ? row.student_name : 'Student');
+                const pct = total > 0 ? Math.round(100 * score / total) : 0;
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = name + ' — ' + score + '/' + total + ' (' + pct + '%)';
+                sel.appendChild(opt);
+            });
+        }
+    } catch (e) {
+        console.warn('Could not load quiz results', e);
+        if (msgEl) { msgEl.textContent = (e.name === 'AbortError' ? 'Request timed out.' : 'Could not load results. You can try again later.'); msgEl.style.display = 'block'; }
+        if (sel) sel.style.display = 'none';
+    }
+}
+function showAttemptFeedback(selectEl) {
+    const val = selectEl.value;
+    const wrap = document.getElementById('attemptFeedback');
+    const scoreEl = document.getElementById('attemptScore');
+    const reviewEl = document.getElementById('attemptReviewList');
+    if (val === '' || !wrap || !scoreEl || !reviewEl) {
+        wrap.classList.remove('visible');
+        return;
+    }
+    const idx = parseInt(val, 10);
+    const row = quizResults[idx];
+    if (!row) { wrap.classList.remove('visible'); return; }
+    const total = row.totalQuestions != null ? row.totalQuestions : (row.total_questions != null ? row.total_questions : 0);
+    const score = row.score != null ? row.score : 0;
+    const name = row.studentName != null ? row.studentName : (row.student_name != null ? row.student_name : 'Student');
+    const pct = total > 0 ? Math.round(100 * score / total) : 0;
+    scoreEl.textContent = name + ' — ' + score + '/' + total + ' (' + pct + '%)';
+    let reviewHtml = '';
+    try {
+        const answersJson = row.answersJson != null ? row.answersJson : (row.answers_json != null ? row.answers_json : '[]');
+        const annotated = JSON.parse(answersJson);
+        annotated.forEach((a, i) => {
+            const cls = a.isRight ? 'review-right' : 'review-wrong';
+            const icon = a.isRight ? '✓' : '✗';
+            reviewHtml += '<div class="review-item ' + cls + '"><div class="review-q">' + icon + ' ' + (questions[i] ? escapeHtml(questions[i].text) : '') + '</div><div class="review-ans">' + (a.isRight ? 'Correct' : 'Your answer: ' + escapeHtml(a.given || '—') + ' · Correct: ' + escapeHtml(a.correct || '—')) + '</div></div>';
+        });
+    } catch (e) { reviewHtml = '<div class="review-item review-wrong">Could not load review.</div>'; }
+    reviewEl.innerHTML = reviewHtml;
+    wrap.classList.add('visible');
+}
+function escapeHtml(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function renderQuestion(idx) {
+    const q = questions[idx];
+    if (!q) return;
+    const total = questions.length;
+    document.getElementById('progressLabel').textContent = `Question ${idx+1} of ${total}`;
+    document.getElementById('progressFill').style.width  = ((idx / total) * 100) + '%';
+    document.getElementById('qType').textContent = q.type === 'MCQ' ? 'Multiple Choice' : q.type === 'TF' ? 'True / False' : 'Short Answer';
+    document.getElementById('qText').textContent = q.text;
+    document.getElementById('nextBtn').textContent = idx === total - 1 ? 'Submit Quiz' : 'Next';
+
+    const area = document.getElementById('qInputArea');
+    if (q.type === 'MCQ') {
+        area.innerHTML = `<div class="mcq-options">${q.options.map(opt =>
+            `<button class="mcq-opt" onclick="selectMcq(this,'${esc(opt)}')">${opt}</button>`
+        ).join('')}</div>`;
+    } else if (q.type === 'TF') {
+        area.innerHTML = `<div class="tf-btns">
+            <button class="tf-btn tf-true"  onclick="selectTf(this,'True')"><i class="fa-solid fa-check"></i> True</button>
+            <button class="tf-btn tf-false" onclick="selectTf(this,'False')"><i class="fa-solid fa-xmark"></i> False</button>
+        </div>`;
+    } else {
+        area.innerHTML = `<input class="short-input" id="shortInput" placeholder="Type your answer…" oninput="givenAnswers[${idx}]=this.value"/>`;
+    }
+    // Restore previous answer if navigating back
+    if (givenAnswers[idx]) restoreAnswer(q, givenAnswers[idx]);
+}
+
+function selectMcq(btn, val) {
+    document.querySelectorAll('.mcq-opt').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    givenAnswers[currentIdx] = val;
+}
+function selectTf(btn, val) {
+    document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    givenAnswers[currentIdx] = val;
+}
+function restoreAnswer(q, val) {
+    if (q.type === 'MCQ') {
+        document.querySelectorAll('.mcq-opt').forEach(b => { if (b.textContent === val) b.classList.add('selected'); });
+    } else if (q.type === 'TF') {
+        document.querySelectorAll('.tf-btn').forEach(b => { if (b.dataset && b.textContent.trim() === val) b.classList.add('selected'); });
+    }
+}
+
+function nextQuestion() {
+    const q = questions[currentIdx];
+    if (q.type === 'SHORT') givenAnswers[currentIdx] = document.getElementById('shortInput')?.value || '';
+
+    currentIdx++;
+    if (currentIdx >= questions.length) {
+        submitQuiz();
+    } else {
+        renderQuestion(currentIdx);
+    }
+}
+
+function readQuestion() {
+    const text = document.getElementById('qText').textContent;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-IN'; u.rate = 0.88;
+    window.speechSynthesis.cancel();
+    setTimeout(() => window.speechSynthesis.speak(u), 60);
+}
+
+async function submitQuiz() {
+    const studentEl   = document.getElementById('studentSelect');
+    const studentName = (studentEl?.value || studentEl?.textContent || 'Student').trim() || 'Student';
+
+    const nextBtn = document.getElementById('nextBtn');
+    nextBtn.innerHTML = '<span class="spinner"></span> Submitting…';
+    nextBtn.disabled  = true;
+
+    const answers = questions.map((q, i) => ({ given: givenAnswers[i] || '' }));
+
+    try {
+        const r = await fetch('/quiz/submit', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ quizId: QUIZ_ID, studentName, answers })
+        });
+        const d = await r.json();
+        showScore(d, studentName);
+        nextBtn.disabled = false;
+        nextBtn.innerHTML = 'Submit Quiz';
+        await loadQuizResults();
+        const sel = document.getElementById('attemptSelect');
+        if (sel && quizResults.length > 0) {
+            const idx = quizResults.findIndex(row => {
+                const name = row.studentName != null ? row.studentName : (row.student_name != null ? row.student_name : '');
+                return name === studentName;
+            });
+            if (idx >= 0) {
+                sel.value = String(idx);
+                showAttemptFeedback(sel);
+            }
+        }
+    } catch(e) {
+        alert('Submit failed. Please try again.');
+        nextBtn.disabled = false;
+        nextBtn.innerHTML = 'Submit Quiz';
+    }
+}
+
+function showScore(d, studentName) {
+    document.getElementById('quizPlayer').style.display = 'none';
+    const screen = document.getElementById('scoreScreen');
+    screen.classList.add('visible');
+
+    const pct   = d.percent || 0;
+    const score = d.score || 0;
+    const total = d.total || questions.length;
+    document.getElementById('scoreNum').textContent   = score + '/' + total;
+    document.getElementById('scorePct').textContent   = pct + '%';
+    document.getElementById('scoreTitle').textContent = pct >= 80 ? 'Excellent!' : pct >= 50 ? 'Good Effort!' : 'Keep Practising!';
+    document.getElementById('scoreSub').textContent   = studentName + ' — Quiz Complete';
+
+    // Review
+    let reviewHtml = '';
+    const annotated = JSON.parse(d.answersJson || '[]');
+    annotated.forEach((a, i) => {
+        const cls = a.isRight ? 'review-right' : 'review-wrong';
+        const icon = a.isRight ? '✓' : '✗';
+        reviewHtml += `<div class="review-item ${cls}">
+            <div class="review-q">${icon} ${questions[i]?.text || ''}</div>
+            <div class="review-ans">${a.isRight ? 'Correct' : 'Your answer: ' + (a.given||'—') + ' · Correct: ' + a.correct}</div>
+        </div>`;
+    });
+    document.getElementById('reviewList').innerHTML = reviewHtml;
+
+    // Speak score
+    const u = new SpeechSynthesisUtterance(`${studentName} scored ${score} out of ${total}. ${pct >= 80 ? 'Excellent work!' : pct >= 50 ? 'Good effort!' : 'Keep practising!'}`);
+    u.lang = 'en-IN'; u.rate = 0.88;
+    setTimeout(() => window.speechSynthesis.speak(u), 300);
+}
+
+function esc(s) { return (s||'').replace(/'/g,"\\'"); }
+
+window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+window.speechSynthesis.getVoices();
+</script>
+</body>
+</html>

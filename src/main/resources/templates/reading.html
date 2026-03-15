@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Reading — SarvashikshaAI</title>
+    <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+    <style>
+        body { }
+
+        .page-hero {
+            padding: 24px 24px 8px;
+            max-width: 860px; margin: 0 auto;
+            color: var(--text);
+        }
+        .page-hero h2 {
+            font-size: 1.3rem; font-weight: 800; color: var(--text);
+            display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
+        }
+        .page-hero p { color: var(--muted); font-size: 0.88rem; }
+
+        /* ── Controls bar ── */
+        .controls-bar {
+            max-width: 860px; margin: 0 auto;
+            padding: 12px 24px;
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        }
+        .read-all-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 9px 20px; border-radius: 50px; border: none;
+            background: #3b82f6; color: white;
+            font-size: 0.88rem; font-weight: 600; cursor: pointer;
+        }
+        .read-all-btn:hover { background: #2563eb; }
+        .read-all-btn.speaking { animation: pulse 1.2s infinite; }
+
+        /* ── Article cards ── */
+        .news-list { max-width: 860px; margin: 0 auto; padding: 0 24px 40px; display: flex; flex-direction: column; gap: 20px; }
+
+        .news-card {
+            background: var(--surface);
+            border: 1px solid var(--surface2);
+            border-radius: 16px; padding: 24px;
+            color: var(--text);
+        }
+        .news-num {
+            font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em;
+            color: var(--primary); font-weight: 700; margin-bottom: 8px;
+        }
+        .news-title {
+            font-size: 1.05rem; font-weight: 700; color: var(--text);
+            margin-bottom: 10px; line-height: 1.4;
+        }
+        .news-title a { color: inherit; text-decoration: none; }
+        .news-title a:hover { text-decoration: underline; color: var(--primary); }
+        .news-summary {
+            font-size: 0.92rem; color: var(--text); line-height: 1.75;
+            margin-bottom: 18px;
+            padding: 14px 18px;
+            background: var(--surface2);
+            border-left: 3px solid var(--primary);
+            border-radius: 0 8px 8px 0;
+            white-space: pre-line;
+            max-height: 420px;
+            overflow-y: auto;
+        }
+        .news-summary.highlighted {
+            background: rgba(251,191,36,0.08);
+            border-left-color: #f59e0b;
+            color: #fef3c7;
+        }
+
+        /* ── Practice section ── */
+        .practice-bar {
+            display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 4px;
+        }
+        .student-select {
+            flex: 1; min-width: 160px; max-width: 260px;
+            padding: 8px 12px; border-radius: 10px;
+            border: 1px solid var(--surface2);
+            background: var(--surface); color: var(--text);
+            font-size: 0.88rem;
+        }
+        .student-select option { background: var(--surface); color: var(--text); }
+        .practice-btn {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 9px 18px; border-radius: 50px; border: none;
+            background: #10b981; color: white;
+            font-size: 0.88rem; font-weight: 600; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .practice-btn:hover { background: #059669; }
+        .practice-btn.listening { background: #ef4444; animation: pulse 1.2s infinite; }
+        .practice-btn.loading   { background: #6366f1; cursor: not-allowed; }
+
+        /* ── Feedback panel ── */
+        .feedback-panel {
+            margin-top: 16px; display: none;
+            border-radius: 16px; overflow: hidden;
+            border: 1px solid var(--surface2);
+            background: var(--surface); color: var(--text);
+        }
+        .feedback-panel.visible { display: block; }
+
+        /* Score header */
+        .score-bar {
+            padding: 16px 20px; display: flex; align-items: center; gap: 14px;
+            background: var(--surface2);
+        }
+        .score-badge {
+            font-size: 1.3rem; font-weight: 900;
+            width: 60px; height: 60px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .score-high   { background: #d1fae5; color: #065f46; }
+        .score-mid    { background: #fef3c7; color: #92400e; }
+        .score-low    { background: #fee2e2; color: #991b1b; }
+        .score-label  { font-size: 0.8rem; color: var(--muted); }
+        .score-title  { font-size: 1rem; font-weight: 800; color: var(--text); }
+
+        /* Analytics grid */
+        .analytics-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(110px,1fr));
+            gap: 10px; padding: 16px 18px;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--surface2);
+        }
+        .metric-card {
+            background: var(--surface); border-radius: 12px;
+            padding: 12px 10px; text-align: center;
+            border: 1px solid var(--surface2);
+        }
+        .metric-value {
+            font-size: 1.5rem; font-weight: 900; line-height: 1;
+            margin-bottom: 4px;
+        }
+        .metric-label {
+            font-size: 0.68rem; text-transform: uppercase;
+            letter-spacing: 0.08em; color: var(--muted); font-weight: 600;
+        }
+        .metric-bar {
+            height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08);
+            margin-top: 6px; overflow: hidden;
+        }
+        .metric-bar-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+        .clr-high  { color: #34d399; } .fill-high  { background: #10b981; }
+        .clr-mid   { color: #fbbf24; } .fill-mid   { background: #f59e0b; }
+        .clr-low   { color: #f87171; } .fill-low   { background: #ef4444; }
+        .clr-blue  { color: #818cf8; } .fill-blue  { background: #6366f1; }
+
+        /* Word count row */
+        .word-count-row {
+            display: flex; gap: 16px; padding: 10px 18px;
+            font-size: 0.82rem; color: var(--muted);
+            background: var(--surface2);
+            border-bottom: 1px solid var(--surface2);
+            flex-wrap: wrap;
+        }
+        .word-count-row span { display: flex; align-items: center; gap: 5px; }
+        .word-count-row b { color: var(--muted); }
+
+        /* Word pills */
+        .word-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .pill {
+            padding: 3px 10px; border-radius: 50px; font-size: 0.78rem; font-weight: 600;
+        }
+        .pill-good  { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+        .pill-hard  { background: rgba(239,68,68,0.12);  color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+
+        .feedback-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+        .fb-block {
+            border-radius: 10px; padding: 14px 16px;
+            font-size: 0.9rem; line-height: 1.7;
+        }
+        .fb-hindi    { background: var(--card-key); border: 1px solid var(--surface2); color: var(--text); }
+        .fb-english  { background: #ecfdf5; border: 1px solid #a7f3d0; color: var(--text); }
+        .fb-question { background: #fffbeb; border: 1px solid #fde68a; color: var(--text); }
+        .fb-tip      { background: var(--card-key); border: 1px solid var(--surface2); color: var(--text); }
+        .fb-label {
+            font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em;
+            font-weight: 700; margin-bottom: 6px;
+        }
+        .fb-hindi    .fb-label { color: var(--primary); }
+        .fb-english  .fb-label { color: var(--success); }
+        .fb-question .fb-label { color: #b45309; }
+        .fb-tip      .fb-label { color: var(--primary); }
+
+        /* Read-aloud mini button inside feedback blocks */
+        .read-btn {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 5px 12px; border-radius: 50px; border: none;
+            font-size: 0.75rem; font-weight: 600; cursor: pointer;
+            margin-top: 10px; transition: all 0.15s;
+        }
+        .read-btn-indigo { background: rgba(99,102,241,0.2); color: #a5b4fc; }
+        .read-btn-indigo:hover, .read-btn-indigo.speaking { background: #6366f1; color: white; }
+        .read-btn-green  { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+        .read-btn-green:hover, .read-btn-green.speaking  { background: #10b981; color: white; }
+        .read-btn-yellow { background: rgba(251,191,36,0.12); color: #fcd34d; }
+        .read-btn-yellow:hover, .read-btn-yellow.speaking { background: #f59e0b; color: white; }
+
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin  { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+        /* Teacher reading section */
+        .teacher-reading-section { max-width: 860px; margin: 0 auto; padding: 0 24px 20px; }
+        .teacher-reading-card {
+            background: var(--surface); border: 1px solid var(--surface2);
+            border-radius: 16px; padding: 20px;
+        }
+        .teacher-reading-heading { font-size: 0.95rem; font-weight: 700; color: var(--text); margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+        .teacher-reading-label { font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 6px; }
+        .teacher-reading-textarea {
+            width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--surface2);
+            background: var(--surface); color: var(--text); font-size: 0.9rem; resize: vertical; min-height: 80px;
+            box-sizing: border-box;
+        }
+        .teacher-reading-textarea:focus { outline: none; border-color: var(--primary); }
+        .teacher-reading-actions { margin-top: 12px; }
+        .teacher-reading-btn {
+            display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 50px; border: none;
+            font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+        }
+        .teacher-reading-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .gen-btn-reading { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; }
+        .gen-btn-reading:hover:not(:disabled) { opacity: 0.9; }
+        .fetch-news-btn { background: #0ea5e9; color: white; }
+        .fetch-news-btn:hover:not(:disabled) { background: #0284c7; }
+        .teacher-reading-divider { height: 1px; background: var(--surface2); margin: 18px 0; }
+        .teacher-reading-toggle-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+        .teacher-reading-toggle-label { font-size: 0.85rem; color: var(--muted); }
+        .teacher-reading-link-row { margin-top: 12px; }
+        .teacher-reading-link { font-size: 0.82rem; color: var(--primary); text-decoration: none; }
+        .teacher-reading-link:hover { text-decoration: underline; }
+
+        @media(max-width:600px){ .news-list { padding: 0 16px 32px; } .news-card { padding: 18px; } }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/loader :: loader}"></div>
+<div th:replace="~{fragments/tabs :: tabBar('reading')}"></div>
+
+<div class="page-hero">
+    <h2><i class="fa-solid fa-newspaper"></i> Reading Practice</h2>
+    <p>Today's student-friendly news. Listen, read aloud, and get AI feedback on your reading.</p>
+</div>
+
+<!-- Teacher-only: prompt + fetch news -->
+<div class="teacher-reading-section" th:if="${isTeacher}">
+    <div class="teacher-reading-card">
+        <h3 class="teacher-reading-heading"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate reading content</h3>
+        <label class="teacher-reading-label">Write a prompt (e.g. topic, grade, style)</label>
+        <textarea id="readingPromptInput" class="teacher-reading-textarea" placeholder="e.g. An article about Chandrayaan-3 for class 8" rows="3"></textarea>
+        <div class="teacher-reading-actions">
+            <button type="button" class="teacher-reading-btn gen-btn-reading" id="generateReadingBtn" onclick="generateReadingContent()">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
+            </button>
+        </div>
+        <div class="teacher-reading-divider"></div>
+        <div class="teacher-reading-toggle-row">
+            <span class="teacher-reading-toggle-label">Or use fetched news (tech, space, science, innovation only, 80–100 lines)</span>
+            <button type="button" class="teacher-reading-btn fetch-news-btn" id="fetchNewsBtn" onclick="fetchTechNews()">
+                <i class="fa-solid fa-newspaper"></i> Fetch news now
+            </button>
+        </div>
+        <div class="teacher-reading-link-row">
+            <a href="#" class="teacher-reading-link" id="useDefaultLink" onclick="useDefaultNews(); return false;">Use default news</a>
+        </div>
+    </div>
+</div>
+
+<div class="controls-bar">
+    <button class="read-all-btn" id="readAllBtn" onclick="readAllNews(this)">
+        <i class="fa-solid fa-volume-high"></i> Read All News Aloud
+    </button>
+    <span style="font-size:0.8rem; color:#475569;">
+        <i class="fa-solid fa-circle-info"></i> Source: The Hindu — filtered for school content
+    </span>
+</div>
+
+<div class="news-list">
+    <div th:each="news, stat : ${newsList}" class="news-card">
+        <div class="news-num">News #<span th:text="${stat.index + 1}"></span></div>
+        <div class="news-title">
+            <a th:href="${news.url()}" th:if="${!news.url().isBlank()}" target="_blank" rel="noopener">
+                <span th:text="${news.title()}"></span>
+                <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.65rem; opacity:0.6; margin-left:4px;"></i>
+            </a>
+            <span th:if="${news.url().isBlank()}" th:text="${news.title()}"></span>
+        </div>
+
+        <!-- Summary text (highlighted during practice) -->
+        <div class="news-summary"
+             th:id="'summary-' + ${stat.index}"
+             th:text="${news.summary()}"></div>
+
+        <!-- Practice bar -->
+        <div class="practice-bar" th:if="${!news.title().contains('not available')}">
+            <!-- Student name selector -->
+            <select class="student-select" th:id="'student-' + ${stat.index}"
+                    th:if="${studentList != null and !studentList.isEmpty()}">
+                <option value="">— Select student —</option>
+                <option th:each="s : ${studentList}" th:value="${s.name}" th:text="${s.name}"></option>
+            </select>
+            <input type="text" class="student-select"
+                   th:id="'student-' + ${stat.index}"
+                   placeholder="Enter student name"
+                   th:if="${studentList == null or studentList.isEmpty()}"/>
+
+            <button class="practice-btn"
+                    th:id="'practiceBtn-' + ${stat.index}"
+                    th:attr="data-index=${stat.index}, data-title=${news.title()}, data-text=${news.summary()}"
+                    onclick="startPractice(this)">
+                <i class="fa-solid fa-microphone"></i> Practice Reading
+            </button>
+        </div>
+
+        <!-- Feedback panel (hidden until result arrives) -->
+        <div class="feedback-panel" th:id="'feedback-' + ${stat.index}">
+
+            <!-- Overall score header -->
+            <div class="score-bar">
+                <div class="score-badge" th:id="'scoreBadge-' + ${stat.index}">—</div>
+                <div>
+                    <div class="score-title" th:id="'scoreTitle-' + ${stat.index}">Fluency Score</div>
+                    <div class="score-label">Overall reading quality</div>
+                </div>
+            </div>
+
+            <!-- 5-metric analytics grid -->
+            <div class="analytics-grid">
+                <div class="metric-card">
+                    <div class="metric-value clr-blue" th:id="'m-fluency-' + ${stat.index}">—</div>
+                    <div class="metric-label">Fluency</div>
+                    <div class="metric-bar"><div class="metric-bar-fill fill-blue" th:id="'mb-fluency-' + ${stat.index}" style="width:0%"></div></div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value clr-high" th:id="'m-pronun-' + ${stat.index}">—</div>
+                    <div class="metric-label">Pronunciation</div>
+                    <div class="metric-bar"><div class="metric-bar-fill fill-high" th:id="'mb-pronun-' + ${stat.index}" style="width:0%"></div></div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value clr-mid" th:id="'m-pace-' + ${stat.index}">—</div>
+                    <div class="metric-label">Pace</div>
+                    <div class="metric-bar"><div class="metric-bar-fill fill-mid" th:id="'mb-pace-' + ${stat.index}" style="width:0%"></div></div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value clr-high" th:id="'m-accuracy-' + ${stat.index}">—</div>
+                    <div class="metric-label">Accuracy</div>
+                    <div class="metric-bar"><div class="metric-bar-fill fill-high" th:id="'mb-accuracy-' + ${stat.index}" style="width:0%"></div></div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value clr-blue" th:id="'m-confidence-' + ${stat.index}">—</div>
+                    <div class="metric-label">Confidence</div>
+                    <div class="metric-bar"><div class="metric-bar-fill fill-blue" th:id="'mb-confidence-' + ${stat.index}" style="width:0%"></div></div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value clr-mid" th:id="'m-accpct-' + ${stat.index}">—</div>
+                    <div class="metric-label">Words Hit %</div>
+                    <div class="metric-bar"><div class="metric-bar-fill fill-mid" th:id="'mb-accpct-' + ${stat.index}" style="width:0%"></div></div>
+                </div>
+            </div>
+
+            <!-- Word count row -->
+            <div class="word-count-row">
+                <span><i class="fa-solid fa-file-lines" style="color:#6366f1"></i> Article: <b th:id="'wc-orig-' + ${stat.index}">—</b> words</span>
+                <span><i class="fa-solid fa-microphone" style="color:#10b981"></i> Spoken: <b th:id="'wc-spoken-' + ${stat.index}">—</b> words</span>
+            </div>
+
+            <!-- Word pills -->
+            <div class="feedback-body">
+                <div th:id="'fb-words-wrap-' + ${stat.index}" style="display:none;">
+                    <div style="display:flex; gap:20px; flex-wrap:wrap;">
+                        <div th:id="'fb-good-wrap-' + ${stat.index}" style="flex:1; min-width:140px; display:none;">
+                            <div class="fb-label" style="color:#34d399; font-size:0.68rem; margin-bottom:4px;">
+                                <i class="fa-solid fa-star"></i> GOOD WORDS
+                            </div>
+                            <div class="word-pills" th:id="'fb-good-' + ${stat.index}"></div>
+                        </div>
+                        <div th:id="'fb-hard-wrap-' + ${stat.index}" style="flex:1; min-width:140px; display:none;">
+                            <div class="fb-label" style="color:#f87171; font-size:0.68rem; margin-bottom:4px;">
+                                <i class="fa-solid fa-triangle-exclamation"></i> NEEDS WORK
+                            </div>
+                            <div class="word-pills" th:id="'fb-hard-' + ${stat.index}"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="fb-block fb-hindi">
+                    <div class="fb-label">हिन्दी फीडबैक</div>
+                    <div th:id="'fb-hindi-' + ${stat.index}"></div>
+                    <button class="read-btn read-btn-indigo"
+                            th:attr="data-target='fb-hindi-' + ${stat.index}, data-lang='hi-IN'"
+                            onclick="readFeedback(this)">
+                        <i class="fa-solid fa-volume-high"></i> सुनें
+                    </button>
+                </div>
+                <div class="fb-block fb-english">
+                    <div class="fb-label">English Feedback</div>
+                    <div th:id="'fb-english-' + ${stat.index}"></div>
+                    <button class="read-btn read-btn-green"
+                            th:attr="data-target='fb-english-' + ${stat.index}, data-lang='en-IN'"
+                            onclick="readFeedback(this)">
+                        <i class="fa-solid fa-volume-high"></i> Read Aloud
+                    </button>
+                </div>
+                <div class="fb-block fb-question" th:id="'fb-question-wrap-' + ${stat.index}" style="display:none;">
+                    <div class="fb-label">Comprehension Question</div>
+                    <div th:id="'fb-question-' + ${stat.index}"></div>
+                    <button class="read-btn read-btn-yellow"
+                            th:attr="data-target='fb-question-' + ${stat.index}, data-lang='hi-IN'"
+                            onclick="readFeedback(this)">
+                        <i class="fa-solid fa-volume-high"></i> सुनें
+                    </button>
+                </div>
+                <div class="fb-block fb-tip" th:id="'fb-tip-wrap-' + ${stat.index}" style="display:none;">
+                    <div class="fb-label"><i class="fa-solid fa-lightbulb"></i> Next Session Tip</div>
+                    <div th:id="'fb-tip-' + ${stat.index}"></div>
+                    <button class="read-btn read-btn-indigo"
+                            th:attr="data-target='fb-tip-' + ${stat.index}, data-lang='en-IN'"
+                            onclick="readFeedback(this)">
+                        <i class="fa-solid fa-volume-high"></i> Read Aloud
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Teacher: Generate / Fetch news / Use default ───────────────────────────
+function generateReadingContent() {
+    var input = document.getElementById('readingPromptInput');
+    var btn = document.getElementById('generateReadingBtn');
+    if (!input || !btn) return;
+    var prompt = (input.value || '').trim();
+    if (!prompt) { alert('Please enter a prompt.'); return; }
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Generating...';
+    fetch('/teacher/reading/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: prompt })
+    })
+    .then(function(r) {
+        if (!r.ok) throw new Error('Generate failed');
+        return r.json();
+    })
+    .then(function() { window.location.reload(); })
+    .catch(function(err) {
+        console.error(err);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Generate';
+        alert('Could not generate content. Please try again.');
+    });
+}
+
+function fetchTechNews() {
+    var btn = document.getElementById('fetchNewsBtn');
+    if (!btn) return;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Fetching...';
+    fetch('/teacher/reading/fetch-news', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+    .then(function(r) { return r.json(); })
+    .then(function() { window.location.reload(); })
+    .catch(function(err) {
+        console.error(err);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-newspaper"></i> Fetch news now';
+        alert('Could not fetch news. Please try again.');
+    });
+}
+
+function useDefaultNews() {
+    fetch('/teacher/reading/use-default', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+    .then(function(r) { return r.json(); })
+    .then(function() { window.location.reload(); })
+    .catch(function() { window.location.reload(); });
+}
+
+// ── Read All News Aloud ────────────────────────────────────────────────────
+let activeSpeech = null;
+let activeBtn    = null;
+
+function getHindiVoice() {
+    const voices = window.speechSynthesis.getVoices();
+    return voices.find(v => v.name === 'Google हिन्दी')
+        || voices.find(v => v.lang.startsWith('hi'))
+        || null;
+}
+
+function stopSpeaking() {
+    window.speechSynthesis.cancel();
+    if (activeBtn) { activeBtn.classList.remove('speaking'); activeBtn.querySelector('i').className = 'fa-solid fa-volume-high'; }
+    activeSpeech = null; activeBtn = null;
+}
+
+function readAllNews(btn) {
+    if (activeSpeech) { stopSpeaking(); return; }
+    const texts = [];
+    document.querySelectorAll('.news-title').forEach((el, i) => {
+        texts.push('News number ' + (i+1) + '. ' + el.textContent.trim() + '.');
+    });
+    const fullText = texts.join(' ');
+    const utter = new SpeechSynthesisUtterance(fullText);
+    utter.lang = 'en-IN'; utter.rate = 0.88;
+    utter.onend = utter.onerror = () => { btn.classList.remove('speaking'); btn.querySelector('i').className = 'fa-solid fa-volume-high'; activeSpeech = null; activeBtn = null; };
+    btn.classList.add('speaking');
+    btn.querySelector('i').className = 'fa-solid fa-circle-stop';
+    activeSpeech = utter; activeBtn = btn;
+    window.speechSynthesis.cancel();
+    setTimeout(() => window.speechSynthesis.speak(utter), 80);
+}
+
+// ── Reading Practice ───────────────────────────────────────────────────────
+let practiceRecognition = null;
+
+function startPractice(btn) {
+    const idx   = btn.dataset.index;
+    const title = btn.dataset.title;
+    const text  = btn.dataset.text;
+
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+        alert('Speech recognition is not supported on this browser. Please use Chrome on Android.');
+        return;
+    }
+
+    const studentEl = document.getElementById('student-' + idx);
+    const studentName = studentEl ? (studentEl.value || studentEl.tagName === 'INPUT' ? studentEl.value : '').trim() : '';
+    if (!studentName) {
+        alert('Please select or enter the student name first.');
+        return;
+    }
+
+    if (practiceRecognition) {
+        practiceRecognition.stop();
+        return;
+    }
+
+    // Highlight the text
+    document.getElementById('summary-' + idx).classList.add('highlighted');
+
+    // Update button
+    btn.classList.add('listening');
+    btn.querySelector('i').className = 'fa-solid fa-stop';
+    btn.innerHTML = '<i class="fa-solid fa-stop"></i> Stop Recording';
+
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SR();
+    recognition.lang = 'en-IN';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    practiceRecognition = recognition;
+
+    recognition.onresult = (event) => {
+        const spoken = event.results[0][0].transcript;
+        submitFeedback(idx, studentName, title, text, spoken, btn);
+    };
+
+    recognition.onerror = (e) => {
+        console.error('Speech error', e);
+        resetPracticeBtn(btn, idx);
+        alert('Could not capture speech. Please try again.');
+    };
+
+    recognition.onend = () => { practiceRecognition = null; };
+    recognition.start();
+}
+
+function submitFeedback(idx, studentName, title, originalText, spokenText, btn) {
+    resetPracticeBtn(btn, idx);
+    btn.disabled = true;
+    btn.classList.add('loading');
+    btn.innerHTML = '<span class="spinner"></span> Evaluating...';
+
+    fetch('/reading/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentName, articleTitle: title, originalText, spokenText })
+    })
+    .then(r => r.json())
+    .then(data => showFeedback(idx, data, btn))
+    .catch(err => {
+        console.error(err);
+        btn.disabled = false;
+        btn.classList.remove('loading');
+        btn.innerHTML = '<i class="fa-solid fa-microphone"></i> Practice Reading';
+        alert('Could not get feedback. Please try again.');
+    });
+}
+
+function scoreColor(s) {
+    return s >= 8 ? 'clr-high' : s >= 5 ? 'clr-mid' : 'clr-low';
+}
+function fillColor(s) {
+    return s >= 8 ? 'fill-high' : s >= 5 ? 'fill-mid' : 'fill-low';
+}
+
+function setMetric(idx, key, value, max) {
+    const el   = document.getElementById('m-' + key + '-' + idx);
+    const fill = document.getElementById('mb-' + key + '-' + idx);
+    if (!el) return;
+    const isPercent = max === 100;
+    el.textContent = isPercent ? value + '%' : value + '/10';
+    // Override color classes
+    el.className = 'metric-value ' + scoreColor(isPercent ? Math.round(value / 10) : value);
+    if (fill) {
+        fill.style.width = Math.round(value / max * 100) + '%';
+        fill.className = 'metric-bar-fill ' + fillColor(isPercent ? Math.round(value / 10) : value);
+    }
+}
+
+function showFeedback(idx, data, btn) {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    btn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Try Again';
+
+    // ── Overall badge ──────────────────────────────────────────────────────
+    const score = data.fluencyScore || 0;
+    const badge = document.getElementById('scoreBadge-' + idx);
+    badge.textContent = score + '/10';
+    badge.className = 'score-badge ' + (score >= 8 ? 'score-high' : score >= 5 ? 'score-mid' : 'score-low');
+    document.getElementById('scoreTitle-' + idx).textContent =
+        score >= 8 ? 'Excellent Reading!' : score >= 5 ? 'Good Effort!' : 'Keep Practising!';
+
+    // ── Analytics grid ─────────────────────────────────────────────────────
+    setMetric(idx, 'fluency',    data.fluencyScore       || 0, 10);
+    setMetric(idx, 'pronun',     data.pronunciationScore || 0, 10);
+    setMetric(idx, 'pace',       data.paceScore          || 0, 10);
+    setMetric(idx, 'accuracy',   data.accuracyScore      || 0, 10);
+    setMetric(idx, 'confidence', data.confidenceScore    || 0, 10);
+    setMetric(idx, 'accpct',     data.accuracyPercent    || 0, 100);
+
+    // ── Word counts ────────────────────────────────────────────────────────
+    const origEl   = document.getElementById('wc-orig-'   + idx);
+    const spokenEl = document.getElementById('wc-spoken-' + idx);
+    if (origEl)   origEl.textContent   = data.originalWordCount || '—';
+    if (spokenEl) spokenEl.textContent = data.spokenWordCount   || '—';
+
+    // ── Word pills ─────────────────────────────────────────────────────────
+    const wordsWrap = document.getElementById('fb-words-wrap-' + idx);
+    const goodWords = (data.goodWords    || '').split(',').map(w => w.trim()).filter(Boolean);
+    const hardWords = (data.difficultWords || '').split(',').map(w => w.trim()).filter(Boolean);
+
+    if (goodWords.length || hardWords.length) {
+        wordsWrap.style.display = 'block';
+        if (goodWords.length) {
+            document.getElementById('fb-good-wrap-' + idx).style.display = 'block';
+            document.getElementById('fb-good-' + idx).innerHTML =
+                goodWords.map(w => `<span class="pill pill-good">${w}</span>`).join('');
+        }
+        if (hardWords.length) {
+            document.getElementById('fb-hard-wrap-' + idx).style.display = 'block';
+            document.getElementById('fb-hard-' + idx).innerHTML =
+                hardWords.map(w => `<span class="pill pill-hard">${w}</span>`).join('');
+        }
+    }
+
+    // ── Text feedback ──────────────────────────────────────────────────────
+    document.getElementById('fb-hindi-'   + idx).textContent = data.hindiFeedback   || '';
+    document.getElementById('fb-english-' + idx).textContent = data.englishFeedback || '';
+
+    if (data.comprehensionQuestion) {
+        document.getElementById('fb-question-' + idx).textContent = data.comprehensionQuestion;
+        document.getElementById('fb-question-wrap-' + idx).style.display = 'block';
+    }
+    if (data.improvementTip) {
+        document.getElementById('fb-tip-' + idx).textContent = data.improvementTip;
+        document.getElementById('fb-tip-wrap-' + idx).style.display = 'block';
+    }
+
+    document.getElementById('feedback-' + idx).classList.add('visible');
+    document.getElementById('summary-' + idx).classList.remove('highlighted');
+}
+
+function resetPracticeBtn(btn, idx) {
+    btn.classList.remove('listening');
+    btn.querySelector && (btn.querySelector('i') || { className: '' });
+    btn.innerHTML = '<i class="fa-solid fa-microphone"></i> Practice Reading';
+    document.getElementById('summary-' + idx).classList.remove('highlighted');
+    practiceRecognition = null;
+}
+
+// ── Read Aloud for feedback blocks ────────────────────────────────────────
+let activeFeedbackBtn = null;
+
+function readFeedback(btn) {
+    const targetId = btn.dataset.target;
+    const lang     = btn.dataset.lang || 'en-IN';
+    const text     = document.getElementById(targetId)?.textContent.trim();
+
+    if (!text) return;
+
+    // If this button is already speaking, stop
+    if (activeFeedbackBtn === btn) {
+        window.speechSynthesis.cancel();
+        btn.classList.remove('speaking');
+        btn.querySelector('i').className = 'fa-solid fa-volume-high';
+        activeFeedbackBtn = null;
+        return;
+    }
+
+    // Stop any previously speaking button
+    if (activeFeedbackBtn) {
+        window.speechSynthesis.cancel();
+        activeFeedbackBtn.classList.remove('speaking');
+        activeFeedbackBtn.querySelector('i').className = 'fa-solid fa-volume-high';
+    }
+
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang  = lang;
+    utter.rate  = lang.startsWith('hi') ? 0.82 : 0.88;
+
+    // For Hindi: prefer Google Hindi voice if available
+    if (lang.startsWith('hi')) {
+        const voices = window.speechSynthesis.getVoices();
+        const hiVoice = voices.find(v => v.name === 'Google हिन्दी')
+                     || voices.find(v => v.lang.startsWith('hi'));
+        if (hiVoice) utter.voice = hiVoice;
+    }
+
+    utter.onstart = () => {
+        btn.classList.add('speaking');
+        btn.querySelector('i').className = 'fa-solid fa-circle-stop';
+        activeFeedbackBtn = btn;
+    };
+    utter.onend = utter.onerror = () => {
+        btn.classList.remove('speaking');
+        btn.querySelector('i').className = 'fa-solid fa-volume-high';
+        if (activeFeedbackBtn === btn) activeFeedbackBtn = null;
+    };
+
+    window.speechSynthesis.cancel();
+    setTimeout(() => window.speechSynthesis.speak(utter), 80);
+}
+
+// Prime voice list
+window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+window.speechSynthesis.getVoices();
+</script>
+</body>
+</html>
