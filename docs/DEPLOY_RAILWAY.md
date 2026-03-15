@@ -6,17 +6,25 @@ This guide walks you through deploying the app on [Railway](https://railway.app)
 
 ## 1. Push your code to GitHub
 
-1. Create a new repo on GitHub (e.g. `sarvashikshaai`).
-2. The repo uses **placeholder** config only; add real secrets in Railway Variables (Step 4), not in the repo.
-3. From your project root (if not already done):
+**Why you don’t see branches:** Branches only appear on GitHub after you **push**. Your local `dev` and `master` exist only on your machine until you run `git push`.
 
+1. **If you use the existing repo** [Shirsh3/sarvashikshaAI](https://github.com/Shirsh3/sarvashikshaAI) (remote name `upstream`):
+   - From your project root, push your branches (you’ll be asked for GitHub credentials):
    ```bash
-   git add .
-   git commit -m "Initial commit"
-   git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
-   git push -u origin main
+   git push -u upstream dev
+   git push upstream master
    ```
+   - Then you’ll see `dev` and `master` on GitHub.
+
+2. **If you create a new repo** under your account:
+   - Create the repo on GitHub (e.g. `sarvashikshaai`), then:
+   ```bash
+   git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
+   git push -u origin dev
+   git push origin master
+   ```
+
+3. The repo uses **placeholder** config only; add real secrets in Railway Variables (Step 4), not in the repo.
 
 ---
 
@@ -107,12 +115,14 @@ Save the DNS records. Propagation can take a few minutes up to 48 hours.
 
 ---
 
-## 8. H2 database on Railway (data persistence)
+## 8. Will Railway run on H2?
 
-The app uses an H2 file database by default. On Railway, the filesystem can be **ephemeral** (data may be lost on redeploy or restart).
+**Yes.** The app is configured to use an **H2 file database** by default. Railway will run the app as-is and use H2.
 
-- For production, consider adding a **PostgreSQL** (or MySQL) database service in Railway and switching the app to use it (e.g. with `spring.datasource.url` and related variables).
-- If you keep H2 for now, expect that data might not persist across redeploys; use it only for testing.
+**But:** On Railway the filesystem is **ephemeral**. Data in H2 may be **lost on redeploy or restart**. So H2 is fine for trying the app; for production, expect no persistence unless you switch to a hosted DB.
+
+- For production, add a **PostgreSQL** (or MySQL) database in Railway and set `spring.datasource.url` (and related variables) so the app uses that instead of H2.
+- If you keep H2 for now, use it only for testing; data might not persist across redeploys.
 
 ---
 
