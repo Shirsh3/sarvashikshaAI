@@ -129,7 +129,7 @@
 
 <div class="page-wrap">
     <h2><i class="fa-solid fa-circle-question"></i> Quiz Mode</h2>
-    <p class="sub">Create quizzes by topic, grade, and description. Students can attempt only once per quiz.</p>
+    <p class="sub">Create quizzes by topic, grade, and description. Each question is assigned to one student and quiz locks on submit.</p>
 
     <div class="subtabs">
         <div class="stab active" onclick="showTab('list',this)">Saved Quizzes</div>
@@ -173,7 +173,7 @@
         <div class="results-modal">
             <h3 id="resultsModalTitle">Quiz Results</h3>
             <p class="results-count" id="resultsCount"></p>
-            <p class="results-note">Attempt summary is stored per student (score, percentage, timestamp).</p>
+            <p class="results-note">Question-wise responses are stored per quiz.</p>
             <div class="results-table-wrap" id="resultsTableWrap"></div>
             <button type="button" class="results-close" onclick="closeResultsModal()">Close</button>
         </div>
@@ -582,36 +582,32 @@ async function showQuizResults(btn) {
     document.getElementById('resultsTableWrap').innerHTML = '<div class="results-empty"><span class="spinner"></span> Loading…</div>';
     document.getElementById('resultsOverlay').classList.add('visible');
     try {
-        const r = await fetch('/quiz/' + id + '/results');
+        const r = await fetch('/quiz/' + id + '/question-results');
+        if (!r.ok) throw new Error('Failed to load results');
         const data = await r.json();
         const list = Array.isArray(data.results) ? data.results : (Array.isArray(data) ? data : (data && typeof data === 'object' && !Array.isArray(data) ? [data] : []));
         const displayList = list;
-        const distinctNames = new Set();
-        displayList.forEach(row => {
-            const name = row.studentName != null ? row.studentName : (row.student_name != null ? row.student_name : '');
-            const key = (name || '').trim();
-            if (key) distinctNames.add(key);
-        });
-            const countEl = document.getElementById('resultsCount');
+        const distinctNames = new Set(displayList.map(row => (row.studentName || '').trim()).filter(Boolean));
+        const countEl = document.getElementById('resultsCount');
         if (countEl) {
             countEl.textContent = displayList.length === 0
                 ? ''
-                    : displayList.length + ' attempt summary row(s) from ' + distinctNames.size + ' student(s).';
+                : displayList.length + ' response row(s) from ' + distinctNames.size + ' student(s).';
         }
         if (displayList.length === 0) {
-                document.getElementById('resultsTableWrap').innerHTML = '<div class="results-empty">No attempts yet. Students will appear here after they submit this quiz.</div>';
+            document.getElementById('resultsTableWrap').innerHTML = '<div class="results-empty">No responses yet.</div>';
         } else {
             const rows = displayList.map((row) => {
-                const name = row.studentName != null ? row.studentName : (row.student_name != null ? row.student_name : '—');
-                const studentId = row.studentId != null ? row.studentId : (row.student_id != null ? row.student_id : '');
-                const score = row.score != null ? row.score : 0;
-                const total = row.totalQuestions != null ? row.totalQuestions : (row.total_questions != null ? row.total_questions : 0);
-                const percent = row.percent != null ? row.percent : (total > 0 ? Math.round((score * 100) / total) : 0);
-                const date = (row.takenAt || row.taken_at) ? new Date(row.takenAt || row.taken_at).toLocaleString(undefined, { dateStyle:'short', timeStyle:'short' }) : '—';
-                return `<tr><td>${escapeHtml(name)}</td><td>${escapeHtml(studentId || '—')}</td><td>${score}/${total}</td><td>${percent}%</td><td>${date}</td></tr>`;
+                const qText = row.questionText != null ? row.questionText : '—';
+                const name = row.studentName != null ? row.studentName : '—';
+                const studentId = row.studentId != null ? row.studentId : '—';
+                const answer = row.answer != null && row.answer !== '' ? row.answer : '—';
+                const marks = row.marksAwarded != null ? row.marksAwarded : '—';
+                const status = row.isCorrect ? 'Correct' : 'Wrong';
+                return `<tr><td>${escapeHtml(qText)}</td><td>${escapeHtml(name)}</td><td>${escapeHtml(studentId)}</td><td>${escapeHtml(answer)}</td><td>${escapeHtml(String(marks))}</td><td>${escapeHtml(status)}</td></tr>`;
             }).join('');
             document.getElementById('resultsTableWrap').innerHTML =
-                '<table class="results-table"><thead><tr><th>Student</th><th>Student ID</th><th>Score</th><th>%</th><th>Date</th></tr></thead><tbody>' + rows + '</tbody></table>';
+                '<table class="results-table"><thead><tr><th>Question</th><th>Student</th><th>Student ID</th><th>Answer</th><th>Marks</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table>';
         }
     } catch (e) {
         document.getElementById('resultsTableWrap').innerHTML = '<div class="results-empty">Could not load results. Try again.</div>';
@@ -628,7 +624,7 @@ async function disableAttemptedQuizStarts() {
         const id = btn.dataset.id;
         if (!id) return;
         try {
-            const r = await fetch('/quiz/' + id + '/results');
+            const r = await fetch('/quiz/' + id + '/question-results');
             if (!r.ok) return;
             const data = await r.json();
             const list = Array.isArray(data.results) ? data.results : (Array.isArray(data) ? data : []);
