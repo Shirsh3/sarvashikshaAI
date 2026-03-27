@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sarvashikshaai.ai.EducationalRedirectionPolicy;
 import com.sarvashikshaai.ai.OpenAIClient;
+import com.sarvashikshaai.ai.StrictEducationalGuard;
 import com.sarvashikshaai.model.entity.QuizEntity;
 import com.sarvashikshaai.model.entity.QuizQuestionEntity;
 import com.sarvashikshaai.model.entity.QuestionResponseEntity;
@@ -121,14 +122,27 @@ public class QuizService {
      * Asks OpenAI to generate quiz questions from a topic or extracted text.
      * Returns a JSON string ready to store in questionsJson.
      */
-    public String generateQuestionsJson(String topicOrText, int count, String questionTypes, String languagePreference) {
-        return generateQuestionsJson(topicOrText, count, questionTypes, languagePreference, "AUTO");
+    public String generateQuestionsJson(String topic, String supportingContext, int count, String questionTypes, String languagePreference) {
+        return generateQuestionsJson(topic, supportingContext, count, questionTypes, languagePreference, "AUTO");
     }
 
-    public String generateQuestionsJson(String topicOrText, int count, String questionTypes, String languagePreference, String difficulty) {
+    public String generateQuestionsJson(String topic, String supportingContext, int count, String questionTypes, String languagePreference, String difficulty) {
+        if (topic == null || topic.isBlank()) {
+            return "[]";
+        }
+        String classifyInput = (topic == null ? "" : topic) + "\n" + (supportingContext == null ? "" : supportingContext);
+        if (openAIClient.classifyUserQuery(classifyInput) != OpenAIClient.QueryCategory.LEARNING) {
+            return "[]";
+        }
+        if (StrictEducationalGuard.isBlocked(topic)) {
+            return "[]";
+        }
+        if (StrictEducationalGuard.isBlocked(supportingContext)) {
+            return "[]";
+        }
         int safeCount = Math.max(1, Math.min(count, 15));
         if (safeCount <= 10) {
-            return generateQuestionsJsonSingle(topicOrText, safeCount, questionTypes, languagePreference, difficulty);
+            return generateQuestionsJsonSingle(topic, supportingContext, safeCount, questionTypes, languagePreference, difficulty);
         }
         // Large counts hallucinate more often in one-shot generation; generate in bounded batches.
         int remaining = safeCount;
@@ -137,7 +151,7 @@ public class QuizService {
         try {
             while (remaining > 0) {
                 int current = Math.min(batchSize, remaining);
-                String batchRaw = generateQuestionsJsonSingle(topicOrText, current, questionTypes, languagePreference, difficulty);
+                String batchRaw = generateQuestionsJsonSingle(topic, supportingContext, current, questionTypes, languagePreference, difficulty);
                 JsonNode arr = mapper.readTree(batchRaw);
                 if (arr != null && arr.isArray()) {
                     for (JsonNode n : arr) merged.add(n);
@@ -154,10 +168,13 @@ public class QuizService {
         }
     }
 
-    private String generateQuestionsJsonSingle(String topicOrText, int count, String questionTypes, String languagePreference, String difficulty) {
+    private String generateQuestionsJsonSingle(String topic, String supportingContext, int count, String questionTypes, String languagePreference, String difficulty) {
         String typeInstruction = buildTypeInstruction(questionTypes.trim(), count);
         String languageRule = languageInstruction(languagePreference, false);
         String difficultyRule = difficultyInstruction(difficulty);
+        String cleanTopic = topic == null ? "" : topic.trim();
+        String cleanContext = supportingContext == null ? "" : supportingContext.trim();
+        String contextForPrompt = cleanContext.length() > 6000 ? cleanContext.substring(0, 6000) : cleanContext;
         String prompt = """
             You are an experienced school teacher in India.
 
@@ -165,9 +182,13 @@ public class QuizService {
 
             """ + EducationalRedirectionPolicy.PROMPT_BLOCK + """
 
-            If the topic or file text is superficial (gossip, ratings of people, comparisons of looks), generate questions ONLY on a pivoted educational topic (e.g. storytelling in film, costumes, media literacy) — never on ratings or attractiveness.
+            Canonical quiz topic (MANDATORY scope): "%s"
 
-            Generate exactly %d quiz questions about: "%s"
+            Supporting classroom context (optional, for factual grounding only):
+            %s
+
+            Generate exactly %d quiz questions ONLY about the canonical quiz topic.
+            Do NOT switch to any other topic even if supporting context contains extra details.
 
             CRITICAL - QUESTION TYPES (you must follow this exactly):
             %s
@@ -182,12 +203,12 @@ public class QuizService {
             - SHORT: no options array; answer is a short phrase (1-6 words)
             - TF: answer must be exactly "True" or "False"
             - MCQ: exactly 4 options, answer must match one option exactly
-            - Be STRICTLY grounded in the provided topic/text. Do not invent names, years, numbers, or facts not present or commonly taught basics.
-            - If source text is limited, ask easier comprehension/concept questions from available content rather than hallucinating new facts.
+            - Be STRICTLY grounded in the canonical topic and supporting context. Do not invent names, years, numbers, or facts not present or commonly taught basics.
+            - If supporting context is limited, ask easier concept/comprehension questions within the same canonical topic.
             - Language: %s
             - Difficulty: %s
             - Level: suitable for school students aged 8-16
-            """.formatted(count, topicOrText, typeInstruction, languageRule, difficultyRule);
+            """.formatted(cleanTopic, contextForPrompt, count, typeInstruction, languageRule, difficultyRule);
 
         try {
             String raw = openAIClient.generateQuizCompletion(prompt);
@@ -214,6 +235,13 @@ public class QuizService {
     }
 
     public GeneratedImageQuiz generateQuestionsFromImage(String topic, String grade, String description, int count, String questionTypes, String languagePreference, String difficulty, String imageDataUri) {
+        String combinedHints = (topic == null ? "" : topic) + " " + (description == null ? "" : description);
+        if (openAIClient.classifyUserQuery(combinedHints) != OpenAIClient.QueryCategory.LEARNING) {
+            return new GeneratedImageQuiz("", "", "", "[]", StrictEducationalGuard.refusalMessage());
+        }
+        if (StrictEducationalGuard.isBlocked(combinedHints)) {
+            return new GeneratedImageQuiz("", "", "", "[]", StrictEducationalGuard.refusalMessage());
+        }
         int safeCount = Math.max(1, Math.min(count, 15));
         String typeInstruction = buildTypeInstruction(questionTypes.trim(), safeCount);
         String languageRule = languageInstruction(languagePreference, true);
@@ -322,6 +350,12 @@ public class QuizService {
      * - questionsJson: a JSON array string in the same format expected by the existing editor
      */
     public GeneratedQuiz generateQuizFromPrompt(String promptOrText) {
+        if (openAIClient.classifyUserQuery(promptOrText) != OpenAIClient.QueryCategory.LEARNING) {
+            return new GeneratedQuiz("Quiz", "", "", "[]");
+        }
+        if (StrictEducationalGuard.isBlocked(promptOrText)) {
+            return new GeneratedQuiz("Quiz", "", "", "[]");
+        }
         String prompt = """
             You are an experienced school teacher in India.
 
@@ -395,6 +429,12 @@ public class QuizService {
         if (contextText == null || contextText.isBlank()) {
             return new InferredQuizMeta("", "", "");
         }
+        if (openAIClient.classifyUserQuery(contextText) != OpenAIClient.QueryCategory.LEARNING) {
+            return new InferredQuizMeta("", "", "");
+        }
+        if (StrictEducationalGuard.isBlocked(contextText)) {
+            return new InferredQuizMeta("", "", "");
+        }
         String prompt = """
             You are helping a teacher create a school quiz.
             Infer metadata from the content below.
@@ -435,7 +475,17 @@ public class QuizService {
 
     public record AssignStudentRequest(Long questionId, String studentId) {}
     public record SubmitAnswerRequest(Long questionId, String studentId, String answer) {}
-    public record QuestionResultRow(Long questionId, String questionText, String studentId, String studentName, String answer, Integer marksAwarded, Boolean isCorrect) {}
+    public record QuestionResultRow(
+            Long questionId,
+            String questionText,
+            String studentId,
+            String studentName,
+            String answer,
+            String correctAnswer,
+            Integer marksAwarded,
+            Boolean isCorrect,
+            String explanation
+    ) {}
 
     public record QuestionData(Long id, String type, String text, List<String> options, String answer) {}
 
@@ -557,15 +607,27 @@ public class QuizService {
 
     public List<QuestionResultRow> getQuizQuestionResults(Long quizId) {
         return questionResponseRepo.findByQuestion_QuizIdOrderByQuestion_QuestionOrderAsc(quizId).stream()
-                .map(r -> new QuestionResultRow(
-                        r.getQuestionId(),
-                        r.getQuestion() != null ? r.getQuestion().getQuestionText() : "",
-                        r.getStudentId(),
-                        r.getStudent() != null ? r.getStudent().getName() : r.getStudentId(),
-                        r.getAnswer(),
-                        r.getMarksAwarded(),
-                        r.getIsCorrect()
-                ))
+                .map(r -> {
+                    String questionType = r.getQuestion() != null && r.getQuestion().getQuestionType() != null
+                            ? r.getQuestion().getQuestionType().trim().toUpperCase(Locale.ROOT)
+                            : "";
+                    String correct = r.getQuestion() != null && r.getQuestion().getCorrectAnswer() != null
+                            ? r.getQuestion().getCorrectAnswer()
+                            : "";
+                    String given = r.getAnswer() == null ? "" : r.getAnswer();
+                    boolean right = Boolean.TRUE.equals(r.getIsCorrect());
+                    return new QuestionResultRow(
+                            r.getQuestionId(),
+                            r.getQuestion() != null ? r.getQuestion().getQuestionText() : "",
+                            r.getStudentId(),
+                            r.getStudent() != null ? r.getStudent().getName() : r.getStudentId(),
+                            given,
+                            correct,
+                            r.getMarksAwarded(),
+                            r.getIsCorrect(),
+                            buildAnswerExplanation(questionType, correct, given, right)
+                    );
+                })
                 .toList();
     }
 
@@ -576,6 +638,21 @@ public class QuizService {
         if (q.getOptionC() != null && !q.getOptionC().isBlank()) out.add(q.getOptionC());
         if (q.getOptionD() != null && !q.getOptionD().isBlank()) out.add(q.getOptionD());
         return out;
+    }
+
+    private String buildAnswerExplanation(String qType, String correct, String given, boolean isRight) {
+        String safeGiven = (given == null || given.isBlank()) ? "no answer" : "\"" + given + "\"";
+        String safeCorrect = (correct == null || correct.isBlank()) ? "the expected answer" : "\"" + correct + "\"";
+        if (isRight) {
+            return "Correct. The expected answer is " + safeCorrect + ", and the student answered " + safeGiven + ".";
+        }
+        if ("TF".equals(qType)) {
+            return "Incorrect. This True/False statement should be " + safeCorrect + ".";
+        }
+        if ("MCQ".equals(qType)) {
+            return "Incorrect. The best option is " + safeCorrect + "; student selected " + safeGiven + ".";
+        }
+        return "Incorrect. Expected " + safeCorrect + " but received " + safeGiven + ".";
     }
 
     private String languageInstruction(String preference, boolean imageFlow) {

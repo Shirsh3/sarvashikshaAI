@@ -32,6 +32,11 @@
         .btn-take.disabled { background:rgba(148,163,184,0.35); color:rgba(255,255,255,0.8); pointer-events:none; cursor:not-allowed; }
         .btn-results { padding:7px 14px; border-radius:8px; background:rgba(99,102,241,0.15); color:#a5b4fc; border:1px solid rgba(99,102,241,0.25); font-size:0.82rem; font-weight:600; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:5px; }
         .btn-results:hover { background:#6366f1; color:white; }
+        .btn-explain {
+            padding:6px 10px; border-radius:8px; border:1px solid rgba(99,102,241,0.28);
+            background:rgba(99,102,241,0.14); color:#818cf8; cursor:pointer; font-size:0.78rem; font-weight:700;
+        }
+        .btn-explain:hover { background:#6366f1; color:white; }
         .btn-del  { padding:7px 14px; border-radius:8px; background:rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.2); font-size:0.82rem; cursor:pointer; }
         .btn-del:hover { background:#ef4444; color:white; }
         .empty-msg { color:var(--muted); text-align:center; padding:40px; }
@@ -158,7 +163,7 @@
                 <a th:href="@{/quiz/take/{id}(id=${quiz.id})}" class="btn-take" th:attr="data-id=${quiz.id}">
                     <i class="fa-solid fa-play"></i> Start
                 </a>
-                <button type="button" class="btn-results" th:attr="data-id=${quiz.id}, data-title=${quiz.title}" onclick="showQuizResults(this)">
+                <button type="button" class="btn-results" th:attr="data-id=${quiz.id}, data-title=${quiz.title}, data-grade=${quiz.grade}, data-description=${quiz.description}" onclick="showQuizResults(this)">
                     <i class="fa-solid fa-chart-column"></i> Results
                 </button>
                 <button class="btn-del" th:attr="data-id=${quiz.id}" onclick="deleteQuiz(this)">
@@ -468,6 +473,7 @@ function esc(s) { return (s||'').replace(/"/g,'&quot;'); }
 // ── Description voice input (teacher) ───────────────────────────────────────
 let descIsListening = false;
 let descRecognition = null;
+let descFinalBuffer = '';
 
 function startAiPromptVoice() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -480,44 +486,55 @@ function startAiPromptVoice() {
     const btnEl = document.getElementById('descMicBtn');
     if (!inputEl || !statusEl || !btnEl) return;
 
-    if (descRecognition) {
-        try { descRecognition.stop(); } catch (_) {}
-        descRecognition = null;
-    }
-
     descRecognition = new SR();
     descRecognition.lang = ''; // auto-detect
-    descRecognition.continuous = false;
+    // Keep listening until teacher explicitly stops.
+    descRecognition.continuous = true;
     descRecognition.interimResults = true;
 
     descRecognition.onstart = () => {
         descIsListening = true;
         btnEl.classList.add('listening');
-        statusEl.textContent = 'Listening... speak description.';
+        descFinalBuffer = (inputEl.value || '').trim();
+        statusEl.textContent = 'Listening... click mic again to stop.';
+        btnEl.innerHTML = '<i class="fa-solid fa-stop"></i> Stop listening';
     };
 
     descRecognition.onresult = (e) => {
         let interimText = '';
-        let finalText = '';
         for (let i = e.resultIndex; i < e.results.length; i++) {
             const t = e.results[i][0]?.transcript || '';
-            if (e.results[i].isFinal) finalText += t;
+            if (e.results[i].isFinal) {
+                const piece = t.trim();
+                if (piece) {
+                    descFinalBuffer = (descFinalBuffer ? (descFinalBuffer + ' ') : '') + piece;
+                }
+            }
             else interimText += t;
         }
-        const merged = (finalText || interimText || '').trim();
-        if (merged) inputEl.value = merged;
+        inputEl.value = (descFinalBuffer + ' ' + (interimText || '').trim()).trim();
     };
 
     descRecognition.onerror = () => {
-        descIsListening = false;
-        btnEl.classList.remove('listening');
-        statusEl.textContent = 'Voice input error. Try again.';
+        if (!descIsListening) return;
+        statusEl.textContent = 'Mic interrupted. Reconnecting...';
     };
 
     descRecognition.onend = () => {
-        descIsListening = false;
-        btnEl.classList.remove('listening');
-        statusEl.textContent = inputEl.value.trim() ? 'Description captured.' : 'Tap mic and speak';
+        // Browser can stop recognition after silence; auto-restart while user kept listening on.
+        if (!descIsListening) {
+            btnEl.classList.remove('listening');
+            btnEl.innerHTML = '<i class="fa-solid fa-microphone"></i> Speak description';
+            statusEl.textContent = inputEl.value.trim() ? 'Description captured.' : 'Tap mic and speak';
+            return;
+        }
+        statusEl.textContent = 'Listening...';
+        setTimeout(() => {
+            if (!descIsListening) return;
+            try {
+                descRecognition.start();
+            } catch (_) {}
+        }, 120);
     };
 
     try {
@@ -527,12 +544,29 @@ function startAiPromptVoice() {
     }
 }
 
+function stopAiPromptVoice() {
+    const statusEl = document.getElementById('descMicStatus');
+    const btnEl = document.getElementById('descMicBtn');
+    descIsListening = false;
+    if (descRecognition) {
+        try { descRecognition.stop(); } catch (_) {}
+    }
+    if (btnEl) {
+        btnEl.classList.remove('listening');
+        btnEl.innerHTML = '<i class="fa-solid fa-microphone"></i> Speak description';
+    }
+    if (statusEl) statusEl.textContent = 'Stopped.';
+}
+
 function wireAiPromptMic() {
     const btnEl = document.getElementById('descMicBtn');
     if (!btnEl) return;
     btnEl.addEventListener('click', () => {
-        if (descIsListening) return; // single-shot, avoid toggling loops
-        startAiPromptVoice();
+        if (descIsListening) {
+            stopAiPromptVoice();
+        } else {
+            startAiPromptVoice();
+        }
     });
 }
 
@@ -578,6 +612,9 @@ async function saveQuiz() {
 async function showQuizResults(btn) {
     const id = btn.dataset.id;
     const title = btn.dataset.title || 'Quiz';
+    const grade = (btn.dataset.grade || '').trim();
+    const description = (btn.dataset.description || '').trim();
+    const ncertUrl = getNcertUrlFromText(description);
     document.getElementById('resultsModalTitle').textContent = title + ' (ID: ' + id + ') — Results';
     document.getElementById('resultsTableWrap').innerHTML = '<div class="results-empty"><span class="spinner"></span> Loading…</div>';
     document.getElementById('resultsOverlay').classList.add('visible');
@@ -602,12 +639,15 @@ async function showQuizResults(btn) {
                 const name = row.studentName != null ? row.studentName : '—';
                 const studentId = row.studentId != null ? row.studentId : '—';
                 const answer = row.answer != null && row.answer !== '' ? row.answer : '—';
+                const correct = row.correctAnswer != null && row.correctAnswer !== '' ? row.correctAnswer : '—';
                 const marks = row.marksAwarded != null ? row.marksAwarded : '—';
+                const explanation = row.explanation != null && row.explanation !== '' ? row.explanation : '—';
                 const status = row.isCorrect ? 'Correct' : 'Wrong';
-                return `<tr><td>${escapeHtml(qText)}</td><td>${escapeHtml(name)}</td><td>${escapeHtml(studentId)}</td><td>${escapeHtml(answer)}</td><td>${escapeHtml(String(marks))}</td><td>${escapeHtml(status)}</td></tr>`;
+                const explainBtn = `<button type="button" class="btn-explain" onclick="explainResultQuestionInClassroom('${escJs(qText)}','${escJs(correct)}','${escJs(grade)}','${escJs(ncertUrl)}')"><i class="fa-solid fa-graduation-cap"></i> Explain in Classroom</button>`;
+                return `<tr><td>${escapeHtml(qText)}</td><td>${escapeHtml(name)}</td><td>${escapeHtml(studentId)}</td><td>${escapeHtml(answer)}</td><td>${escapeHtml(correct)}</td><td>${escapeHtml(String(marks))}</td><td>${escapeHtml(explanation)}</td><td>${escapeHtml(status)}<div style="margin-top:8px;">${explainBtn}</div></td></tr>`;
             }).join('');
             document.getElementById('resultsTableWrap').innerHTML =
-                '<table class="results-table"><thead><tr><th>Question</th><th>Student</th><th>Student ID</th><th>Answer</th><th>Marks</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table>';
+                '<table class="results-table"><thead><tr><th>Question</th><th>Student</th><th>Student ID</th><th>Answer</th><th>Correct Answer</th><th>Marks</th><th>AI Feedback</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table>';
         }
     } catch (e) {
         document.getElementById('resultsTableWrap').innerHTML = '<div class="results-empty">Could not load results. Try again.</div>';
@@ -617,6 +657,47 @@ function closeResultsModal() {
     document.getElementById('resultsOverlay').classList.remove('visible');
 }
 function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function escJs(s) { return String(s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, ' ').replace(/\r/g, ' '); }
+
+function explainResultQuestionInClassroom(questionText, correctAnswer, grade, ncertUrl) {
+    const g = (grade || '').trim() || '5';
+    const sourceBlock = (ncertUrl || '').trim()
+        ? `Use ONLY this NCERT source for explanation. Do not use outside facts.
+NCERT Source URL: ${(ncertUrl || '').trim()}
+
+`
+        : '';
+    const prompt = `Explain this MCQ for a Grade ${g} student.
+
+Question: ${questionText || ''}
+Correct Answer: ${correctAnswer || ''}
+
+${sourceBlock}\
+Return ONLY in this JSON format:
+{
+  "key_point": "1 short sentence",
+  "simple_explanation": "2 short sentences max",
+  "example": "1 simple relatable example"
+}`;
+    try {
+        localStorage.setItem('classroom_prefill_prompt', prompt);
+        localStorage.setItem('classroom_auto_explain', '1');
+        localStorage.setItem('classroom_selected_context', JSON.stringify({
+            question: questionText || '',
+            correctAnswer: correctAnswer || '',
+            grade: g,
+            ncertUrl: (ncertUrl || '').trim()
+        }));
+    } catch (_) {}
+    window.open('/?selectedExplain=1', '_blank');
+}
+
+function getNcertUrlFromText(text) {
+    const t = (text || '').trim();
+    if (!t) return '';
+    const m = t.match(/https?:\/\/[^\s"']*ncert\.nic\.in[^\s"']*/i);
+    return m ? m[0] : '';
+}
 
 async function disableAttemptedQuizStarts() {
     const startButtons = Array.from(document.querySelectorAll('.btn-take[data-id]'));

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sarvashikshaai.ai.OpenAIClient;
 import com.sarvashikshaai.ai.PromptBuilder;
+import com.sarvashikshaai.ai.StrictEducationalGuard;
 import com.sarvashikshaai.ai.WikipediaClient;
 import com.sarvashikshaai.ai.YouTubeClient;
 import com.sarvashikshaai.model.TeachingRequest;
@@ -37,6 +38,17 @@ public class TeachingService {
         if (request.getTopic() == null || request.getTopic().isBlank()) {
             return new TeachingResponse(
                     "Please enter a school-related question.",
+                    null, null, null, null, null, true);
+        }
+        OpenAIClient.QueryCategory category = openAIClient.classifyUserQuery(request.getTopic());
+        if (category != OpenAIClient.QueryCategory.LEARNING) {
+            return new TeachingResponse(
+                    StrictEducationalGuard.refusalMessage(),
+                    null, null, null, null, null, true);
+        }
+        if (StrictEducationalGuard.isBlocked(request.getTopic())) {
+            return new TeachingResponse(
+                    StrictEducationalGuard.refusalMessage(),
                     null, null, null, null, null, true);
         }
 

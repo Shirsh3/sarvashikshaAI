@@ -1,5 +1,6 @@
 package com.sarvashikshaai.controller;
 
+import com.sarvashikshaai.ai.OpenAIClient;
 import com.sarvashikshaai.model.entity.QuizEntity;
 import com.sarvashikshaai.service.FileExtractionService;
 import com.sarvashikshaai.service.QuizService;
@@ -16,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
+import java.net.URI;
 
 @Controller
 @RequestMapping("/quiz")
@@ -30,6 +32,7 @@ public class QuizController {
     private final FileExtractionService     extractor;
     private final UrlContentService         urlContentService;
     private final ObjectMapper              objectMapper;
+    private final OpenAIClient              openAIClient;
     // ── Teacher dashboard ─────────────────────────────────────────────────────
 
     @GetMapping("/teacher")
@@ -77,8 +80,17 @@ public class QuizController {
             String topicText = topic != null ? topic.trim() : "";
             String gradeText = grade != null ? grade.trim() : "";
             String descText = description != null ? description.trim() : "";
+            String classifyInput = (topicText + "\n" + gradeText + "\n" + descText).trim();
+            if (!classifyInput.isBlank()
+                    && openAIClient.classifyUserQuery(classifyInput) != OpenAIClient.QueryCategory.LEARNING) {
+                return ResponseEntity.ok(Map.of(
+                        "questionsJson", "[]",
+                        "error", "Only educational classroom content is allowed. Please ask a school-related topic."
+                ));
+            }
             String resolvedTypes = "MCQ"; // enforce MCQ-only quiz generation
             String sourceExtracted = "";
+            boolean hasValidNcertSource = false;
             StringBuilder contextBuilder = new StringBuilder();
             if (!topicText.isBlank()) contextBuilder.append("Topic: ").append(topicText);
             if (!gradeText.isBlank()) {
@@ -95,12 +107,22 @@ public class QuizController {
                 String fromUrl = urlContentService.extractContextFromUrl(sourceUrl);
                 if (!fromUrl.isBlank()) {
                     sourceExtracted = fromUrl;
+                    hasValidNcertSource = isNcertUrl(sourceUrl);
                     contextText = contextText.isEmpty() ? fromUrl : contextText + "\n\nSource URL content:\n" + fromUrl;
                 }
             }
 
             if (!sourceExtracted.isBlank() && (topicText.isBlank() || gradeText.isBlank() || descText.isBlank())) {
                 QuizService.InferredQuizMeta inferred = quizService.inferQuizMetaFromContext(sourceExtracted);
+                if (topicText.isBlank()) topicText = inferred.topic() != null ? inferred.topic().trim() : "";
+                if (gradeText.isBlank()) gradeText = inferred.grade() != null ? inferred.grade().trim() : "";
+                if (descText.isBlank()) descText = inferred.description() != null ? inferred.description().trim() : "";
+            }
+
+            // Also infer topic/grade from teacher-entered context (including spoken description)
+            // so title fields auto-populate even when URL/file source is not used.
+            if ((topicText.isBlank() || gradeText.isBlank()) && !contextText.isBlank()) {
+                QuizService.InferredQuizMeta inferred = quizService.inferQuizMetaFromContext(contextText);
                 if (topicText.isBlank()) topicText = inferred.topic() != null ? inferred.topic().trim() : "";
                 if (gradeText.isBlank()) gradeText = inferred.grade() != null ? inferred.grade().trim() : "";
                 if (descText.isBlank()) descText = inferred.description() != null ? inferred.description().trim() : "";
@@ -158,7 +180,17 @@ public class QuizController {
                         "error", "Please enter topic/grade/description or upload a PDF/image."
                 ));
             }
-            String json = quizService.generateQuestionsJson(contextText, effectiveCount, resolvedTypes, language, difficulty);
+            if (topicText.isBlank() && hasValidNcertSource) {
+                // For valid NCERT links, do not force teacher to type topic/grade manually.
+                topicText = "NCERT source content";
+            }
+            if (topicText.isBlank()) {
+                return ResponseEntity.ok(Map.of(
+                        "questionsJson", "[]",
+                        "error", "Topic is required for strict quiz generation."
+                ));
+            }
+            String json = quizService.generateQuestionsJson(topicText, contextText, effectiveCount, resolvedTypes, language, difficulty);
             return ResponseEntity.ok(Map.of(
                     "questionsJson", json != null ? json : "[]",
                     "topic", topicText,
@@ -262,6 +294,17 @@ public class QuizController {
             return ResponseEntity.ok(Map.of("results", results));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    private boolean isNcertUrl(String sourceUrl) {
+        if (sourceUrl == null || sourceUrl.isBlank()) return false;
+        try {
+            URI uri = URI.create(sourceUrl.trim());
+            String host = uri.getHost();
+            return host != null && host.toLowerCase().contains("ncert.nic.in");
+        } catch (Exception ignored) {
+            return false;
         }
     }
 

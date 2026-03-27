@@ -78,6 +78,16 @@
             color:#a5b4fc;
             border-color:rgba(99,102,241,0.35);
         }
+        .question-tools { margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; }
+        .tool-btn {
+            padding:8px 12px; border-radius:10px; border:1px solid var(--surface2);
+            background:var(--surface2); color:var(--text); cursor:pointer; font-size:0.82rem; font-weight:700;
+        }
+        .tool-btn:hover { border-color:var(--primary); color:var(--primary); }
+        .answer-reveal {
+            margin-top:10px; padding:10px 12px; border-radius:10px;
+            border:1px solid rgba(16,185,129,0.55); background:#ecfdf5; color:#064e3b; font-size:0.9rem;
+        }
 
         /* Nav buttons */
         .nav-btns { display:flex; gap:12px; margin-top:8px; }
@@ -217,7 +227,9 @@
                     <th>Student</th>
                     <th>Student ID</th>
                     <th>Answer</th>
+                    <th>Correct Answer</th>
                     <th>Marks</th>
+                    <th>Explanation</th>
                     <th>Status</th>
                 </tr>
                 </thead>
@@ -230,6 +242,8 @@
 <script th:inline="javascript">
 const QUIZ_ID    = /*[[${quiz.id}]]*/   0;
 const QUIZ_LOCKED = /*[[${quiz.isLocked}]]*/ false;
+const QUIZ_GRADE = /*[[${quiz.grade}]]*/ '';
+const QUIZ_DESCRIPTION = /*[[${quiz.description}]]*/ '';
 const QUIZ_JSON  = /*[[${quizQuestionsJson}]]*/  '[]';
 const questions  = JSON.parse(QUIZ_JSON);
 let currentIdx   = 0;
@@ -351,7 +365,9 @@ async function loadQuizResults() {
             const student = row.studentName != null ? row.studentName : 'Student';
             const studentId = row.studentId != null ? row.studentId : '—';
             const answer = row.answer != null && row.answer !== '' ? row.answer : '—';
+            const correctAnswer = row.correctAnswer != null && row.correctAnswer !== '' ? row.correctAnswer : '—';
             const marksAwarded = row.marksAwarded != null ? row.marksAwarded : '—';
+            const explanation = row.explanation != null && row.explanation !== '' ? row.explanation : '—';
             const isCorrect = !!row.isCorrect;
             rows.push(
                 '<tr>'
@@ -359,7 +375,9 @@ async function loadQuizResults() {
                 + '<td>' + escapeHtml(student) + '</td>'
                 + '<td>' + escapeHtml(studentId || '—') + '</td>'
                 + '<td>' + escapeHtml(answer) + '</td>'
+                + '<td>' + escapeHtml(correctAnswer) + '</td>'
                 + '<td>' + escapeHtml(String(marksAwarded)) + '</td>'
+                + '<td>' + escapeHtml(explanation) + '</td>'
                 + '<td class="' + (isCorrect ? 'answer-ok' : 'answer-bad') + '">' + (isCorrect ? 'Correct' : 'Wrong') + '</td>'
                 + '</tr>'
             );
@@ -389,8 +407,9 @@ function renderQuestion(idx) {
     document.getElementById('nextBtn').textContent = idx === total - 1 ? 'Submit Quiz' : 'Next';
 
     const area = document.getElementById('qInputArea');
+    let inputMarkup = '';
     if (q.type === 'MCQ') {
-        area.innerHTML = `<div class="mcq-options">${q.options.map(opt =>
+        inputMarkup = `<div class="mcq-options">${q.options.map(opt =>
             `<button class="mcq-opt" onclick="selectMcq(this,'${esc(opt)}')">${opt}</button>`
         ).join('')}</div>
         <div style="margin-top:14px;">
@@ -399,7 +418,7 @@ function renderQuestion(idx) {
             </button>
         </div>`;
     } else if (q.type === 'TF') {
-        area.innerHTML = `<div class="tf-btns">
+        inputMarkup = `<div class="tf-btns">
             <button class="tf-btn tf-true"  onclick="selectTf(this,'True')"><i class="fa-solid fa-check"></i> True</button>
             <button class="tf-btn tf-false" onclick="selectTf(this,'False')"><i class="fa-solid fa-xmark"></i> False</button>
         </div>
@@ -409,10 +428,19 @@ function renderQuestion(idx) {
             </button>
         </div>`;
     } else {
-        area.innerHTML = `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        inputMarkup = `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
             <input class="short-input" id="shortInput" style="flex:1;min-width:160px;" placeholder="Type or use voice…" oninput="onShortInputChanged(${idx}, this.value)"/>
             <button type="button" class="voice-q-btn" id="shortVoiceBtn" title="Speak your answer"><i class="fa-solid fa-microphone"></i> Voice answer</button>
         </div>`;
+    }
+    area.innerHTML = inputMarkup
+        + `<div class="question-tools">
+            <button type="button" class="tool-btn" onclick="revealCorrectAnswer(${idx})"><i class="fa-solid fa-eye"></i> Reveal Correct Answer</button>
+            <button type="button" class="tool-btn" onclick="explainInClassroom(${idx})"><i class="fa-solid fa-graduation-cap"></i> Explain in Classroom</button>
+           </div>
+           <div id="answerRevealBox" class="answer-reveal" style="display:none;"></div>`;
+
+    if (q.type === 'SHORT') {
         const vbtn = document.getElementById('shortVoiceBtn');
         if (vbtn) vbtn.onclick = () => startShortAnswerVoice(idx);
     }
@@ -426,6 +454,59 @@ function renderQuestion(idx) {
     if (givenAnswers[idx]) restoreAnswer(q, givenAnswers[idx]);
     stopQuestionSpeech();
     setQuestionReadButtonState(false);
+}
+
+function revealCorrectAnswer(idx) {
+    const q = questions[idx];
+    const box = document.getElementById('answerRevealBox');
+    if (!q || !box) return;
+    const correct = (q.answer || 'Not available').trim();
+    box.style.display = '';
+    box.innerHTML = '<strong>Correct Answer:</strong> ' + escapeHtml(correct);
+}
+
+function explainInClassroom(idx) {
+    const q = questions[idx];
+    if (!q) return;
+    const grade = (QUIZ_GRADE || '').toString().trim() || '5';
+    const ncertUrl = extractNcertUrlFromText(QUIZ_DESCRIPTION || '');
+    const sourceBlock = ncertUrl
+        ? `Use ONLY this NCERT source for explanation. Do not use outside facts.
+NCERT Source URL: ${ncertUrl}
+
+`
+        : '';
+    const prompt = `Explain this MCQ for a Grade ${grade} student.
+
+Question: ${q.text || ''}
+Correct Answer: ${q.answer || ''}
+
+${sourceBlock}\
+Return ONLY in this JSON format:
+{
+  "key_point": "1 short sentence",
+  "simple_explanation": "2 short sentences max",
+  "example": "1 simple relatable example"
+}`;
+
+    try {
+        localStorage.setItem('classroom_prefill_prompt', prompt);
+        localStorage.setItem('classroom_auto_explain', '1');
+        localStorage.setItem('classroom_selected_context', JSON.stringify({
+            question: q.text || '',
+            correctAnswer: q.answer || '',
+            grade: (QUIZ_GRADE || '').toString().trim() || '5',
+            ncertUrl: ncertUrl || ''
+        }));
+    } catch (_) {}
+    window.open('/?selectedExplain=1', '_blank');
+}
+
+function extractNcertUrlFromText(text) {
+    const t = (text || '').trim();
+    if (!t) return '';
+    const m = t.match(/https?:\/\/[^\s"']*ncert\.nic\.in[^\s"']*/i);
+    return m ? m[0] : '';
 }
 
 function selectMcq(btn, val) {

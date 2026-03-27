@@ -34,15 +34,21 @@ public class PromptBuilder {
                   - Otherwise, write refusal/explanation/example/keyPoint in English.
 
                 - Classify the QUESTION:
-                  (A) Hard-block: sexual content, hate/harassment, self-harm how-to, extreme graphic violence, illegal how-to, malware, exam cheating, harvesting personal data → set educational=false; refusal = one short polite sentence; youtubeSearchQuery=null; explanation, example, keyPoint = "".
+                  (A) Hard-block: sexual content, hate/harassment, self-harm how-to, extreme graphic violence, illegal how-to, malware, exam cheating, harvesting personal data, or requests to rate/score/compare real people by beauty/attractiveness/looks (e.g., "Rate Indian actress", "Who is hottest", "compare actresses") → set educational=false; refusal = one short polite sentence; youtubeSearchQuery=null; explanation, example, keyPoint = "".
 
                   (B) Allowed but superficial / non-educational (gossip, rating or comparing looks or attractiveness, "best hairstyle" style questions, idle celebrity chatter) → set educational=TRUE, refusal="". Do NOT rate people or compare looks. Do NOT shame the asker. Pivot using the TRANSFORMATION steps above across the fields:
                     • explanation: acknowledge + generalise (2–4 short sentences).
                     • example: one concrete educational angle (storytelling, culture, history, science, or media literacy).
-                    • keyPoint: must end with a redirect such as "Would you like to learn…" or "A good question could be…"
+                    • keyPoint: one direct takeaway sentence that answers the learner’s doubt (do NOT ask a follow-up question).
                     • youtubeSearchQuery: short neutral ENGLISH phrase for the pivoted educational topic (for YouTube API search).
 
-                  (C) Normal school-style question → educational=true, refusal="", fill explanation (2–3 sentences), example (one concrete example), keyPoint (one memorable sentence). youtubeSearchQuery = short neutral ENGLISH phrase for the topic.
+                  (C) Normal school-style question → educational=true, refusal="", fill explanation as a detailed teaching block (5–7 short sentences, step-by-step, include what/why/how where relevant), example (one concrete relatable example), keyPoint (one memorable takeaway sentence, not a question). youtubeSearchQuery = short neutral ENGLISH phrase for the topic.
+
+                - For educational=true responses, prioritize explanation depth:
+                  - explanation should be the longest field.
+                  - Use plain school-level wording but include enough detail for classroom teaching.
+                  - Avoid one-line explanations unless the question itself is extremely simple.
+                - keyPoint must be a statement/answer, never phrased as a question.
 
                 - Never include harmful or inappropriate content.
 

@@ -62,10 +62,7 @@
                 </button>
             </div>
         </form>
-        <p class="followup-hint">
-            <i class="fa-solid fa-rotate-right"></i>
-            Follow-up: ask your next question above — the conversation stays open for more learning.
-        </p>
+        <div class="followup-hint"></div>
     </div>
 
     <!-- ══ RIGHT PANEL ══ -->
@@ -498,6 +495,72 @@ function speak(text, lang, rate, pitch) {
     if (window.speechSynthesis.paused) window.speechSynthesis.resume();
     window.speechSynthesis.speak(u);
 }
+
+function submitPromptBehindScenes(prompt, displayText) {
+    var input = document.getElementById('topicInput');
+    if (!input) return;
+    input.value = displayText || '🎤 Explaining selected question...';
+    input.focus();
+
+    var tempForm = document.createElement('form');
+    tempForm.method = 'post';
+    tempForm.action = '/explain';
+    var hidden = document.createElement('input');
+    hidden.type = 'hidden';
+    hidden.name = 'topic';
+    hidden.value = prompt;
+    tempForm.appendChild(hidden);
+    document.body.appendChild(tempForm);
+    tempForm.submit();
+}
+
+// Prefill Ask-a-Question prompt from quiz journey links.
+document.addEventListener('DOMContentLoaded', function () {
+    var input = document.getElementById('topicInput');
+    var form = document.getElementById('explainForm');
+    if (!input) return;
+    var params = new URLSearchParams(window.location.search);
+    var qAuto = params.get('selectedExplain') === '1';
+    var localPrefill = '';
+    var localAuto = false;
+    try {
+        localPrefill = (localStorage.getItem('classroom_prefill_prompt') || '').trim();
+        if (localPrefill) localStorage.removeItem('classroom_prefill_prompt');
+        localAuto = (localStorage.getItem('classroom_auto_explain') || '') === '1';
+        if (localAuto) localStorage.removeItem('classroom_auto_explain');
+    } catch (_) {}
+    var prefill = localPrefill;
+    var autoExplain = qAuto || localAuto;
+    if (prefill) {
+        if (autoExplain && form) {
+            submitPromptBehindScenes(prefill, '🎤 Explaining selected question...');
+        } else {
+            input.value = prefill;
+            input.focus();
+        }
+    }
+    // Remove transient flag from URL after loading.
+    if (params.get('selectedExplain') === '1') {
+        history.replaceState({}, '', '/');
+    }
+});
+
+// Never expose structured backend prompt in the visible topic badge title.
+document.addEventListener('DOMContentLoaded', function () {
+    var badge = document.querySelector('.topic-badge');
+    if (!badge) return;
+    var spans = badge.querySelectorAll('span');
+    if (!spans || spans.length < 2) return;
+    var titleEl = spans[1];
+    var txt = (titleEl.textContent || '').trim();
+    var looksLikePrompt =
+        txt.startsWith('Explain this MCQ') ||
+        txt.indexOf('Return ONLY in this JSON format') >= 0 ||
+        txt.indexOf('"key_point"') >= 0;
+    if (looksLikePrompt) {
+        titleEl.textContent = '🎤 Explaining selected question...';
+    }
+});
 
 // Load voices so TTS can use them (required on some browsers)
 window.speechSynthesis.onvoiceschanged = function() { window.speechSynthesis.getVoices(); };

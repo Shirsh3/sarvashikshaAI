@@ -4,12 +4,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sarvashikshaai.ai.EducationalRedirectionPolicy;
 import com.sarvashikshaai.ai.OpenAIClient;
+import com.sarvashikshaai.ai.StrictEducationalGuard;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Set;
+import java.util.Arrays;
 import java.util.stream.Collectors;
 
 /**
@@ -98,6 +100,20 @@ public class ReadingEvaluationService {
             return new GeneratedReadingPassage("Reading passage", "");
         }
         String trimmed = teacherInput.trim();
+        if (openAIClient.classifyUserQuery(trimmed) != OpenAIClient.QueryCategory.LEARNING) {
+            return new GeneratedReadingPassage(
+                    "Practice passage",
+                    "Only educational classroom content is allowed. Please ask a school-related topic."
+            );
+        }
+        if (StrictEducationalGuard.isBlocked(trimmed)) {
+            return new GeneratedReadingPassage(
+                    "Practice passage",
+                    "School learning helps us build knowledge, discipline, and confidence. "
+                            + "Regular reading improves vocabulary and understanding. "
+                            + "A good classroom question is about ideas, science, language, or history."
+            );
+        }
 
         String prompt = """
             You help Indian school teachers prepare reading practice for students aged 8-16.
@@ -280,10 +296,16 @@ public class ReadingEvaluationService {
 
     private static int computeSimpleAccuracy(String original, String spoken) {
         if (original == null || original.isBlank() || spoken == null || spoken.isBlank()) return 0;
-        Set<String> spokenWords = Set.of(spoken.toLowerCase().replaceAll("[^a-z\\s]", "").trim().split("\\s+"));
-        String[] origWords = original.toLowerCase().replaceAll("[^a-z\\s]", "").trim().split("\\s+");
+        Set<String> spokenWords = Arrays.stream(
+                        spoken.toLowerCase().replaceAll("[^a-z\\s]", " ").trim().split("\\s+"))
+                .filter(w -> !w.isBlank())
+                .collect(Collectors.toSet());
+        String[] origWords = original.toLowerCase().replaceAll("[^a-z\\s]", " ").trim().split("\\s+");
         if (origWords.length == 0) return 0;
-        long matched = java.util.Arrays.stream(origWords).filter(spokenWords::contains).count();
+        long matched = Arrays.stream(origWords)
+                .filter(w -> !w.isBlank())
+                .filter(spokenWords::contains)
+                .count();
         return (int) Math.round(100.0 * matched / origWords.length);
     }
 }

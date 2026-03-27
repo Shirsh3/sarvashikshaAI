@@ -33,9 +33,10 @@ function buildTtsText() {
     const raw     = document.getElementById('ttsRaw')?.textContent.trim();
 
     const parts = [];
-    if (explain) parts.push('Explanation. ' + explain);
-    if (example) parts.push('Example. '     + example);
-    if (key)     parts.push('Key Point. '   + key);
+    // Match visible classroom sequence: Key points -> Detailed explanation -> Example.
+    if (key)     parts.push('Key points. ' + key);
+    if (explain) parts.push('Detailed explanation. ' + explain);
+    if (example) parts.push('Example. ' + example);
 
     const text = parts.length > 0 ? parts.join('. ') : (raw || '');
     return text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').replace(/\s{2,}/g, ' ').trim();
@@ -98,6 +99,10 @@ function startReading() {
     }
 }
 
+function isReadAloudActive() {
+    return isSpeaking || (window.speechSynthesis && window.speechSynthesis.speaking);
+}
+
 // ── Button wiring ─────────────────────────────────────────────────────────────
 
 function initReadAloudBtn() {
@@ -124,3 +129,19 @@ window.reinitVoiceUI = function () {
 };
 
 document.addEventListener('DOMContentLoaded', initReadAloudBtn);
+
+// Warn before refresh/navigation while read-aloud is active.
+window.addEventListener('beforeunload', function (e) {
+    if (!isReadAloudActive()) return;
+    const msg = 'Read Aloud is currently running. Do you want to stop and leave this page?';
+    e.preventDefault();
+    e.returnValue = msg;
+    return msg;
+});
+
+// If user confirms leaving, stop active speech immediately.
+window.addEventListener('pagehide', function () {
+    if (!isReadAloudActive()) return;
+    try { window.speechSynthesis.cancel(); } catch (_) {}
+    resetReadAloudBtn();
+});
