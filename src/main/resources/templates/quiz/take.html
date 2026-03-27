@@ -149,6 +149,9 @@
     <p class="quiz-meta" id="quizLockedWarn" style="display:none; margin:-8px 0 16px 0; max-width:700px; color:#f87171;">
         <i class="fa-solid fa-ban"></i> This quiz is locked. You can only review question-wise responses below.
     </p>
+    <p class="quiz-meta" id="studentCodeWarn" style="display:none; margin:-8px 0 16px 0; max-width:700px; color:#f59e0b;">
+        <i class="fa-solid fa-id-card"></i> Student code is mandatory. Select a student with a valid code from the roster.
+    </p>
 
     <!-- Quiz player -->
     <div id="quizPlayer">
@@ -266,6 +269,32 @@ function onStudentPickerChange() {
     if (selectedName && selectedCode && questions[currentIdx]) {
         questionAssignments[currentIdx] = { studentName: selectedName, studentCode: selectedCode };
     }
+    enforceStudentCodeMandatory();
+}
+
+function enforceStudentCodeMandatory() {
+    const nextBtn = document.getElementById('nextBtn');
+    const warn = document.getElementById('studentCodeWarn');
+    if (!nextBtn || !warn) return true;
+
+    if (quizLocked) {
+        warn.style.display = 'none';
+        nextBtn.disabled = true;
+        return false;
+    }
+
+    const name = getStudentNameValue();
+    const code = getStudentCodeValue();
+    const missing = !!name && !code;
+    if (missing) {
+        warn.style.display = 'block';
+        nextBtn.disabled = true;
+        return false;
+    }
+
+    warn.style.display = 'none';
+    nextBtn.disabled = false;
+    return true;
 }
 function resetQuizForAnotherStudent() {
     const submittedKey = toStudentKey(lastSubmittedStudentName || '');
@@ -291,6 +320,7 @@ function resetQuizForAnotherStudent() {
         activeStudentKey = '';
     }
     updateStudentSelectorVisibility();
+    enforceStudentCodeMandatory();
 }
 async function loadQuizResults() {
     const msgEl = document.getElementById('viewAttemptsMsg');
@@ -305,9 +335,14 @@ async function loadQuizResults() {
         const r = await fetch('/quiz/' + QUIZ_ID + '/question-results', { signal: controller.signal });
         clearTimeout(timeoutId);
         const data = await r.json();
+        if (!r.ok) {
+            throw new Error(data && data.error ? data.error : 'Failed to load question responses.');
+        }
         quizResults = Array.isArray(data.results) ? data.results : (Array.isArray(data) ? data : (data && typeof data === 'object' && !Array.isArray(data) ? [data] : []));
+        // Always show a message for empty results (prevents "blank" UI).
         if (quizResults.length === 0) {
             if (msgEl) { msgEl.textContent = 'No question responses yet.'; msgEl.style.display = 'block'; }
+            if (tableWrap) tableWrap.style.display = 'none';
             return;
         }
         const rows = [];
@@ -436,6 +471,10 @@ function restoreAnswer(q, val) {
 }
 
 function nextQuestion() {
+    if (!enforceStudentCodeMandatory()) {
+        alert('Student code is required.');
+        return;
+    }
     const currentStudentName = getStudentNameValue();
     if (!currentStudentName) {
         alert('Please select student name before continuing.');
@@ -783,6 +822,10 @@ async function submitQuiz() {
     if (quizLocked) {
         lockQuizIfAlreadyAttempted();
         alert('This quiz is locked.');
+        return;
+    }
+    if (!enforceStudentCodeMandatory()) {
+        alert('Student code is required.');
         return;
     }
     const selectedNow = getStudentNameValue();
