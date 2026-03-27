@@ -1,21 +1,19 @@
 package com.sarvashikshaai.controller;
 
-import com.sarvashikshaai.model.Student;
+import com.sarvashikshaai.model.ReadingContentItem;
 import com.sarvashikshaai.model.entity.ReadingFeedbackRecord;
 import com.sarvashikshaai.repository.ReadingFeedbackRepository;
-import com.sarvashikshaai.repository.TeacherSettingsRepository;
-import com.sarvashikshaai.service.AssemblyNewsService;
-import com.sarvashikshaai.service.StudentSyncService;
+import com.sarvashikshaai.service.ReadingEvaluationService;
+import com.sarvashikshaai.service.StudentListService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/reading")
@@ -23,35 +21,49 @@ import java.util.List;
 @Slf4j
 public class ReadingController {
 
-    private final AssemblyNewsService       newsService;
-    private final StudentSyncService        syncService;
-    private final ReadingFeedbackRepository feedbackRepo;
-    private final TeacherSettingsRepository settingsRepo;
+    private static final List<ReadingContentItem> DEFAULT_READING_CONTENT = List.of(
+        new ReadingContentItem(
+            "Reading practice",
+            "Choose a passage from your textbook or paste text below. Read it aloud and get feedback on fluency and pronunciation.",
+            ""
+        )
+    );
 
-    // ── Page ─────────────────────────────────────────────────────────────────
+    private final ReadingEvaluationService evaluationService;
+    private final StudentListService       studentListService;
+    private final ReadingFeedbackRepository feedbackRepo;
 
     @GetMapping
-    public String readingPage(@AuthenticationPrincipal OAuth2User principal, Model model) {
-        String teacherEmail = resolveTeacherEmail(principal);
-
-        model.addAttribute("newsList",    newsService.getReadingContent());
-        model.addAttribute("studentList", syncService.getStudents(teacherEmail));
-        model.addAttribute("isTeacher",   principal != null);
+    public String readingPage(Model model) {
+        model.addAttribute("newsList",    DEFAULT_READING_CONTENT);
+        model.addAttribute("studentList", studentListService.getStudents());
+        model.addAttribute("isTeacher",   true);
         return "reading";
     }
 
-    // ── Reading feedback AJAX endpoint ───────────────────────────────────────
+    /**
+     * Teacher box: may be a generation prompt or pasted passage. Returns JSON title + passage for the UI.
+     */
+    @PostMapping("/generate-passage")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> generatePassage(@RequestBody(required = false) Map<String, String> body) {
+        String prompt = body != null && body.get("prompt") != null ? body.get("prompt").trim() : "";
+        if (prompt.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "prompt is required"));
+        }
+        ReadingEvaluationService.GeneratedReadingPassage gen = evaluationService.generateReadingPassage(prompt);
+        return ResponseEntity.ok(Map.of(
+                "title", gen.title() != null ? gen.title() : "Reading passage",
+                "passage", gen.passage() != null ? gen.passage() : prompt));
+    }
 
     @PostMapping("/feedback")
     @ResponseBody
-    public ResponseEntity<AssemblyNewsService.ReadingFeedback> feedback(
-            @RequestBody AssemblyNewsService.ReadingRequest req,
-            @AuthenticationPrincipal OAuth2User principal) {
+    public ResponseEntity<ReadingEvaluationService.ReadingFeedback> feedback(
+            @RequestBody ReadingEvaluationService.ReadingRequest req) {
 
-        // 1. Get AI evaluation
-        AssemblyNewsService.ReadingFeedback result = newsService.evaluateReading(req);
+        ReadingEvaluationService.ReadingFeedback result = evaluationService.evaluateReading(req);
 
-        // 2. Persist full analytics to H2
         try {
             ReadingFeedbackRecord record = new ReadingFeedbackRecord(
                 req.studentName(),
@@ -76,23 +88,9 @@ public class ReadingController {
                 req.studentName(), result.fluencyScore(), result.accuracyPercent(),
                 result.spokenWordCount(), result.originalWordCount());
         } catch (Exception e) {
-            log.error("Failed to save reading feedback to H2: {}", e.getMessage());
+            log.error("Failed to save reading feedback: {}", e.getMessage());
         }
 
         return ResponseEntity.ok(result);
-    }
-
-    // ── Helper ────────────────────────────────────────────────────────────────
-
-    private String resolveTeacherEmail(OAuth2User principal) {
-        if (principal != null) {
-            String email = principal.getAttribute("email");
-            if (email != null) return email;
-        }
-        // Single-NGO fallback: use first teacher settings found
-        return settingsRepo.findAll().stream()
-                .findFirst()
-                .map(s -> s.getEmail())
-                .orElse("_local_");
     }
 }

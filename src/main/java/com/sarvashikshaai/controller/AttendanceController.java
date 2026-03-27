@@ -3,15 +3,12 @@ package com.sarvashikshaai.controller;
 import com.sarvashikshaai.model.Student;
 import com.sarvashikshaai.model.entity.AttendanceRecord;
 import com.sarvashikshaai.repository.AttendanceRepository;
-import com.sarvashikshaai.repository.TeacherSettingsRepository;
-import com.sarvashikshaai.service.StudentSyncService;
+import com.sarvashikshaai.service.StudentListService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -29,22 +26,19 @@ import java.util.stream.Collectors;
 @Slf4j
 public class AttendanceController {
 
-    private final StudentSyncService      syncService;
+    private final StudentListService      studentListService;
     private final AttendanceRepository    attendanceRepo;
-    private final TeacherSettingsRepository settingsRepo;
 
     // ── Page ─────────────────────────────────────────────────────────────────
 
     @GetMapping
     public String attendancePage(
-            @AuthenticationPrincipal OAuth2User principal,
             @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             Model model) {
 
-        String teacherEmail = resolveTeacherEmail(principal);
         if (date == null) date = LocalDate.now();
 
-        List<Student> students = syncService.getStudents(teacherEmail);
+        List<Student> students = studentListService.getStudents();
         LocalDate finalDate = date;
         Map<String, Boolean> markedMap = attendanceRepo.findByDateOrderByStudentNameAsc(date)
                 .stream()
@@ -110,17 +104,6 @@ public class AttendanceController {
                     (r.isPresent() ? "Present" : "Absent"));
         }
         writer.flush();
-    }
-
-    // ── Helpers ────────────────────────────────────────────────────────────────
-
-    private String resolveTeacherEmail(OAuth2User principal) {
-        if (principal != null) {
-            String email = principal.getAttribute("email");
-            if (email != null) return email;
-        }
-        return settingsRepo.findAll().stream().findFirst()
-                .map(s -> s.getEmail()).orElse("_local_");
     }
 
     private String escapeCsv(String value) {

@@ -75,6 +75,7 @@ async function submitForm() {
         });
 
         applySceneAndIcon();
+        if (typeof window.initLazyClassroomVideo === 'function') window.initLazyClassroomVideo();
         if (typeof window.reinitVoiceUI === 'function') window.reinitVoiceUI();
 
     } catch (err) {
@@ -90,10 +91,29 @@ async function submitForm() {
     }
 }
 
+/**
+ * YouTube embed loads only after explicit click (student-safe).
+ */
+window.initLazyClassroomVideo = function initLazyClassroomVideo() {
+    document.querySelectorAll('.video-lazy').forEach(function (wrap) {
+        if (wrap.dataset.loaded === '1') return;
+        const btn = wrap.querySelector('.btn-load-video');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            const id = wrap.getAttribute('data-videoid');
+            if (!id) return;
+            wrap.innerHTML = '<div class="yt-wrapper"><iframe src="https://www.youtube.com/embed/' + id +
+                '?rel=0&modestbranding=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe></div>';
+            wrap.dataset.loaded = '1';
+        }, { once: true });
+    });
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('explainForm');
     if (form) form.addEventListener('submit', e => { e.preventDefault(); submitForm(); });
 
     // Handle initial page load that already has a response (e.g. after browser back)
     applySceneAndIcon();
+    window.initLazyClassroomVideo();
 });

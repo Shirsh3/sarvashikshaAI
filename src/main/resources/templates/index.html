@@ -7,6 +7,22 @@
     <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
     <link rel="stylesheet" th:href="@{/css/app.css}"/>
+    <style>
+        .followup-hint { font-size: 0.86rem; color: var(--muted); margin-top: 14px; line-height: 1.45; }
+        .followup-hint i { color: var(--primary); margin-right: 6px; }
+        .edu-blocked-msg { background: rgba(251, 191, 36, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 14px; padding: 18px 20px; color: var(--text); line-height: 1.55; }
+        .classroom-details { margin-bottom: 10px; border: 1px solid var(--surface2); border-radius: 14px; padding: 8px 14px; background: var(--surface); color: var(--text); }
+        .classroom-details summary { cursor: pointer; font-weight: 700; font-size: 0.92rem; list-style: none; }
+        .classroom-details summary::-webkit-details-marker { display: none; }
+        .classroom-details summary::before { content: '▸ '; display: inline-block; transition: transform 0.15s; }
+        .classroom-details[open] summary::before { transform: rotate(90deg); }
+        .classroom-details .section-text { margin-top: 10px; line-height: 1.65; font-size: 0.95rem; padding-bottom: 6px; }
+        .btn-load-video {
+            display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 12px;
+            border: 1px solid var(--surface2); background: var(--surface2); color: var(--text); font-weight: 700; font-size: 0.9rem; cursor: pointer;
+        }
+        .btn-load-video:hover { border-color: var(--primary); color: var(--primary); }
+    </style>
 </head>
 <body>
 <div th:replace="~{fragments/loader :: loader}"></div>
@@ -46,6 +62,10 @@
                 </button>
             </div>
         </form>
+        <p class="followup-hint">
+            <i class="fa-solid fa-rotate-right"></i>
+            Follow-up: ask your next question above — the conversation stays open for more learning.
+        </p>
     </div>
 
     <!-- ══ RIGHT PANEL ══ -->
@@ -62,23 +82,29 @@
             </button>
         </div>
 
-        <!-- Tier 1: YouTube video -->
-        <div class="media-visual" th:if="${response != null and response.videoId != null}">
-            <div class="yt-wrapper">
-                <iframe th:src="'https://www.youtube.com/embed/' + ${response.videoId} + '?rel=0&modestbranding=1'"
-                        allowfullscreen></iframe>
+        <!-- Non-educational: short refusal only -->
+        <div class="edu-blocked-msg" th:if="${response != null and response.nonEducational}">
+            <span th:text="${response.explanation}">We can only show educational content.</span>
+        </div>
+
+        <!-- Tier 1: Lazy YouTube (click to load iframe) -->
+        <div class="media-visual video-lazy-wrap" th:if="${response != null and !response.nonEducational and response.videoId != null}">
+            <div class="video-lazy" th:attr="data-videoid=${response.videoId}">
+                <button type="button" class="btn-load-video">
+                    <i class="fa-brands fa-youtube"></i> Load video
+                </button>
             </div>
         </div>
 
         <!-- Tier 2: Wikipedia animated GIF -->
         <div class="media-visual"
-             th:if="${response != null and response.videoId == null and response.wikiGifUrl != null}">
+             th:if="${response != null and !response.nonEducational and response.videoId == null and response.wikiGifUrl != null}">
             <img th:src="${response.wikiGifUrl}" class="wiki-gif" alt="Educational animation"/>
         </div>
 
         <!-- Tier 3: CSS animated scene (injected by app.js when no video/gif) -->
         <div class="media-visual" id="cssScene"
-             th:if="${response != null and response.videoId == null and response.wikiGifUrl == null}"
+             th:if="${response != null and !response.nonEducational and response.videoId == null and response.wikiGifUrl == null}"
              style="display:none;">
         </div>
 
@@ -87,23 +113,23 @@
             <span></span><span></span><span></span>
         </div>
 
-        <!-- Answer cards -->
-        <div class="answer-cards" th:if="${response != null}">
-            <div class="answer-card card-explain" th:if="${response.explanationSection != null}">
-                <div class="card-label">💡 Explanation</div>
-                <span th:text="${response.explanationSection}"></span>
-            </div>
-            <div class="answer-card card-example" th:if="${response.exampleSection != null}">
-                <div class="card-label">📌 Example</div>
-                <span th:text="${response.exampleSection}"></span>
-            </div>
-            <div class="answer-card card-key" th:if="${response.keyPointSection != null}">
-                <div class="card-label">🔑 Key Point</div>
-                <span th:text="${response.keyPointSection}"></span>
-            </div>
+        <!-- Clickable sections (educational answers only) -->
+        <div class="answer-cards" th:if="${response != null and !response.nonEducational}">
+            <details class="classroom-details" th:if="${response.keyPointSection != null}">
+                <summary>Key points</summary>
+                <div class="section-text" th:text="${response.keyPointSection}"></div>
+            </details>
+            <details class="classroom-details" th:if="${response.explanationSection != null}">
+                <summary>Detailed explanation</summary>
+                <div class="section-text" th:text="${response.explanationSection}"></div>
+            </details>
+            <details class="classroom-details" th:if="${response.exampleSection != null}">
+                <summary>Example</summary>
+                <div class="section-text" th:text="${response.exampleSection}"></div>
+            </details>
             <!-- Fallback: raw response when sections could not be parsed -->
             <div class="answer-card card-explain"
-                 th:if="${response.explanationSection == null and response.exampleSection == null}"
+                 th:if="${response.explanationSection == null and response.exampleSection == null and response.keyPointSection == null}"
                  th:text="${response.explanation}">
             </div>
         </div>

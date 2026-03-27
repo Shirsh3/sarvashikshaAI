@@ -4,6 +4,7 @@ import com.sarvashikshaai.model.dto.YoutubeSearchResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.UriBuilder;
 
 @Component
 public class YouTubeClient {
@@ -19,23 +20,43 @@ public class YouTubeClient {
 
     /**
      * Searches YouTube for an educational video matching the topic.
-     * Returns the video ID of the first result, or null if unavailable.
+     * Tries Education category (27) first; if no results, retries without category.
      */
     public String fetchVideoId(String topic) {
         if (apiKey == null || apiKey.isBlank()) return null;
 
+        String q = buildQuery(topic);
+        String id = search(q, true);
+        if (id == null) {
+            id = search(q, false);
+        }
+        return id;
+    }
+
+    private static String buildQuery(String topic) {
+        if (topic == null || topic.isBlank()) return "educational video for students";
+        String t = topic.trim();
+        if (t.toLowerCase().contains("explained")) return t;
+        return t + " explained for students";
+    }
+
+    private String search(String q, boolean educationCategory) {
         try {
             YoutubeSearchResponse response = webClient.get()
-                    .uri(uri -> uri
-                            .path("/search")
-                            .queryParam("part", "snippet")
-                            .queryParam("q", topic + " explained for students")
-                            .queryParam("type", "video")
-                            .queryParam("videoEmbeddable", "true")
-                            .queryParam("safeSearch", "strict")
-                            .queryParam("maxResults", 1)
-                            .queryParam("key", apiKey)
-                            .build())
+                    .uri(uri -> {
+                        UriBuilder b = uri.path("/search")
+                                .queryParam("part", "snippet")
+                                .queryParam("q", q)
+                                .queryParam("type", "video")
+                                .queryParam("videoEmbeddable", "true")
+                                .queryParam("safeSearch", "strict")
+                                .queryParam("maxResults", 1)
+                                .queryParam("key", apiKey);
+                        if (educationCategory) {
+                            b.queryParam("videoCategoryId", "27");
+                        }
+                        return b.build();
+                    })
                     .retrieve()
                     .bodyToMono(YoutubeSearchResponse.class)
                     .block();

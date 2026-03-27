@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface StudentEntityRepository extends JpaRepository<StudentEntity, String> {
     List<StudentEntity> findByActiveTrue();
+
+    StudentEntity findByCode(String code);
 }

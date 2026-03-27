@@ -18,11 +18,21 @@ import lombok.Setter;
 @AllArgsConstructor
 public class Student {
     private String name;
+    private String code;
     private String grade;
     private String strength;
     private String weakness;
     private String notes;
     private boolean active;
+
+    /**
+     * When editing a student, holds the original name used as the lookup key.
+     * This lets the teacher rename a student without creating a second row.
+     */
+    private String originalName;
+
+    private java.time.Instant createdAt;
+    private java.time.Instant updatedAt;
 
     /** Returns a short context string injected into AI prompts. */
     public String toPromptContext() {

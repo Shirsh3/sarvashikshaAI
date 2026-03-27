@@ -89,41 +89,6 @@
         .no-video a { color: var(--primary); text-decoration: none; }
         .no-video a:hover { text-decoration: underline; }
 
-        /* ── Read-along text box ── */
-        .text-box {
-            background: var(--surface);
-            border: 1px solid var(--surface2);
-            border-radius: 14px; padding: 24px;
-            font-size: clamp(1rem, 2.5vw, 1.15rem);
-            line-height: 2.1; color: var(--text);
-            white-space: pre-line;
-        }
-        .meaning-box {
-            background: rgba(14,116,144,0.15);
-            border: 1px solid rgba(14,116,144,0.3);
-            border-radius: 14px; padding: 20px;
-            margin-top: 14px;
-            font-size: 0.88rem; line-height: 1.8; color: #a5f3fc;
-            white-space: pre-line;
-        }
-        .meaning-label {
-            font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em;
-            color: #67e8f9; font-weight: 700; margin-bottom: 8px;
-        }
-
-        /* ── Read Aloud button ── */
-        .read-btn {
-            display: inline-flex; align-items: center; gap: 8px;
-            padding: 10px 22px; border: none; border-radius: 50px;
-            font-size: 0.9rem; font-weight: 600; cursor: pointer;
-            transition: all 0.2s;
-        }
-        .read-btn-anthem { background: #f59e0b; color: #1c1917; }
-        .read-btn-pledge { background: #10b981; color: white; }
-        .read-btn-prayer { background: #8b5cf6; color: white; }
-        .read-btn:hover { transform: scale(1.04); opacity: 0.92; }
-        .read-btn.speaking { animation: pulse 1.2s infinite; }
-
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
 
         /* ── Bottom nav ── */
@@ -168,15 +133,26 @@
             </button>
         </div>
     </div>
+    <div style="margin-top:14px; color:#e0f2fe; font-size:0.9rem;">
+        <span th:text="'Word: ' + ${wordEnglish} + ' — ' + ${wordHindi}"></span>
+        <span>&nbsp;·&nbsp;</span>
+        <span th:text="'Habit: ' + ${habit}"></span>
+    </div>
+    <form th:action="@{/assembly/regenerate}" method="post" style="margin-top:16px;">
+        <button type="submit"
+                style="padding:8px 18px;border-radius:999px;border:none;
+                       background:#f97316;color:white;font-size:0.85rem;font-weight:600;
+                       display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            Generate new Thought + Word + Habit
+        </button>
+    </form>
 </div>
 
 <!-- ══ National Anthem ══ -->
 <div class="section">
     <div class="section-header">
-        <div class="section-title">🇮🇳 &nbsp;राष्ट्रीय गान — जन गण मन</div>
-        <button class="read-btn read-btn-anthem" onclick="readText('anthemText', this, 'hi-IN')">
-            <i class="fa-solid fa-volume-high"></i> सुनाओ / गाओ
-        </button>
+        <div class="section-title">🇮🇳 &nbsp;National Anthem</div>
     </div>
 
     <!-- YouTube video -->
@@ -187,24 +163,14 @@
     </div>
     <div th:if="${videoAnthem == null}" class="no-video">
         <i class="fa-solid fa-circle-info"></i> &nbsp;No video set yet.
-        <a href="/teacher/setup">Add a YouTube link in Teacher Setup → Assembly tab in your Google Sheet.</a>
-    </div>
-
-    <!-- Read-along text -->
-    <div class="text-box" id="anthemText" th:text="${anthem}"></div>
-    <div class="meaning-box" th:if="${anthemMeaning != null and !anthemMeaning.isBlank()}">
-        <div class="meaning-label"><i class="fa-solid fa-book-open"></i> &nbsp;अर्थ</div>
-        <span th:text="${anthemMeaning}"></span>
+        <a href="/teacher/setup">Add a YouTube link under “Assembly videos” in Teacher Setup.</a>
     </div>
 </div>
 
 <!-- ══ Pledge ══ -->
 <div class="section">
     <div class="section-header">
-        <div class="section-title">✊ &nbsp;राष्ट्रीय प्रतिज्ञा</div>
-        <button class="read-btn read-btn-pledge" onclick="readText('pledgeText', this, 'hi-IN')">
-            <i class="fa-solid fa-volume-high"></i> बोलो / सुनाओ
-        </button>
+        <div class="section-title">✊ &nbsp;Pledge</div>
     </div>
 
     <div th:if="${videoPledge != null}" class="video-wrap">
@@ -214,19 +180,14 @@
     </div>
     <div th:if="${videoPledge == null}" class="no-video">
         <i class="fa-solid fa-circle-info"></i> &nbsp;No video set yet.
-        <a href="/teacher/setup">Add "Pledge" row in the Assembly tab of your Google Sheet.</a>
+        <a href="/teacher/setup">Add a YouTube link under “Assembly videos” in Teacher Setup.</a>
     </div>
-
-    <div class="text-box" id="pledgeText" th:text="${pledge}"></div>
 </div>
 
 <!-- ══ Morning Prayer (Saraswati Vandana) ══ -->
 <div class="section">
     <div class="section-header">
-        <div class="section-title">🙏 &nbsp;प्रातःकालीन प्रार्थना — सरस्वती वंदना</div>
-        <button class="read-btn read-btn-prayer" onclick="readText('prayerText', this, 'hi-IN')">
-            <i class="fa-solid fa-volume-high"></i> पढ़ो / सुनाओ
-        </button>
+        <div class="section-title">🙏 &nbsp;Morning Prayer</div>
     </div>
 
     <div th:if="${videoPrayer != null}" class="video-wrap">
@@ -236,13 +197,7 @@
     </div>
     <div th:if="${videoPrayer == null}" class="no-video">
         <i class="fa-solid fa-circle-info"></i> &nbsp;No video set yet.
-        <a href="/teacher/setup">Add "Morning Prayer" row in the Assembly tab of your Google Sheet.</a>
-    </div>
-
-    <div class="text-box" id="prayerText" th:text="${prayer}"></div>
-    <div class="meaning-box" th:if="${prayerMeaning != null and !prayerMeaning.isBlank()}">
-        <div class="meaning-label"><i class="fa-solid fa-book-open"></i> &nbsp;अर्थ</div>
-        <span th:text="${prayerMeaning}"></span>
+        <a href="/teacher/setup">Add a YouTube link under “Assembly videos” in Teacher Setup.</a>
     </div>
 </div>
 
@@ -260,6 +215,7 @@
 
 
 <script>
+    // Keep speech only for Thought of the Day cards
     let activeSpeech = null;
     let activeBtn    = null;
 
@@ -292,7 +248,6 @@
 
         const utter = new SpeechSynthesisUtterance(text);
         utter.lang  = lang || 'hi-IN';
-        utter.rate  = (elementId === 'anthemText') ? 0.78 : 0.88;
         const voice = getVoice(lang);
         if (voice) utter.voice = voice;
 
@@ -310,7 +265,6 @@
         setTimeout(() => window.speechSynthesis.speak(utter), 80);
     }
 
-    // Prime voice list on load
     window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
     window.speechSynthesis.getVoices();
 </script>

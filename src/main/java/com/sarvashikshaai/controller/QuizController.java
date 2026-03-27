@@ -1,15 +1,14 @@
 package com.sarvashikshaai.controller;
 
 import com.sarvashikshaai.model.entity.QuizEntity;
-import com.sarvashikshaai.repository.TeacherSettingsRepository;
 import com.sarvashikshaai.service.FileExtractionService;
 import com.sarvashikshaai.service.QuizService;
-import com.sarvashikshaai.service.StudentSyncService;
+import com.sarvashikshaai.service.StudentListService;
+import com.sarvashikshaai.service.UrlContentService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -24,18 +23,19 @@ import java.util.Map;
 @Slf4j
 public class QuizController {
 
-    private final QuizService               quizService;
-    private final StudentSyncService        syncService;
-    private final FileExtractionService     extractor;
-    private final TeacherSettingsRepository settingsRepo;
+    private static final long MAX_UPLOAD_BYTES = 5 * 1024 * 1024L; // 5 MB
 
+    private final QuizService               quizService;
+    private final StudentListService        studentListService;
+    private final FileExtractionService     extractor;
+    private final UrlContentService         urlContentService;
+    private final ObjectMapper              objectMapper;
     // ── Teacher dashboard ─────────────────────────────────────────────────────
 
     @GetMapping("/teacher")
-    public String teacherDashboard(@AuthenticationPrincipal OAuth2User principal, Model model) {
-        String email = resolveEmail(principal);
+    public String teacherDashboard(Model model) {
         model.addAttribute("quizList",     quizService.listAll());
-        model.addAttribute("studentList",  syncService.getStudents(email));
+        model.addAttribute("studentList",  studentListService.getStudents());
         return "quiz/teacher";
     }
 
@@ -44,12 +44,12 @@ public class QuizController {
     @PostMapping("/create")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> createQuiz(
-            @RequestParam String title,
-            @RequestParam(defaultValue = "") String subject,
+            @RequestParam String topic,
             @RequestParam(defaultValue = "") String grade,
+            @RequestParam(defaultValue = "") String description,
             @RequestParam String questionsJson) {
         try {
-            QuizEntity saved = quizService.save(title, subject, grade, questionsJson);
+            QuizEntity saved = quizService.save(topic, grade, description, questionsJson);
             return ResponseEntity.ok(Map.of("id", saved.getId(), "title", saved.getTitle(), "count", saved.getQuestionCount()));
         } catch (Exception e) {
             log.error("Save quiz failed: {}", e.getMessage());
@@ -63,29 +63,108 @@ public class QuizController {
     @ResponseBody
     public ResponseEntity<Map<String, Object>> aiGenerate(
             @RequestParam(required = false, defaultValue = "") String topic,
+            @RequestParam(required = false, defaultValue = "") String grade,
+            @RequestParam(required = false, defaultValue = "") String description,
+            @RequestParam(required = false, defaultValue = "") String sourceUrl,
             @RequestParam(defaultValue = "5") int count,
-            @RequestParam(defaultValue = "MCQ, TF") String types,
+            @RequestParam(defaultValue = "MCQ") String types,
+            @RequestParam(defaultValue = "AUTO") String language,
+            @RequestParam(defaultValue = "AUTO") String difficulty,
             @RequestPart(value = "file", required = false) MultipartFile file) {
 
         try {
-            String contextText = topic != null ? topic.trim() : "";
+            int effectiveCount = Math.max(1, Math.min(count, 15));
+            String topicText = topic != null ? topic.trim() : "";
+            String gradeText = grade != null ? grade.trim() : "";
+            String descText = description != null ? description.trim() : "";
+            String resolvedTypes = "MCQ"; // enforce MCQ-only quiz generation
+            String sourceExtracted = "";
+            StringBuilder contextBuilder = new StringBuilder();
+            if (!topicText.isBlank()) contextBuilder.append("Topic: ").append(topicText);
+            if (!gradeText.isBlank()) {
+                if (!contextBuilder.isEmpty()) contextBuilder.append("\n");
+                contextBuilder.append("Grade: ").append(gradeText);
+            }
+            if (!descText.isBlank()) {
+                if (!contextBuilder.isEmpty()) contextBuilder.append("\n");
+                contextBuilder.append("Description: ").append(descText);
+            }
+            String contextText = contextBuilder.toString();
+
+            if (sourceUrl != null && !sourceUrl.isBlank()) {
+                String fromUrl = urlContentService.extractContextFromUrl(sourceUrl);
+                if (!fromUrl.isBlank()) {
+                    sourceExtracted = fromUrl;
+                    contextText = contextText.isEmpty() ? fromUrl : contextText + "\n\nSource URL content:\n" + fromUrl;
+                }
+            }
+
+            if (!sourceExtracted.isBlank() && (topicText.isBlank() || gradeText.isBlank() || descText.isBlank())) {
+                QuizService.InferredQuizMeta inferred = quizService.inferQuizMetaFromContext(sourceExtracted);
+                if (topicText.isBlank()) topicText = inferred.topic() != null ? inferred.topic().trim() : "";
+                if (gradeText.isBlank()) gradeText = inferred.grade() != null ? inferred.grade().trim() : "";
+                if (descText.isBlank()) descText = inferred.description() != null ? inferred.description().trim() : "";
+            }
 
             if (file != null && !file.isEmpty()) {
+                if (file.getSize() > MAX_UPLOAD_BYTES) {
+                    return ResponseEntity.ok(Map.of(
+                            "questionsJson", "[]",
+                            "error", "File too large. Maximum allowed size is 5 MB."
+                    ));
+                }
                 FileExtractionService.FileType ft = extractor.detectType(file);
                 if (ft == FileExtractionService.FileType.PDF) {
                     String pdfText = extractor.extractPdfText(file);
                     contextText = contextText.isEmpty() ? pdfText : contextText + "\n\nFile content:\n" + pdfText;
                 } else if (ft == FileExtractionService.FileType.IMAGE) {
-                    contextText = contextText.isEmpty() ? "Generate questions from the provided image" : contextText;
+                    String imageDataUri = extractor.encodeImageToBase64(file);
+                    if (imageDataUri == null || imageDataUri.isBlank()) {
+                        return ResponseEntity.ok(Map.of("questionsJson", "[]", "error", "Could not read uploaded image. Try another screenshot."));
+                    }
+                    QuizService.GeneratedImageQuiz gen = quizService.generateQuestionsFromImage(
+                            topicText, gradeText, descText,
+                            effectiveCount,
+                            resolvedTypes,
+                            language,
+                            difficulty,
+                            imageDataUri
+                    );
+                    if (gen.error() != null && !gen.error().isBlank()) {
+                        return ResponseEntity.ok(Map.of("questionsJson", "[]", "error", gen.error()));
+                    }
+                    String json = gen.questionsJson() != null ? gen.questionsJson() : "[]";
+                    if ("[]".equals(json.trim())) {
+                        return ResponseEntity.ok(Map.of("questionsJson", "[]", "error", "Could not generate questions from this screenshot. Try clearer image or add topic hint."));
+                    }
+                    return ResponseEntity.ok(Map.of(
+                            "questionsJson", json,
+                            "topic", gen.topic() != null ? gen.topic() : "",
+                            "grade", gen.grade() != null ? gen.grade() : "",
+                            "description", gen.description() != null ? gen.description() : ""
+                    ));
                 }
             }
 
-            if (contextText.isEmpty()) {
-                return ResponseEntity.ok(Map.of("questionsJson", "[]", "error", "Please enter a topic or upload a PDF/image."));
+            // If URL was provided but extraction returned empty (transient/network/site-script issues),
+            // still proceed using URL hint so first click does not fail.
+            if (contextText.isEmpty() && sourceUrl != null && !sourceUrl.isBlank()) {
+                contextText = "Generate an educational quiz from this source URL context:\n" + sourceUrl.trim();
             }
 
-            String json = quizService.generateQuestionsJson(contextText, count, types != null ? types : "MCQ, TF");
-            return ResponseEntity.ok(Map.of("questionsJson", json != null ? json : "[]"));
+            if (contextText.isEmpty()) {
+                return ResponseEntity.ok(Map.of(
+                        "questionsJson", "[]",
+                        "error", "Please enter topic/grade/description or upload a PDF/image."
+                ));
+            }
+            String json = quizService.generateQuestionsJson(contextText, effectiveCount, resolvedTypes, language, difficulty);
+            return ResponseEntity.ok(Map.of(
+                    "questionsJson", json != null ? json : "[]",
+                    "topic", topicText,
+                    "grade", gradeText,
+                    "description", descText
+            ));
         } catch (Exception e) {
             log.error("AI generate questions failed", e);
             return ResponseEntity.ok(Map.of("questionsJson", "[]", "error", e.getMessage() != null ? e.getMessage() : "Generation failed. Please try again."));
@@ -97,56 +176,93 @@ public class QuizController {
     @DeleteMapping("/{id}")
     @ResponseBody
     public ResponseEntity<Map<String, String>> deleteQuiz(@PathVariable Long id) {
-        quizService.delete(id);
-        return ResponseEntity.ok(Map.of("status", "deleted"));
+        try {
+            quizService.delete(id);
+            return ResponseEntity.ok(Map.of("status", "deleted"));
+        } catch (Exception e) {
+            log.error("Delete quiz failed for id={}: {}", id, e.getMessage(), e);
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Delete failed"));
+        }
     }
 
     // ── Student: take a quiz ─────────────────────────────────────────────────
 
     @GetMapping("/take/{id}")
     public String takeQuiz(@PathVariable Long id,
-                           @AuthenticationPrincipal OAuth2User principal,
                            Model model) {
         return quizService.findById(id).map(quiz -> {
-            String email = resolveEmail(principal);
+            String questionsJson = "[]";
+            try {
+                questionsJson = objectMapper.writeValueAsString(quizService.getQuestionsByQuiz(quiz.getId()));
+            } catch (Exception e) {
+                log.warn("Could not serialize quiz questions for quiz {}: {}", quiz.getId(), e.getMessage());
+            }
             model.addAttribute("quiz",        quiz);
-            model.addAttribute("studentList", syncService.getStudents(email));
+            model.addAttribute("quizQuestionsJson", questionsJson);
+            model.addAttribute("studentList", studentListService.getStudents());
             return "quiz/take";
         }).orElse("redirect:/quiz/teacher");
     }
 
-    // ── Submit quiz ───────────────────────────────────────────────────────────
-
-    @PostMapping("/submit")
+    @PostMapping("/{quizId}/lock")
     @ResponseBody
-    public ResponseEntity<Object> submitQuiz(@RequestBody QuizService.SubmitRequest req) {
-        log.info("Quiz submit request received: quizId={}, studentName={}", req.quizId(), req.studentName());
+    public ResponseEntity<Map<String, Object>> lockQuiz(@PathVariable Long quizId) {
         try {
-            QuizService.SubmitResult result = quizService.gradeAndSave(req);
-            return ResponseEntity.ok(result);
+            quizService.lockQuiz(quizId);
+            return ResponseEntity.ok(Map.of("status", "locked", "quizId", quizId));
         } catch (Exception e) {
-            log.error("Submit quiz failed: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
-    // ── Results for a quiz (all attempts by all students; explicit array in body) ─
-
-    @GetMapping(value = "/{id}/results", produces = "application/json")
+    @PostMapping("/questions/{questionId}/assign")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> quizResults(@PathVariable Long id) {
-        java.util.List<com.sarvashikshaai.model.entity.QuizResultEntity> list = quizService.getResultsByQuiz(id);
-        log.info("Quiz {} results: {} attempt(s)", id, list.size());
-        return ResponseEntity.ok(Map.of("results", new java.util.ArrayList<>(list)));
-    }
-
-    // ── Helper ────────────────────────────────────────────────────────────────
-
-    private String resolveEmail(OAuth2User principal) {
-        if (principal != null) {
-            String e = principal.getAttribute("email");
-            if (e != null) return e;
+    public ResponseEntity<Map<String, Object>> assignStudentToQuestion(
+            @PathVariable Long questionId,
+            @RequestBody QuizService.AssignStudentRequest req
+    ) {
+        try {
+            var saved = quizService.assignStudentToQuestion(questionId, req.studentId());
+            return ResponseEntity.ok(Map.of(
+                    "id", saved.getId(),
+                    "questionId", saved.getQuestionId(),
+                    "studentId", saved.getStudentId()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
-        return settingsRepo.findAll().stream().findFirst().map(s -> s.getEmail()).orElse("_local_");
     }
+
+    @PostMapping("/questions/{questionId}/answer")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> submitQuestionAnswer(
+            @PathVariable Long questionId,
+            @RequestBody QuizService.SubmitAnswerRequest req
+    ) {
+        try {
+            var saved = quizService.submitAnswer(questionId, req.studentId(), req.answer());
+            return ResponseEntity.ok(Map.of(
+                    "questionId", saved.getQuestionId(),
+                    "studentId", saved.getStudentId(),
+                    "answer", saved.getAnswer(),
+                    "isCorrect", saved.getIsCorrect(),
+                    "marksAwarded", saved.getMarksAwarded(),
+                    "answeredAt", saved.getAnsweredAt()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{quizId}/question-results")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getQuizQuestionResults(@PathVariable Long quizId) {
+        try {
+            List<QuizService.QuestionResultRow> results = quizService.getQuizQuestionResults(quizId);
+            return ResponseEntity.ok(Map.of("results", results));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
 }

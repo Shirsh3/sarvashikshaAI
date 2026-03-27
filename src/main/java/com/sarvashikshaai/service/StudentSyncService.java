@@ -62,9 +62,16 @@ public class StudentSyncService {
         }
 
         List<Student> students = entities.stream()
-                .map(e -> new Student(e.getName(), e.getGrade(),
-                                      e.getStrength(), e.getWeakness(),
-                                      e.getNotes(), e.isActive()))
+                .map(e -> {
+                    Student s = new Student();
+                    s.setName(e.getName());
+                    s.setGrade(e.getGrade());
+                    s.setStrength(e.getStrength());
+                    s.setWeakness(e.getWeakness());
+                    s.setNotes(e.getNotes());
+                    s.setActive(e.isActive());
+                    return s;
+                })
                 .toList();
 
         // Use a synthetic email key for single-NGO mode; real teacher email set on first sync
@@ -149,9 +156,16 @@ public class StudentSyncService {
         // If no cache entry for this teacher, try loading from H2 directly
         if (!cache.containsKey(teacherEmail)) {
             List<Student> fromDb = studentEntityRepo.findByActiveTrue().stream()
-                    .map(e -> new Student(e.getName(), e.getGrade(),
-                                          e.getStrength(), e.getWeakness(),
-                                          e.getNotes(), e.isActive()))
+                    .map(e -> {
+                        Student s = new Student();
+                        s.setName(e.getName());
+                        s.setGrade(e.getGrade());
+                        s.setStrength(e.getStrength());
+                        s.setWeakness(e.getWeakness());
+                        s.setNotes(e.getNotes());
+                        s.setActive(e.isActive());
+                        return s;
+                    })
                     .toList();
             if (!fromDb.isEmpty()) {
                 cache.put(teacherEmail, fromDb);

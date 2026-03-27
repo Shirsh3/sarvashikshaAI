@@ -8,8 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
     <link rel="stylesheet" th:href="@{/css/app.css}"/>
     <style>
-        body { }
-        .quiz-wrap { max-width:680px; margin:0 auto; padding:20px 20px 60px; }
+        .quiz-wrap { max-width:1100px; margin:0 auto; padding:20px 20px 60px; }
 
         .quiz-topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:10px; }
         .quiz-title  { font-size:1.1rem; font-weight:800; color:var(--text); }
@@ -59,6 +58,27 @@
         .short-input { width:100%; padding:12px 16px; border-radius:10px; border:1px solid var(--surface2); background:var(--surface); color:var(--text); font-size:1rem; }
         .short-input:focus { outline:none; border-color:var(--primary); }
 
+        /* Voice answer button (per question) */
+        .voice-q-btn {
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            padding:10px 16px;
+            border-radius:12px;
+            background:rgba(99,102,241,0.12);
+            color:#818cf8;
+            border:1px solid rgba(99,102,241,0.22);
+            font-size:0.9rem;
+            font-weight:800;
+            cursor:pointer;
+            white-space:nowrap;
+        }
+        .voice-q-btn:hover {
+            background:rgba(99,102,241,0.2);
+            color:#a5b4fc;
+            border-color:rgba(99,102,241,0.35);
+        }
+
         /* Nav buttons */
         .nav-btns { display:flex; gap:12px; margin-top:8px; }
         .btn-next { flex:1; padding:14px; border-radius:12px; border:none; background:#6366f1; color:white; font-size:0.95rem; font-weight:800; cursor:pointer; }
@@ -66,19 +86,20 @@
         .btn-next:disabled { opacity:0.4; cursor:not-allowed; }
 
         /* Score screen */
-        .score-screen { display:none; text-align:center; padding:40px 20px; }
+        .score-screen { display:none; text-align:center; padding:24px 12px; }
         .score-screen.visible { display:block; }
         .score-circle { width:140px; height:140px; border-radius:50%; background:linear-gradient(135deg,#6366f1,#8b5cf6); display:flex; align-items:center; justify-content:center; margin:0 auto 24px; flex-direction:column; }
         .score-num { font-size:2.4rem; font-weight:900; color:white; }
         .score-pct { font-size:0.85rem; color:rgba(255,255,255,0.7); }
         .score-title { font-size:1.5rem; font-weight:900; margin-bottom:8px; }
         .score-sub { color:var(--muted); margin-bottom:28px; font-size:0.9rem; }
-        .review-list { text-align:left; margin-bottom:24px; }
-        .review-item { padding:10px 14px; border-radius:10px; margin-bottom:8px; font-size:0.88rem; }
-        .review-right { background:rgba(16,185,129,0.1); border-left:3px solid #10b981; color:#a7f3d0; }
-        .review-wrong { background:rgba(239,68,68,0.08); border-left:3px solid #ef4444; color:#fca5a5; }
-        .review-q { font-weight:600; margin-bottom:3px; }
-        .review-ans { color:var(--muted); font-size:0.82rem; }
+        .review-table-wrap { margin:16px 0 24px; border:1px solid var(--surface2); border-radius:12px; overflow:auto; }
+        .review-table { width:100%; border-collapse:collapse; min-width:980px; text-align:left; font-size:0.88rem; }
+        .review-table th { padding:10px; color:var(--muted); border-bottom:1px solid var(--surface2); }
+        .review-table td { padding:10px; border-bottom:1px solid rgba(255,255,255,0.05); vertical-align:top; color:var(--text); }
+        .review-table tr:last-child td { border-bottom:none; }
+        .answer-ok { color:#34d399; font-weight:700; }
+        .answer-bad { color:#f87171; font-weight:700; }
         .btn-done { padding:13px 32px; border-radius:12px; border:none; background:#6366f1; color:white; font-size:0.95rem; font-weight:800; cursor:pointer; }
         .spinner { display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,0.3); border-top-color:white; border-radius:50%; animation:spin 0.7s linear infinite; }
         @keyframes spin { to { transform:rotate(360deg); } }
@@ -87,11 +108,7 @@
         .view-attempts { margin-top:32px; margin-bottom:24px; padding:20px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; }
         .view-attempts h4 { font-size:0.85rem; font-weight:700; color:var(--muted); margin-bottom:10px; }
         .view-attempts-msg { font-size:0.88rem; color:var(--muted); margin:0 0 10px 0; }
-        .view-attempts .attempt-select { width:100%; max-width:320px; padding:10px 12px; border-radius:10px; border:1px solid var(--surface2); background:var(--surface); color:var(--text); font-size:0.9rem; }
-        .view-attempts .attempt-select option { background:var(--surface); color:var(--text); }
-        .view-attempts .attempt-feedback { display:none; margin-top:16px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.08); }
-        .view-attempts .attempt-feedback.visible { display:block; }
-        .view-attempts .attempt-score { font-size:1rem; font-weight:800; color:#c7d2fe; margin-bottom:12px; }
+        .view-attempts .attempt-table-wrap { margin-top:12px; border:1px solid var(--surface2); border-radius:10px; overflow:auto; max-height:56vh; }
     </style>
 </head>
 <body>
@@ -107,22 +124,31 @@
                 <span th:if="${quiz.subject != null and !quiz.subject.isBlank()}" th:text="${quiz.subject + ' · '}"></span>
                 <span th:text="${quiz.questionCount + ' questions'}"></span>
             </div>
+                <div class="quiz-meta" th:text="'Quiz ID: ' + ${quiz.id}" style="margin-top:6px;"></div>
         </div>
         <a href="/quiz/teacher" style="color:var(--muted); font-size:0.82rem; text-decoration:none;">
             <i class="fa-solid fa-arrow-left"></i> Back
         </a>
     </div>
 
-    <!-- Student name picker (for taking the quiz) -->
+    <!-- Student name: full class roster (who is taking this attempt). Bottom section lists saved attempts only. -->
     <div class="student-bar">
-        <select class="student-select" id="studentSelect"
-                th:if="${studentList != null and !studentList.isEmpty()}">
-            <option value="">— Select student name —</option>
-            <option th:each="s : ${studentList}" th:value="${s.name}" th:text="${s.name}"></option>
+        <select class="student-select" id="studentRosterSelect"
+                th:if="${studentList != null and !studentList.isEmpty()}"
+                onchange="onStudentPickerChange()">
+            <option value="">— Select student —</option>
+            <option th:each="s : ${studentList}" th:value="${s.name}" th:text="${s.name}" th:attr="data-code=${s.code}"></option>
         </select>
-        <input type="text" class="student-select" id="studentSelect" placeholder="Enter student name"
-               th:if="${studentList == null or studentList.isEmpty()}"/>
+        <input type="text" class="student-select" id="studentNameInput" placeholder="Enter student name"
+               th:if="${studentList == null or studentList.isEmpty()}"
+               oninput="onStudentPickerChange()"/>
     </div>
+    <p class="quiz-meta" id="studentPickHint" style="margin:-12px 0 20px 0; max-width:520px;" th:if="${studentList != null and !studentList.isEmpty()}">
+        <i class="fa-solid fa-circle-info"></i> Select the student for each question before answering. Different questions can be assigned to different students.
+    </p>
+    <p class="quiz-meta" id="quizLockedWarn" style="display:none; margin:-8px 0 16px 0; max-width:700px; color:#f87171;">
+        <i class="fa-solid fa-ban"></i> This quiz is locked. You can only review question-wise responses below.
+    </p>
 
     <!-- Quiz player -->
     <div id="quizPlayer">
@@ -153,104 +179,167 @@
         </div>
         <div class="score-title" id="scoreTitle"></div>
         <div class="score-sub" id="scoreSub"></div>
-        <div class="review-list" id="reviewList"></div>
+        <div class="review-table-wrap">
+            <table class="review-table" id="reviewTable">
+                <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Question</th>
+                    <th>Your answer</th>
+                    <th>Correct answer</th>
+                    <th>Explanation</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody id="reviewTableBody"></tbody>
+            </table>
+        </div>
+        <button type="button" class="btn-done" style="margin-bottom:12px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);" onclick="resetQuizForAnotherStudent()">
+            <i class="fa-solid fa-rotate-left"></i> Back to Quiz View
+        </button>
         <button class="btn-done" onclick="location.href='/quiz/teacher'">
             <i class="fa-solid fa-house"></i> Back to Quizzes
         </button>
     </div>
 
-    <!-- View past attempts (at the end): only students who have attempted this quiz -->
+    <!-- View question-wise responses -->
     <div class="view-attempts" id="viewAttemptsSection">
-        <h4><i class="fa-solid fa-chart-column"></i> View attempt by student</h4>
+        <h4><i class="fa-solid fa-chart-column"></i> Question-wise responses</h4>
         <p class="view-attempts-msg" id="viewAttemptsMsg">Loading…</p>
-        <select class="attempt-select" id="attemptSelect" onchange="showAttemptFeedback(this)" style="display:none;">
-            <option value="">— Select student to view result —</option>
-        </select>
-        <div class="attempt-feedback" id="attemptFeedback">
-            <div class="attempt-score" id="attemptScore"></div>
-            <div class="review-list" id="attemptReviewList"></div>
+        <div class="attempt-table-wrap" id="attemptTableWrap" style="display:none;">
+            <table class="review-table">
+                <thead>
+                <tr>
+                    <th>Question</th>
+                    <th>Student</th>
+                    <th>Student ID</th>
+                    <th>Answer</th>
+                    <th>Marks</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody id="attemptTableBody"></tbody>
+            </table>
         </div>
     </div>
 </div>
 
 <script th:inline="javascript">
 const QUIZ_ID    = /*[[${quiz.id}]]*/   0;
-const QUIZ_JSON  = /*[[${quiz.questionsJson}]]*/  '[]';
+const QUIZ_LOCKED = /*[[${quiz.isLocked}]]*/ false;
+const QUIZ_JSON  = /*[[${quizQuestionsJson}]]*/  '[]';
 const questions  = JSON.parse(QUIZ_JSON);
 let currentIdx   = 0;
 let givenAnswers = [];
-let quizResults  = [];  // list of { studentName, score, totalQuestions, answersJson, takenAt } for this quiz
+let quizResults  = [];
+let lastSubmittedStudentName = null;
+let questionSpeechLoopEnabled = false;
+let currentQuestionUtterance = null;
+/** In-progress attempts keyed by normalized student name. */
+const studentAttemptMap = {};
+let activeStudentKey = '';
+const questionAnsweredByMap = {};
+const questionAnsweredByCodeMap = {};
+const studentNameByKey = {};
+const studentCodeByKey = {};
+const questionAssignments = {};
+let quizLocked = !!QUIZ_LOCKED;
 
 window.onload = () => {
     renderQuestion(0);
+    onStudentPickerChange();
+    if (quizLocked) lockQuizIfAlreadyAttempted();
     loadQuizResults();
 };
+function onStudentPickerChange() {
+    const selectedName = getStudentNameValue();
+    const selectedCode = getStudentCodeValue();
+    const selectedKey = toStudentKey(selectedName);
+    if (!selectedKey) {
+        activeStudentKey = '';
+    } else {
+        activeStudentKey = selectedKey;
+        studentNameByKey[selectedKey] = selectedName.trim();
+        if (selectedCode) studentCodeByKey[selectedKey] = selectedCode;
+        ensureStudentAttempt(activeStudentKey);
+    }
+    if (selectedName && selectedCode && questions[currentIdx]) {
+        questionAssignments[currentIdx] = { studentName: selectedName, studentCode: selectedCode };
+    }
+}
+function resetQuizForAnotherStudent() {
+    const submittedKey = toStudentKey(lastSubmittedStudentName || '');
+    if (submittedKey) delete studentAttemptMap[submittedKey];
+    lastSubmittedStudentName = null;
+    document.getElementById('scoreScreen').classList.remove('visible');
+    document.getElementById('quizPlayer').style.display = '';
+    currentIdx = 0;
+    givenAnswers = [];
+    renderQuestion(0);
+    const nextBtn = document.getElementById('nextBtn');
+    if (nextBtn) {
+        nextBtn.disabled = false;
+        nextBtn.innerHTML = 'Next <i class="fa-solid fa-arrow-right"></i>';
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const selectedNow = getStudentNameValue();
+    if (selectedNow) {
+        activeStudentKey = toStudentKey(selectedNow);
+        ensureStudentAttempt(activeStudentKey);
+        renderQuestion(0);
+    } else {
+        activeStudentKey = '';
+    }
+    updateStudentSelectorVisibility();
+}
 async function loadQuizResults() {
     const msgEl = document.getElementById('viewAttemptsMsg');
-    const sel = document.getElementById('attemptSelect');
+    const tableWrap = document.getElementById('attemptTableWrap');
+    const tableBody = document.getElementById('attemptTableBody');
     if (msgEl) { msgEl.textContent = 'Loading…'; msgEl.style.display = 'block'; }
-    if (sel) sel.style.display = 'none';
+    if (tableWrap) tableWrap.style.display = 'none';
+    if (tableBody) tableBody.innerHTML = '';
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000);
-        const r = await fetch('/quiz/' + QUIZ_ID + '/results', { signal: controller.signal });
+        const r = await fetch('/quiz/' + QUIZ_ID + '/question-results', { signal: controller.signal });
         clearTimeout(timeoutId);
         const data = await r.json();
         quizResults = Array.isArray(data.results) ? data.results : (Array.isArray(data) ? data : (data && typeof data === 'object' && !Array.isArray(data) ? [data] : []));
-        if (msgEl) msgEl.style.display = 'none';
-        if (sel) sel.style.display = '';
-        if (!sel) return;
-        sel.innerHTML = '<option value="">— Select student to view result —</option>';
         if (quizResults.length === 0) {
-            if (msgEl) { msgEl.textContent = 'No attempts yet. Results will appear here after students take this quiz.'; msgEl.style.display = 'block'; }
-            sel.style.display = 'none';
-        } else {
-            quizResults.forEach((row, i) => {
-                const total = row.totalQuestions != null ? row.totalQuestions : (row.total_questions != null ? row.total_questions : 0);
-                const score = row.score != null ? row.score : 0;
-                const name = row.studentName != null ? row.studentName : (row.student_name != null ? row.student_name : 'Student');
-                const pct = total > 0 ? Math.round(100 * score / total) : 0;
-                const opt = document.createElement('option');
-                opt.value = i;
-                opt.textContent = name + ' — ' + score + '/' + total + ' (' + pct + '%)';
-                sel.appendChild(opt);
-            });
+            if (msgEl) { msgEl.textContent = 'No question responses yet.'; msgEl.style.display = 'block'; }
+            return;
         }
+        const rows = [];
+        quizResults.forEach((row) => {
+            const questionText = row.questionText != null ? row.questionText : '—';
+            const student = row.studentName != null ? row.studentName : 'Student';
+            const studentId = row.studentId != null ? row.studentId : '—';
+            const answer = row.answer != null && row.answer !== '' ? row.answer : '—';
+            const marksAwarded = row.marksAwarded != null ? row.marksAwarded : '—';
+            const isCorrect = !!row.isCorrect;
+            rows.push(
+                '<tr>'
+                + '<td>' + escapeHtml(questionText) + '</td>'
+                + '<td>' + escapeHtml(student) + '</td>'
+                + '<td>' + escapeHtml(studentId || '—') + '</td>'
+                + '<td>' + escapeHtml(answer) + '</td>'
+                + '<td>' + escapeHtml(String(marksAwarded)) + '</td>'
+                + '<td class="' + (isCorrect ? 'answer-ok' : 'answer-bad') + '">' + (isCorrect ? 'Correct' : 'Wrong') + '</td>'
+                + '</tr>'
+            );
+        });
+        if (msgEl) {
+            msgEl.textContent = rows.length + ' response row(s) loaded.';
+            msgEl.style.display = 'block';
+        }
+        if (tableBody) tableBody.innerHTML = rows.join('');
+        if (tableWrap) tableWrap.style.display = '';
     } catch (e) {
         console.warn('Could not load quiz results', e);
         if (msgEl) { msgEl.textContent = (e.name === 'AbortError' ? 'Request timed out.' : 'Could not load results. You can try again later.'); msgEl.style.display = 'block'; }
-        if (sel) sel.style.display = 'none';
+        if (tableWrap) tableWrap.style.display = 'none';
     }
-}
-function showAttemptFeedback(selectEl) {
-    const val = selectEl.value;
-    const wrap = document.getElementById('attemptFeedback');
-    const scoreEl = document.getElementById('attemptScore');
-    const reviewEl = document.getElementById('attemptReviewList');
-    if (val === '' || !wrap || !scoreEl || !reviewEl) {
-        wrap.classList.remove('visible');
-        return;
-    }
-    const idx = parseInt(val, 10);
-    const row = quizResults[idx];
-    if (!row) { wrap.classList.remove('visible'); return; }
-    const total = row.totalQuestions != null ? row.totalQuestions : (row.total_questions != null ? row.total_questions : 0);
-    const score = row.score != null ? row.score : 0;
-    const name = row.studentName != null ? row.studentName : (row.student_name != null ? row.student_name : 'Student');
-    const pct = total > 0 ? Math.round(100 * score / total) : 0;
-    scoreEl.textContent = name + ' — ' + score + '/' + total + ' (' + pct + '%)';
-    let reviewHtml = '';
-    try {
-        const answersJson = row.answersJson != null ? row.answersJson : (row.answers_json != null ? row.answers_json : '[]');
-        const annotated = JSON.parse(answersJson);
-        annotated.forEach((a, i) => {
-            const cls = a.isRight ? 'review-right' : 'review-wrong';
-            const icon = a.isRight ? '✓' : '✗';
-            reviewHtml += '<div class="review-item ' + cls + '"><div class="review-q">' + icon + ' ' + (questions[i] ? escapeHtml(questions[i].text) : '') + '</div><div class="review-ans">' + (a.isRight ? 'Correct' : 'Your answer: ' + escapeHtml(a.given || '—') + ' · Correct: ' + escapeHtml(a.correct || '—')) + '</div></div>';
-        });
-    } catch (e) { reviewHtml = '<div class="review-item review-wrong">Could not load review.</div>'; }
-    reviewEl.innerHTML = reviewHtml;
-    wrap.classList.add('visible');
 }
 function escapeHtml(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
@@ -268,28 +357,75 @@ function renderQuestion(idx) {
     if (q.type === 'MCQ') {
         area.innerHTML = `<div class="mcq-options">${q.options.map(opt =>
             `<button class="mcq-opt" onclick="selectMcq(this,'${esc(opt)}')">${opt}</button>`
-        ).join('')}</div>`;
+        ).join('')}</div>
+        <div style="margin-top:14px;">
+            <button type="button" class="voice-q-btn" id="mcqVoiceBtn" title="Speak your answer (A/B/C/D or option text)">
+                <i class="fa-solid fa-microphone"></i> Voice answer
+            </button>
+        </div>`;
     } else if (q.type === 'TF') {
         area.innerHTML = `<div class="tf-btns">
             <button class="tf-btn tf-true"  onclick="selectTf(this,'True')"><i class="fa-solid fa-check"></i> True</button>
             <button class="tf-btn tf-false" onclick="selectTf(this,'False')"><i class="fa-solid fa-xmark"></i> False</button>
+        </div>
+        <div style="margin-top:14px;">
+            <button type="button" class="voice-q-btn" id="tfVoiceBtn" title="Speak your answer (true/false or yes/no)">
+                <i class="fa-solid fa-microphone"></i> Voice answer
+            </button>
         </div>`;
     } else {
-        area.innerHTML = `<input class="short-input" id="shortInput" placeholder="Type your answer…" oninput="givenAnswers[${idx}]=this.value"/>`;
+        area.innerHTML = `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <input class="short-input" id="shortInput" style="flex:1;min-width:160px;" placeholder="Type or use voice…" oninput="onShortInputChanged(${idx}, this.value)"/>
+            <button type="button" class="voice-q-btn" id="shortVoiceBtn" title="Speak your answer"><i class="fa-solid fa-microphone"></i> Voice answer</button>
+        </div>`;
+        const vbtn = document.getElementById('shortVoiceBtn');
+        if (vbtn) vbtn.onclick = () => startShortAnswerVoice(idx);
     }
+
+    // MCQ voice + TF voice wiring
+    const mcqVbtn = document.getElementById('mcqVoiceBtn');
+    if (mcqVbtn) mcqVbtn.onclick = () => startMcqAnswerVoice(idx);
+    const tfVbtn  = document.getElementById('tfVoiceBtn');
+    if (tfVbtn) tfVbtn.onclick = () => startTfAnswerVoice(idx);
     // Restore previous answer if navigating back
     if (givenAnswers[idx]) restoreAnswer(q, givenAnswers[idx]);
+    stopQuestionSpeech();
+    setQuestionReadButtonState(false);
 }
 
 function selectMcq(btn, val) {
     document.querySelectorAll('.mcq-opt').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
     givenAnswers[currentIdx] = val;
+    if (activeStudentKey) {
+        studentNameByKey[activeStudentKey] = getStudentNameValue();
+        const code = getStudentCodeValue();
+        if (code) studentCodeByKey[activeStudentKey] = code;
+        ensureStudentAttempt(activeStudentKey);
+        studentAttemptMap[activeStudentKey].givenAnswers[currentIdx] = val;
+        questionAnsweredByMap[currentIdx] = getStudentNameValue();
+        questionAnsweredByCodeMap[currentIdx] = getStudentCodeValue();
+    }
+    const sName = getStudentNameValue();
+    const sCode = getStudentCodeValue();
+    if (sName && sCode) questionAssignments[currentIdx] = { studentName: sName, studentCode: sCode };
 }
 function selectTf(btn, val) {
     document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
     givenAnswers[currentIdx] = val;
+    if (activeStudentKey) {
+        studentNameByKey[activeStudentKey] = getStudentNameValue();
+        const code = getStudentCodeValue();
+        if (code) studentCodeByKey[activeStudentKey] = code;
+        ensureStudentAttempt(activeStudentKey);
+        studentAttemptMap[activeStudentKey].givenAnswers[currentIdx] = val;
+        questionAnsweredByMap[currentIdx] = getStudentNameValue();
+        questionAnsweredByCodeMap[currentIdx] = getStudentCodeValue();
+    }
+    const sName = getStudentNameValue();
+    const sCode = getStudentCodeValue();
+    if (sName && sCode) questionAssignments[currentIdx] = { studentName: sName, studentCode: sCode };
 }
 function restoreAnswer(q, val) {
     if (q.type === 'MCQ') {
@@ -300,68 +436,457 @@ function restoreAnswer(q, val) {
 }
 
 function nextQuestion() {
+    const currentStudentName = getStudentNameValue();
+    if (!currentStudentName) {
+        alert('Please select student name before continuing.');
+        return;
+    }
+    if (!Array.isArray(questions) || questions.length === 0) {
+        alert('No quiz questions found.');
+        return;
+    }
+    if (currentIdx < 0) currentIdx = 0;
+    // If user is already at/after the last question, treat as submit.
+    if (currentIdx >= questions.length) {
+        syncCurrentStudentAttempt();
+        submitQuiz();
+        return;
+    }
+    if (!activeStudentKey) {
+        activeStudentKey = toStudentKey(currentStudentName);
+        ensureStudentAttempt(activeStudentKey);
+    }
+
     const q = questions[currentIdx];
+    if (!q) {
+        alert('Question not found. Please go back and try again.');
+        return;
+    }
     if (q.type === 'SHORT') givenAnswers[currentIdx] = document.getElementById('shortInput')?.value || '';
+    const currentAnswer = (givenAnswers[currentIdx] || '').trim();
+    if (!currentAnswer) {
+        alert('Please select or enter an answer before moving to the next question.');
+        return;
+    }
 
     currentIdx++;
     if (currentIdx >= questions.length) {
+        syncCurrentStudentAttempt();
         submitQuiz();
     } else {
+        syncCurrentStudentAttempt();
         renderQuestion(currentIdx);
     }
 }
 
 function readQuestion() {
     const text = document.getElementById('qText').textContent;
+    if (questionSpeechLoopEnabled) {
+        stopQuestionSpeech();
+        setQuestionReadButtonState(false);
+        return;
+    }
+    questionSpeechLoopEnabled = true;
+    setQuestionReadButtonState(true);
+    speakQuestionLoop(text);
+}
+
+function speakQuestionLoop(text) {
+    if (!questionSpeechLoopEnabled) return;
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'en-IN'; u.rate = 0.88;
+    currentQuestionUtterance = u;
+    u.lang = 'en-IN';
+    u.rate = 0.88;
+    u.onend = () => {
+        if (questionSpeechLoopEnabled) {
+            setTimeout(() => speakQuestionLoop(text), 120);
+        }
+    };
+    u.onerror = () => {
+        stopQuestionSpeech();
+        setQuestionReadButtonState(false);
+    };
     window.speechSynthesis.cancel();
-    setTimeout(() => window.speechSynthesis.speak(u), 60);
+    setTimeout(() => {
+        if (questionSpeechLoopEnabled) window.speechSynthesis.speak(u);
+    }, 60);
+}
+
+function stopQuestionSpeech() {
+    questionSpeechLoopEnabled = false;
+    if (currentQuestionUtterance) {
+        try { currentQuestionUtterance.onend = null; } catch (_) {}
+    }
+    currentQuestionUtterance = null;
+    window.speechSynthesis.cancel();
+}
+
+function setQuestionReadButtonState(isSpeaking) {
+    const btn = document.querySelector('.read-q-btn');
+    if (!btn) return;
+    if (isSpeaking) {
+        btn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i> Stop speaking';
+    } else {
+        btn.innerHTML = '<i class="fa-solid fa-volume-high"></i> Read question aloud';
+    }
+}
+
+function getStudentNameValue() {
+    const roster = document.getElementById('studentRosterSelect');
+    if (roster) return (roster.value || '').trim();
+    const inp = document.getElementById('studentNameInput');
+    if (inp) return (inp.value || '').trim();
+    return '';
+}
+
+function getStudentCodeValue() {
+    const roster = document.getElementById('studentRosterSelect');
+    if (!roster) return '';
+    const opt = (roster.options && roster.selectedIndex >= 0) ? roster.options[roster.selectedIndex] : null;
+    if (!opt) return '';
+    return ((opt.getAttribute('data-code') || '') + '').trim();
+}
+
+function toStudentKey(name) {
+    return (name || '').trim().toLowerCase();
+}
+
+function lockQuizIfAlreadyAttempted() {
+    quizLocked = true;
+    const quizPlayer = document.getElementById('quizPlayer');
+    const scoreScreen = document.getElementById('scoreScreen');
+    const lockWarn = document.getElementById('quizLockedWarn');
+    const nextBtn = document.getElementById('nextBtn');
+    const roster = document.getElementById('studentRosterSelect');
+    const input = document.getElementById('studentNameInput');
+    if (quizPlayer) quizPlayer.style.display = 'none';
+    if (scoreScreen) scoreScreen.classList.remove('visible');
+    if (lockWarn) lockWarn.style.display = 'block';
+    if (nextBtn) {
+        nextBtn.disabled = true;
+        nextBtn.innerHTML = 'Locked';
+    }
+    if (roster) roster.value = '';
+    if (input) input.value = '';
+    activeStudentKey = '';
+    updateStudentSelectorVisibility();
+}
+
+function updateStudentSelectorVisibility() {
+    const studentBar = document.querySelector('.student-bar');
+    const studentHint = document.getElementById('studentPickHint');
+    if (!studentBar) return;
+    const scoreScreen = document.getElementById('scoreScreen');
+    const inScoreView = !!(scoreScreen && scoreScreen.classList.contains('visible'));
+    const isLocked = quizLocked;
+    const hide = inScoreView || isLocked;
+    studentBar.style.display = hide ? 'none' : '';
+    if (studentHint) studentHint.style.display = hide ? 'none' : '';
+}
+
+function syncCurrentStudentAttempt() {
+    if (!activeStudentKey) return;
+    // IMPORTANT: do NOT overwrite the whole givenAnswers array for this student.
+    // The UI keeps a single global `givenAnswers`, which may temporarily reflect the last selected student.
+    // We only update the cursor position and (if present) the current question's value for this student.
+    ensureStudentAttempt(activeStudentKey);
+    const val = Array.isArray(givenAnswers) && currentIdx >= 0 ? givenAnswers[currentIdx] : undefined;
+    if (val !== undefined) {
+        studentAttemptMap[activeStudentKey].givenAnswers[currentIdx] = val;
+    }
+    studentAttemptMap[activeStudentKey].currentIdx = currentIdx;
+}
+
+function ensureStudentAttempt(studentKey) {
+    if (!studentKey) return;
+    if (!studentAttemptMap[studentKey]) {
+        studentAttemptMap[studentKey] = { givenAnswers: [], currentIdx: 0 };
+    }
+}
+
+function onShortInputChanged(idx, value) {
+    const v = (value || '').trim();
+    givenAnswers[idx] = v;
+    if (activeStudentKey) {
+        studentNameByKey[activeStudentKey] = getStudentNameValue();
+        const code = getStudentCodeValue();
+        if (code) studentCodeByKey[activeStudentKey] = code;
+        ensureStudentAttempt(activeStudentKey);
+        studentAttemptMap[activeStudentKey].givenAnswers[idx] = v;
+        questionAnsweredByMap[idx] = getStudentNameValue();
+        questionAnsweredByCodeMap[idx] = getStudentCodeValue();
+    }
+    const sName = getStudentNameValue();
+    const sCode = getStudentCodeValue();
+    if (v && sName && sCode) questionAssignments[idx] = { studentName: sName, studentCode: sCode };
+}
+
+function startShortAnswerVoice(idx) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { alert('Voice input needs Chrome or Edge.'); return; }
+    const input = document.getElementById('shortInput');
+    const rec = new SR();
+    rec.lang = 'en-IN';
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.onresult = function(e) {
+        let t = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            t += e.results[i][0].transcript;
+        }
+        if (input) {
+            const v = t.trim();
+            input.value = v;
+            givenAnswers[idx] = v;
+            if (activeStudentKey) {
+                ensureStudentAttempt(activeStudentKey);
+                studentAttemptMap[activeStudentKey].givenAnswers[idx] = v;
+                questionAnsweredByMap[idx] = getStudentNameValue();
+            }
+            const sName = getStudentNameValue();
+            const sCode = getStudentCodeValue();
+            if (v && sName && sCode) questionAssignments[idx] = { studentName: sName, studentCode: sCode };
+        }
+    };
+    rec.onerror = function() {};
+    try { rec.start(); } catch (err) { console.warn(err); }
+}
+
+function normalizeVoice(t) {
+    return (t || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ' ')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+}
+
+function setMcqAnswer(val) {
+    document.querySelectorAll('.mcq-opt').forEach(b => {
+        const match = (b.textContent || '').trim() === val;
+        b.classList.toggle('selected', match);
+    });
+    givenAnswers[currentIdx] = val;
+    if (activeStudentKey) {
+        studentNameByKey[activeStudentKey] = getStudentNameValue();
+        const code = getStudentCodeValue();
+        if (code) studentCodeByKey[activeStudentKey] = code;
+        ensureStudentAttempt(activeStudentKey);
+        studentAttemptMap[activeStudentKey].givenAnswers[currentIdx] = val;
+        questionAnsweredByMap[currentIdx] = getStudentNameValue();
+        questionAnsweredByCodeMap[currentIdx] = getStudentCodeValue();
+    }
+    const sName = getStudentNameValue();
+    const sCode = getStudentCodeValue();
+    if (sName && sCode) questionAssignments[currentIdx] = { studentName: sName, studentCode: sCode };
+}
+
+function setTfAnswer(val) {
+    document.querySelectorAll('.tf-btn').forEach(b => {
+        const match = (b.textContent || '').toLowerCase().includes(val.toLowerCase());
+        b.classList.toggle('selected', match);
+    });
+    givenAnswers[currentIdx] = val;
+    if (activeStudentKey) {
+        studentNameByKey[activeStudentKey] = getStudentNameValue();
+        const code = getStudentCodeValue();
+        if (code) studentCodeByKey[activeStudentKey] = code;
+        ensureStudentAttempt(activeStudentKey);
+        studentAttemptMap[activeStudentKey].givenAnswers[currentIdx] = val;
+        questionAnsweredByMap[currentIdx] = getStudentNameValue();
+        questionAnsweredByCodeMap[currentIdx] = getStudentCodeValue();
+    }
+    const sName = getStudentNameValue();
+    const sCode = getStudentCodeValue();
+    if (sName && sCode) questionAssignments[currentIdx] = { studentName: sName, studentCode: sCode };
+}
+
+function pickMcqOption(q, transcript) {
+    const t = normalizeVoice(transcript);
+    if (!q || !Array.isArray(q.options)) return null;
+
+    // If options are letters A/B/C/D (common in your quiz generator)
+    const letters = ['a', 'b', 'c', 'd'];
+    for (const L of letters) {
+        const opt = L.toUpperCase();
+        if (q.options.includes(opt) && new RegExp(`\\b${L}\\b`).test(t)) return opt;
+    }
+
+    // Otherwise try exact match on option text
+    for (const opt of q.options) {
+        const optNorm = normalizeVoice(opt);
+        if (optNorm && (t.includes(optNorm) || optNorm === t)) return opt;
+    }
+    return null;
+}
+
+function startMcqAnswerVoice(idx) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { alert('Voice input needs Chrome or Edge.'); return; }
+    const q = questions[idx];
+
+    const rec = new SR();
+    rec.lang = ''; // allow browser auto-detect
+    rec.interimResults = true;
+    rec.continuous = false;
+
+    rec.onresult = function(e) {
+        let t = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            t += e.results[i][0].transcript;
+        }
+        const chosen = pickMcqOption(q, t);
+        if (chosen != null) {
+            setMcqAnswer(chosen);
+        }
+    };
+    rec.onerror = function() {};
+    try { rec.start(); } catch (err) { console.warn(err); }
+}
+
+function startTfAnswerVoice(idx) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { alert('Voice input needs Chrome or Edge.'); return; }
+
+    const rec = new SR();
+    rec.lang = ''; // allow auto-detect for yes/haan/nahi
+    rec.interimResults = true;
+    rec.continuous = false;
+
+    rec.onresult = function(e) {
+        let t = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            t += e.results[i][0].transcript;
+        }
+        const n = normalizeVoice(t);
+        const isTrue =
+            /\btrue\b/.test(n) ||
+            /\byes\b/.test(n) ||
+            /\bhaan\b/.test(n) ||
+            /\bcorrect\b/.test(n) ||
+            /\bright\b/.test(n);
+        const isFalse =
+            /\bfalse\b/.test(n) ||
+            /\bno\b/.test(n) ||
+            /\bnahi\b/.test(n) ||
+            /\bnahin\b/.test(n) ||
+            /\bincorrect\b/.test(n) ||
+            /\bwrong\b/.test(n);
+
+        if (isTrue && !isFalse) setTfAnswer('True');
+        else if (isFalse && !isTrue) setTfAnswer('False');
+    };
+    rec.onerror = function() {};
+    try { rec.start(); } catch (err) { console.warn(err); }
 }
 
 async function submitQuiz() {
-    const studentEl   = document.getElementById('studentSelect');
-    const studentName = (studentEl?.value || studentEl?.textContent || 'Student').trim() || 'Student';
-
+    if (quizLocked) {
+        lockQuizIfAlreadyAttempted();
+        alert('This quiz is locked.');
+        return;
+    }
+    const selectedNow = getStudentNameValue();
+    const selectedKeyNow = toStudentKey(selectedNow);
+    if (selectedKeyNow) {
+        activeStudentKey = selectedKeyNow;
+        studentNameByKey[selectedKeyNow] = selectedNow.trim();
+        const selectedCodeNow = getStudentCodeValue();
+        if (selectedCodeNow) studentCodeByKey[selectedKeyNow] = selectedCodeNow;
+    }
+    let studentName = selectedNow ? selectedNow.trim() : '';
+    if (!studentName && activeStudentKey && studentNameByKey[activeStudentKey]) {
+        studentName = (studentNameByKey[activeStudentKey] || '').trim();
+    }
+    if (!studentName) {
+        alert('Please select or enter the student name before submitting.');
+        const nextBtn = document.getElementById('nextBtn');
+        if (nextBtn) { nextBtn.disabled = false; nextBtn.innerHTML = 'Submit Quiz'; }
+        return;
+    }
+    if (!activeStudentKey) activeStudentKey = toStudentKey(studentName);
     const nextBtn = document.getElementById('nextBtn');
     nextBtn.innerHTML = '<span class="spinner"></span> Submitting…';
     nextBtn.disabled  = true;
 
-    const answers = questions.map((q, i) => ({ given: givenAnswers[i] || '' }));
-
     try {
-        const r = await fetch('/quiz/submit', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ quizId: QUIZ_ID, studentName, answers })
-        });
-        const d = await r.json();
-        showScore(d, studentName);
-        nextBtn.disabled = false;
-        nextBtn.innerHTML = 'Submit Quiz';
-        await loadQuizResults();
-        const sel = document.getElementById('attemptSelect');
-        if (sel && quizResults.length > 0) {
-            const idx = quizResults.findIndex(row => {
-                const name = row.studentName != null ? row.studentName : (row.student_name != null ? row.student_name : '');
-                return name === studentName;
-            });
-            if (idx >= 0) {
-                sel.value = String(idx);
-                showAttemptFeedback(sel);
+        let score = 0;
+        const reviewRows = [];
+
+        for (let i = 0; i < questions.length; i++) {
+            const q = questions[i];
+            if (!q || !q.id) throw new Error('Question id missing. Refresh page and try again.');
+
+            const assignment = questionAssignments[i];
+            if (!assignment || !assignment.studentCode) {
+                throw new Error('Please assign a student for Question ' + (i + 1) + '.');
             }
+
+            const assignRes = await fetch('/quiz/questions/' + q.id + '/assign', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ questionId: q.id, studentId: assignment.studentCode })
+            });
+            const assignBody = await assignRes.json();
+            if (!assignRes.ok || assignBody.error) {
+                throw new Error(assignBody.error || ('Failed assignment for Question ' + (i + 1)));
+            }
+
+            let isCorrect = false;
+            const given = (givenAnswers[i] || '').trim();
+            if (given) {
+                const answerRes = await fetch('/quiz/questions/' + q.id + '/answer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ questionId: q.id, studentId: assignment.studentCode, answer: given })
+                });
+                const answerBody = await answerRes.json();
+                if (!answerRes.ok || answerBody.error) {
+                    throw new Error(answerBody.error || ('Failed answer submit for Question ' + (i + 1)));
+                }
+                isCorrect = !!answerBody.isCorrect;
+            }
+
+            if (isCorrect) score++;
+            reviewRows.push({
+                questionIndex: i,
+                answeredBy: assignment.studentName,
+                given,
+                correct: q.answer || '',
+                isRight: isCorrect,
+                explanation: isCorrect ? 'Matched expected answer.' : 'Did not match expected answer.'
+            });
         }
+
+        const lockRes = await fetch('/quiz/' + QUIZ_ID + '/lock', { method: 'POST' });
+        const lockBody = await lockRes.json();
+        if (!lockRes.ok || lockBody.error) {
+            throw new Error(lockBody.error || 'Failed to lock quiz.');
+        }
+
+        quizLocked = true;
+        showScore({
+            score: score,
+            total: questions.length,
+            percent: questions.length > 0 ? Math.round((score * 100) / questions.length) : 0,
+            answersJson: JSON.stringify(reviewRows)
+        }, studentName);
+        lockQuizIfAlreadyAttempted();
+        await loadQuizResults();
     } catch(e) {
-        alert('Submit failed. Please try again.');
+        alert(e && e.message ? e.message : 'Submit failed. Please try again.');
         nextBtn.disabled = false;
         nextBtn.innerHTML = 'Submit Quiz';
     }
 }
 
 function showScore(d, studentName) {
+    stopQuestionSpeech();
+    lastSubmittedStudentName = (studentName || '').trim() || null;
     document.getElementById('quizPlayer').style.display = 'none';
     const screen = document.getElementById('scoreScreen');
     screen.classList.add('visible');
+    onStudentPickerChange();
+    updateStudentSelectorVisibility();
 
     const pct   = d.percent || 0;
     const score = d.score || 0;
@@ -369,31 +894,32 @@ function showScore(d, studentName) {
     document.getElementById('scoreNum').textContent   = score + '/' + total;
     document.getElementById('scorePct').textContent   = pct + '%';
     document.getElementById('scoreTitle').textContent = pct >= 80 ? 'Excellent!' : pct >= 50 ? 'Good Effort!' : 'Keep Practising!';
-    document.getElementById('scoreSub').textContent   = studentName + ' — Quiz Complete';
+    document.getElementById('scoreSub').textContent = studentName + ' — Quiz Complete';
 
-    // Review
-    let reviewHtml = '';
+    // Review table
+    let reviewRows = '';
     const annotated = JSON.parse(d.answersJson || '[]');
-    annotated.forEach((a, i) => {
-        const cls = a.isRight ? 'review-right' : 'review-wrong';
-        const icon = a.isRight ? '✓' : '✗';
-        reviewHtml += `<div class="review-item ${cls}">
-            <div class="review-q">${icon} ${questions[i]?.text || ''}</div>
-            <div class="review-ans">${a.isRight ? 'Correct' : 'Your answer: ' + (a.given||'—') + ' · Correct: ' + a.correct}</div>
-        </div>`;
+    annotated.forEach((a) => {
+        const qText = questions[a.questionIndex]?.text || a.text || '';
+        const rowStudent = (a.answeredBy || studentName || 'Student');
+        reviewRows += `<tr>
+            <td>${escapeHtml(rowStudent)}</td>
+            <td>${escapeHtml(qText)}</td>
+            <td>${escapeHtml(a.given || '—')}</td>
+            <td>${escapeHtml(a.correct || '—')}</td>
+            <td>${escapeHtml(a.explanation || '')}</td>
+            <td class="${a.isRight ? 'answer-ok' : 'answer-bad'}">${a.isRight ? 'Correct' : 'Wrong'}</td>
+        </tr>`;
     });
-    document.getElementById('reviewList').innerHTML = reviewHtml;
+    document.getElementById('reviewTableBody').innerHTML = reviewRows;
 
-    // Speak score
-    const u = new SpeechSynthesisUtterance(`${studentName} scored ${score} out of ${total}. ${pct >= 80 ? 'Excellent work!' : pct >= 50 ? 'Good effort!' : 'Keep practising!'}`);
-    u.lang = 'en-IN'; u.rate = 0.88;
-    setTimeout(() => window.speechSynthesis.speak(u), 300);
 }
 
 function esc(s) { return (s||'').replace(/'/g,"\\'"); }
 
 window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 window.speechSynthesis.getVoices();
+window.addEventListener('beforeunload', stopQuestionSpeech);
 </script>
 </body>
 </html>

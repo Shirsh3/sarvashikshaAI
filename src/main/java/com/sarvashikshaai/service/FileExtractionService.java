@@ -39,7 +39,21 @@ public class FileExtractionService {
     public String extractPdfText(MultipartFile file) {
         if (file == null || file.isEmpty()) return "";
         if (file.getSize() > MAX_BYTES) return "[File too large — maximum 5 MB]";
-        try (PDDocument doc = Loader.loadPDF(file.getBytes())) {
+        try {
+            return extractPdfText(file.getBytes());
+        } catch (Exception e) {
+            log.error("PDF extraction failed: {}", e.getMessage());
+            return "[Could not read PDF content]";
+        }
+    }
+
+    /**
+     * Extract text from raw PDF bytes (e.g. downloaded remote PDFs).
+     */
+    public String extractPdfText(byte[] pdfBytes) {
+        if (pdfBytes == null || pdfBytes.length == 0) return "";
+        if (pdfBytes.length > MAX_BYTES) return "[File too large — maximum 5 MB]";
+        try (PDDocument doc = Loader.loadPDF(pdfBytes)) {
             PDFTextStripper stripper = new PDFTextStripper();
             String text = stripper.getText(doc).trim();
             // Cap at ~6000 chars to stay within token limits

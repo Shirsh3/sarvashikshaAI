@@ -9,7 +9,6 @@
     <link rel="stylesheet" th:href="@{/css/app.css}"/>
     <style>
         body { background: var(--bg); color: var(--text); }
-
         .teacher-subbar {
             background: var(--dark); color: white;
             padding: 8px 24px;
@@ -18,8 +17,55 @@
         }
         .signout-link { color: #99f6e4; text-decoration: none; }
         .signout-link:hover { text-decoration: underline; }
-
-        main { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+        main { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+        .layout {
+            display: grid;
+            grid-template-columns: 230px minmax(0, 1fr);
+            gap: 16px;
+            align-items: flex-start;
+        }
+        .side-tabs {
+            background: white;
+            border-radius: 16px;
+            padding: 16px 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        .side-tab-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #0f766e;
+            margin-bottom: 8px;
+        }
+        .side-tab-button {
+            width: 100%;
+            text-align: left;
+            border: none;
+            background: transparent;
+            padding: 8px 10px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .side-tab-button i {
+            width: 18px;
+            text-align: center;
+            color: #0f766e;
+        }
+        .side-tab-button:hover {
+            background: #ecfeff;
+        }
+        .side-tab-button.active {
+            background: #0f766e;
+            color: white;
+        }
+        .side-tab-button.active i {
+            color: #a7f3d0;
+        }
 
         .card {
             background: white; border-radius: 16px;
@@ -28,96 +74,24 @@
         }
         .card h2 { font-size: 1.05rem; color: #0f766e; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
         .card p { font-size: 0.88rem; color: var(--muted); margin-bottom: 16px; }
-
-        .sheet-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-        select {
-            flex: 1; min-width: 200px; padding: 10px 14px;
-            border: 2px solid #e2e8f0; border-radius: 10px;
-            font-size: 0.95rem; background: white; color: #1e293b;
-        }
-        select:focus { outline: none; border-color: #0d9488; }
-
-        .btn {
-            padding: 10px 20px; border: none; border-radius: 10px;
-            font-size: 0.9rem; font-weight: 600; cursor: pointer;
-            display: flex; align-items: center; gap: 6px;
-        }
-        .btn-primary { background: #0f766e; color: white; }
-        .btn-primary:hover { background: #0d9488; }
-        .btn-secondary { background: #e0f2fe; color: #0369a1; }
-        .btn-secondary:hover { background: #bae6fd; }
-        .btn-go { background: #10b981; color: white; font-size: 1rem; padding: 12px 28px; }
-        .btn-go:hover { background: #059669; }
-
-        .alert-success {
-            background: #d1fae5; color: #065f46;
-            border: 1px solid #6ee7b7; border-radius: 10px;
-            padding: 12px 16px; margin-bottom: 16px;
-            display: flex; align-items: center; gap: 8px; font-size: 0.9rem;
-        }
-
-        .current-sheet {
-            background: #f0fdf4; border: 1px solid #bbf7d0;
-            border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;
-            font-size: 0.88rem; color: #065f46;
-            display: flex; align-items: center; gap: 8px;
-        }
-
+        .btn { padding: 10px 20px; border: none; border-radius: 10px; font-size: 0.9rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-go { background: #10b981; color: white; font-size: 1rem; padding: 12px 28px; text-decoration: none; }
+        .btn-go:hover { background: #059669; color: white; }
         .student-preview { overflow-x: auto; margin-top: 12px; }
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         th { background: #f0fdf4; color: #0f766e; padding: 8px 12px; text-align: left; border-bottom: 2px solid #d1fae5; }
         td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; color: #334155; }
         tr:last-child td { border-bottom: none; }
         tr:hover td { background: #f8fafc; }
-
-        .badge {
-            background: #d1fae5; color: #065f46;
-            border-radius: 20px; padding: 2px 10px;
-            font-size: 0.78rem; font-weight: 600;
-        }
-
-        .template-link {
-            display: inline-flex; align-items: center; gap: 6px;
-            color: #0369a1; font-size: 0.88rem;
-            background: #e0f2fe; padding: 8px 14px; border-radius: 8px;
-            text-decoration: none;
-        }
-        .template-link:hover { background: #bae6fd; }
-
-        .steps { list-style: none; counter-reset: step; }
-        .steps li {
-            counter-increment: step;
-            display: flex; gap: 12px; align-items: flex-start;
-            padding: 8px 0; font-size: 0.88rem; color: #475569;
-        }
-        .steps li::before {
-            content: counter(step);
-            min-width: 24px; height: 24px; border-radius: 50%;
-            background: #0f766e; color: white;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: 700; font-size: 0.78rem; flex-shrink: 0;
-        }
-        code { background: #f1f5f9; padding: 1px 6px; border-radius: 4px; font-size: 0.82rem; }
-
+        .badge { background: #d1fae5; color: #065f46; border-radius: 20px; padding: 2px 10px; font-size: 0.78rem; font-weight: 600; }
         .go-section { text-align: center; padding: 8px 0; }
 
-        /* Sync status grid */
-        .sync-status-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 14px; margin-top: 4px;
+        .tab-panel {
+            display: none;
         }
-        .sync-stat {
-            border-radius: 12px; padding: 16px 12px; text-align: center;
-            border: 2px solid #e2e8f0; background: #f8fafc;
+        .tab-panel.active {
+            display: block;
         }
-        .sync-stat.stat-ok  { border-color: #6ee7b7; background: #f0fdf4; }
-        .sync-stat.stat-warn { border-color: #fcd34d; background: #fffbeb; }
-        .stat-icon { font-size: 1.4rem; margin-bottom: 6px; color: var(--muted); }
-        .stat-ok  .stat-icon { color: #059669; }
-        .stat-warn .stat-icon { color: #d97706; }
-        .stat-val  { font-size: 2rem; font-weight: 800; color: #1e293b; line-height: 1; }
-        .stat-label { font-size: 0.78rem; color: var(--muted); margin-top: 4px; line-height: 1.4; }
-        .stat-hint  { font-size: 0.72rem; color: var(--muted); }
     </style>
 </head>
 <body>
@@ -125,182 +99,192 @@
 <div th:replace="~{fragments/tabs :: tabBar('teacher')}"></div>
 
 <div class="teacher-subbar">
-    <span th:if="${teacherName}">
-        <i class="fa-solid fa-circle-user"></i>&nbsp;<span th:text="${teacherName}"></span>
-    </span>
+    <span th:if="${teacherName}"><i class="fa-solid fa-circle-user"></i>&nbsp;<span th:text="${teacherName}"></span></span>
     <a href="/logout" class="signout-link"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</a>
 </div>
 
 <main>
+    <div class="layout">
+        <aside class="side-tabs">
+            <div class="side-tab-title">Setup</div>
+            <button type="button" class="side-tab-button active" data-target="students-panel">
+                <i class="fa-solid fa-users"></i>
+                <span>Students</span>
+            </button>
+            <button type="button" class="side-tab-button" data-target="assembly-panel">
+                <i class="fa-solid fa-music"></i>
+                <span>Assembly videos</span>
+            </button>
+        </aside>
 
-    <!-- Success message after save/sync -->
-    <div class="alert-success" th:if="${syncMessage}">
-        <i class="fa-solid fa-circle-check"></i>
-        <span th:text="${syncMessage}"></span>
-    </div>
+        <section>
+    <div class="card tab-panel active" id="students-panel">
+        <h2><i class="fa-solid fa-users"></i> Students</h2>
+        <p>Manage your students directly in the app. Add, update, or remove students below.</p>
+        <p th:if="${errorMessage}" style="color:#b91c1c;font-size:0.85rem;margin-bottom:8px;">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span th:text="${errorMessage}"></span>
+        </p>
+        <p th:if="${students != null and !#lists.isEmpty(students)}">
+            <span class="badge" th:text="${students.size()} + ' students'"></span>
+        </p>
 
-    <!-- Sync status dashboard (shown when a sheet is connected) -->
-    <div class="card" th:if="${settings != null and settings.sheetId != null}">
-        <h2><i class="fa-solid fa-chart-simple"></i> Current Sync Status</h2>
-        <p>Data loaded in memory from your Google Sheet. Click <strong>Sync Now</strong> to refresh.</p>
-        <div class="sync-status-grid">
-            <div class="sync-stat" th:classappend="${students != null and students.size() > 0} ? ' stat-ok' : ' stat-warn'">
-                <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
-                <div class="stat-val" th:text="${students != null ? students.size() : 0}">0</div>
-                <div class="stat-label">Students<br/><span class="stat-hint">Tab: <code>Students</code></span></div>
+        <form th:action="@{/teacher/students/save}" method="post" th:object="${studentForm}" style="margin-top: 12px; margin-bottom: 16px;">
+            <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:8px;">
+                <div>
+                    <label style="font-size:0.8rem;color:var(--muted);">Name</label>
+                    <input type="text" th:field="*{name}" placeholder="Student name" required
+                           style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.85rem;">
+                </div>
+                <div>
+                    <label style="font-size:0.8rem;color:var(--muted);">Student Code</label>
+                    <input type="text" th:field="*{code}" placeholder="e.g. S001"
+                           style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.85rem;">
+                </div>
+                <div>
+                    <label style="font-size:0.8rem;color:var(--muted);">Grade</label>
+                    <input type="text" th:field="*{grade}" placeholder="e.g. 6A"
+                           style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.85rem;">
+                </div>
+                <div style="display:flex;align-items:flex-end;gap:6px;">
+                    <input type="checkbox" th:field="*{active}" style="width:auto;margin-right:6px;">
+                    <label style="font-size:0.85rem;">Active</label>
+                </div>
             </div>
-            <div class="sync-stat" th:classappend="${assemblyCount > 0} ? ' stat-ok' : ' stat-warn'">
-                <div class="stat-icon"><i class="fa-solid fa-film"></i></div>
-                <div class="stat-val" th:text="${assemblyCount}">0</div>
-                <div class="stat-label">Assembly Videos<br/><span class="stat-hint">Tab: <code>Assembly</code></span></div>
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:8px;">
+                <div>
+                    <label style="font-size:0.8rem;color:var(--muted);">Strength</label>
+                    <input type="text" th:field="*{strength}" placeholder="e.g. Reading, Maths"
+                           style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.85rem;">
+                </div>
+                <div>
+                    <label style="font-size:0.8rem;color:var(--muted);">Weakness</label>
+                    <input type="text" th:field="*{weakness}" placeholder="e.g. Writing"
+                           style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.85rem;">
+                </div>
+                <div>
+                    <label style="font-size:0.8rem;color:var(--muted);">Notes</label>
+                    <input type="text" th:field="*{notes}" placeholder="Any notes"
+                           style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.85rem;">
+                </div>
             </div>
-            <div class="sync-stat" th:classappend="${hindiCount > 0} ? ' stat-ok' : ' stat-warn'">
-                <div class="stat-icon"><i class="fa-solid fa-language"></i></div>
-                <div class="stat-val" th:text="${hindiCount}">0</div>
-                <div class="stat-label">Hindi Thoughts<br/><span class="stat-hint">Tab: <code>Thoughts</code></span></div>
-            </div>
-            <div class="sync-stat" th:classappend="${englishCount > 0} ? ' stat-ok' : ' stat-warn'">
-                <div class="stat-icon"><i class="fa-solid fa-quote-left"></i></div>
-                <div class="stat-val" th:text="${englishCount}">0</div>
-                <div class="stat-label">English Thoughts<br/><span class="stat-hint">Tab: <code>Thoughts</code></span></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Step 1: Sheet Setup -->
-    <div class="card">
-        <h2><i class="fa-brands fa-google"></i> Step 1 — Connect your Google Sheet</h2>
-        <p>Select the Google Sheet that contains your student list. The sheet must have a tab named <code>Students</code> with columns: Name, Grade, Strength, Weakness, Notes, Active.</p>
-
-        <!-- Currently connected sheet -->
-        <div class="current-sheet" th:if="${settings != null and settings.sheetId != null}">
-            <i class="fa-solid fa-table"></i>
-            Currently using: <strong th:text="${settings.sheetName}"></strong>
-            &nbsp;—&nbsp;
-            <span th:text="${students != null ? students.size() : 0}"></span> students loaded
-            &nbsp;&nbsp;
-            <form method="post" action="/teacher/sync" style="display:inline;">
-                <button type="submit" class="btn btn-secondary" style="padding:4px 12px; font-size:0.8rem;">
-                    <i class="fa-solid fa-rotate"></i> Sync Now
-                </button>
-            </form>
-        </div>
-
-        <!-- Sheet picker form -->
-        <form method="post" action="/teacher/sheet" class="sheet-form" id="sheetForm">
-            <select name="sheetId" id="sheetSelect" onchange="updateSheetName()" required>
-                <option value="">— Select a Google Sheet —</option>
-                <option th:each="sheet : ${sheets}"
-                        th:value="${sheet.id()}"
-                        th:text="${sheet.name()}"
-                        th:attr="data-name=${sheet.name()}">
-                </option>
-            </select>
-            <input type="hidden" name="sheetName" id="sheetNameInput"/>
-            <button type="submit" class="btn btn-primary">
-                <i class="fa-solid fa-link"></i> Save &amp; Sync Students
+            <input type="hidden" th:field="*{originalName}"/>
+            <button type="submit" class="btn" style="background:#0f766e;color:white;">
+                <i class="fa-solid fa-plus"></i>
+                <span th:text="${editing} != null ? 'Update student' : 'Save student'">Save student</span>
             </button>
         </form>
 
-        <!-- Template link -->
-        <div style="margin-top:16px;">
-            <a class="template-link"
-               href="https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms/copy"
-               target="_blank">
-                <i class="fa-solid fa-copy"></i> Copy Student Sheet Template
-            </a>
-            <span style="font-size:0.8rem; color:var(--muted); margin-left:8px;">
-                Make a copy of this template in your Google Drive, fill in your students, then select it above.
-            </span>
-        </div>
-    </div>
-
-    <!-- Sheet format guide -->
-    <div class="card" th:if="${settings == null or settings.sheetId == null}">
-        <h2><i class="fa-solid fa-circle-info"></i> How to set up your sheet</h2>
-        <ol class="steps">
-            <li>Click <strong>Copy Student Sheet Template</strong> above to get a ready-made template in your Google Drive.</li>
-            <li>Open the sheet and fill in your students' names, grades, and any notes about their strengths and weaknesses.</li>
-            <li>In the <code>Active</code> column, write <code>Yes</code> for students currently attending and <code>No</code> for those who left.</li>
-            <li>Come back here, select the sheet from the dropdown, and click <strong>Save &amp; Sync Students</strong>.</li>
-        </ol>
-    </div>
-
-    <!-- Step 2: Student preview (shown after sync) -->
-    <div class="card" th:if="${students != null and !#lists.isEmpty(students)}">
-        <h2>
-            <i class="fa-solid fa-users"></i> Step 2 — Student Preview
-            <span class="badge" th:text="${students.size()} + ' students'"></span>
-        </h2>
-        <p>These students are now loaded. Any changes you make to the Google Sheet will reflect here after the next sync.</p>
-
-        <div class="student-preview">
+        <div class="student-preview" th:if="${students != null and !#lists.isEmpty(students)}">
             <table>
                 <thead>
                     <tr>
                         <th>#</th>
                         <th>Name</th>
+                        <th>Code</th>
                         <th>Grade</th>
                         <th>Strength</th>
                         <th>Weakness</th>
                         <th>Notes</th>
+                        <th>Last updated</th>
+                        <th>Active</th>
+                        <th style="width:130px;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr th:each="s, stat : ${students}">
                         <td th:text="${stat.count}"></td>
                         <td><strong th:text="${s.name}"></strong></td>
+                        <td th:text="${s.code}"></td>
                         <td th:text="${s.grade}"></td>
                         <td th:text="${s.strength}"></td>
                         <td th:text="${s.weakness}"></td>
                         <td th:text="${s.notes}"></td>
+                        <td th:text="${s.updatedAt} ?: '—'"></td>
+                        <td>
+                            <span th:text="${s.active} ? 'Yes' : 'No'"></span>
+                        </td>
+                        <td>
+                            <form th:action="@{/teacher/setup}" method="get" style="display:inline;margin-right:4px;">
+                                <input type="hidden" name="edit" th:value="${s.name}"/>
+                                <button type="submit" class="btn" style="background:#e0f2fe;color:#0369a1;padding:6px 10px;font-size:0.78rem;">
+                                    <i class="fa-solid fa-pen"></i> Edit
+                                </button>
+                            </form>
+                            <form th:action="@{/teacher/students/delete}" method="post" style="display:inline;">
+                                <input type="hidden" name="name" th:value="${s.name}"/>
+                                <button type="submit" class="btn" style="background:#fee2e2;color:#b91c1c;padding:6px 10px;font-size:0.78rem;">
+                                    <i class="fa-solid fa-trash"></i> Remove
+                                </button>
+                            </form>
+                        </td>
                     </tr>
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- Step 3: Go to classroom -->
-    <div class="card go-section" th:if="${students != null and !#lists.isEmpty(students)}">
-        <h2 style="justify-content:center;"><i class="fa-solid fa-door-open"></i> Step 3 — Start the Classroom</h2>
-        <p style="text-align:center; margin-bottom:20px;">
-            Students are loaded. Open the main app on the classroom phone or device.
-        </p>
-        <a href="/" class="btn btn-go">
-            <i class="fa-solid fa-chalkboard"></i> Go to Classroom App →
-        </a>
+    <div class="card tab-panel" id="assembly-panel">
+        <h2><i class="fa-solid fa-music"></i> Assembly videos</h2>
+        <p>Configure the YouTube links for National Anthem, Morning Prayer, Pledge, and Hindi Prayer.</p>
+        <form th:action="@{/teacher/assembly/save}" method="post" style="display:grid;gap:8px;max-width:700px;">
+            <div>
+                <label style="font-size:0.8rem;color:var(--muted);">National Anthem URL</label>
+                <input type="text" name="anthemUrl" th:value="${assemblyConfig?.anthemUrl}"
+                       placeholder="https://www.youtube.com/watch?v=..."
+                       style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.85rem;">
+            </div>
+            <div>
+                <label style="font-size:0.8rem;color:var(--muted);">Morning Prayer URL</label>
+                <input type="text" name="prayerUrl" th:value="${assemblyConfig?.prayerUrl}"
+                       placeholder="https://www.youtube.com/watch?v=..."
+                       style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.85rem;">
+            </div>
+            <div>
+                <label style="font-size:0.8rem;color:var(--muted);">Pledge URL</label>
+                <input type="text" name="pledgeUrl" th:value="${assemblyConfig?.pledgeUrl}"
+                       placeholder="https://www.youtube.com/watch?v=..."
+                       style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.85rem;">
+            </div>
+            <div>
+                <label style="font-size:0.8rem;color:var(--muted);">Hindi Prayer URL</label>
+                <input type="text" name="hindiPrayerUrl" th:value="${assemblyConfig?.hindiPrayerUrl}"
+                       placeholder="https://www.youtube.com/watch?v=..."
+                       style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.85rem;">
+            </div>
+            <button type="submit" class="btn" style="background:#0f766e;color:white;align-self:flex-start;">
+                <i class="fa-solid fa-floppy-disk"></i> Save assembly links
+            </button>
+        </form>
     </div>
 
+    <div class="card go-section">
+        <h2 style="justify-content:center;"><i class="fa-solid fa-door-open"></i> Start the Classroom</h2>
+        <p style="text-align:center; margin-bottom:20px;">Open the main app on the classroom device.</p>
+        <a href="/" class="btn btn-go"><i class="fa-solid fa-chalkboard"></i> Go to Classroom App →</a>
+    </div>
+        </section>
+    </div>
+
+<script>
+    (function() {
+        const buttons = document.querySelectorAll('.side-tab-button');
+        const panels = document.querySelectorAll('.tab-panel');
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetId = btn.getAttribute('data-target');
+                buttons.forEach(b => b.classList.remove('active'));
+                panels.forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                const panel = document.getElementById(targetId);
+                if (panel) {
+                    panel.classList.add('active');
+                }
+            });
+        });
+    })();
+</script>
+
 </main>
-
-<script>
-    function updateSheetName() {
-        const sel = document.getElementById('sheetSelect');
-        const opt = sel.options[sel.selectedIndex];
-        document.getElementById('sheetNameInput').value = opt.getAttribute('data-name') || '';
-    }
-</script>
-
-<!-- Quick-access teacher tools card (injected just before </body>) -->
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const main = document.querySelector('main');
-    if (!main) return;
-    const toolCard = document.createElement('div');
-    toolCard.className = 'card';
-    toolCard.innerHTML = `
-        <h2 style="color:#6366f1;"><i class="fa-solid fa-toolbox"></i> Teacher Tools</h2>
-        <p>AI-powered tools to help you prepare content and generate student report cards.</p>
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <a href="/teacher/assistant" style="flex:1;min-width:160px;padding:14px 18px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;font-weight:700;font-size:0.9rem;text-decoration:none;display:flex;align-items:center;gap:8px;">
-                <i class="fa-solid fa-robot"></i> AI Teaching Assistant
-            </a>
-            <a href="/teacher/reports" style="flex:1;min-width:160px;padding:14px 18px;border-radius:12px;background:linear-gradient(135deg,#0f766e,#0d9488);color:white;font-weight:700;font-size:0.9rem;text-decoration:none;display:flex;align-items:center;gap:8px;">
-                <i class="fa-solid fa-file-lines"></i> Student Report Cards
-            </a>
-        </div>`;
-    main.appendChild(toolCard);
-});
-</script>
 </body>
 </html>

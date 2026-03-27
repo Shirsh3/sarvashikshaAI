@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
     <link rel="stylesheet" th:href="@{/css/app.css}"/>
     <style>
-        body { }
         .page-wrap { max-width:900px; margin:0 auto; padding:24px 20px 60px; }
         h2 { font-size:1.25rem; font-weight:800; display:flex; align-items:center; gap:10px; margin-bottom:4px; }
         .sub { color:var(--muted); font-size:0.86rem; margin-bottom:24px; }
@@ -30,6 +29,7 @@
         .quiz-detail { font-size:0.76rem; color:var(--muted); margin-top:3px; }
         .quiz-actions { display:flex; gap:8px; }
         .btn-take { padding:7px 16px; border-radius:8px; background:#10b981; color:white; border:none; font-size:0.82rem; font-weight:600; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:5px; }
+        .btn-take.disabled { background:rgba(148,163,184,0.35); color:rgba(255,255,255,0.8); pointer-events:none; cursor:not-allowed; }
         .btn-results { padding:7px 14px; border-radius:8px; background:rgba(99,102,241,0.15); color:#a5b4fc; border:1px solid rgba(99,102,241,0.25); font-size:0.82rem; font-weight:600; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:5px; }
         .btn-results:hover { background:#6366f1; color:white; }
         .btn-del  { padding:7px 14px; border-radius:8px; background:rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.2); font-size:0.82rem; cursor:pointer; }
@@ -39,7 +39,7 @@
         /* Results modal */
         .results-overlay { display:none; position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; padding:20px; }
         .results-overlay.visible { display:flex; }
-        .results-modal { background:var(--surface); border-radius:16px; padding:24px; max-width:520px; width:100%; max-height:85vh; display:flex; flex-direction:column; border:1px solid var(--surface2); color:var(--text); }
+        .results-modal { background:var(--surface); border-radius:16px; padding:24px; max-width:min(1100px, 96vw); width:100%; max-height:88vh; display:flex; flex-direction:column; border:1px solid var(--surface2); color:var(--text); }
         .results-modal h3 { font-size:1rem; font-weight:800; color:var(--dark); margin-bottom:4px; }
         .results-modal .results-count { font-size:0.8rem; color:var(--muted); margin-bottom:8px; }
         .results-modal .results-note { font-size:0.78rem; color:var(--muted); margin-bottom:12px; }
@@ -82,6 +82,7 @@
         }
         .upload-zone:hover { border-color:#6366f1; color:#818cf8; }
         .upload-zone.has-file { border-color:#10b981; color:#34d399; }
+        .upload-zone.drag-over { border-color:#6366f1; color:#a5b4fc; background:rgba(99,102,241,0.08); }
 
         /* Questions editor */
         .q-editor { margin-bottom:16px; }
@@ -97,6 +98,27 @@
         .save-quiz-btn:hover { opacity:0.9; }
         .save-quiz-btn:disabled { opacity:0.45; cursor:not-allowed; }
 
+        /* Prompt voice input (teacher) */
+        .prompt-mic-btn {
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--surface2);
+            background: var(--surface2);
+            color: var(--text);
+            font-size: 0.9rem;
+            font-weight: 800;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .prompt-mic-btn.listening {
+            background: rgba(239,68,68,0.95);
+            border-color: rgba(239,68,68,1);
+            color: white;
+        }
+        .prompt-mic-status { font-size: 0.82rem; color: var(--muted); }
+
         .spinner { display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,0.3); border-top-color:white; border-radius:50%; animation:spin 0.7s linear infinite; }
         @keyframes spin { to { transform:rotate(360deg); } }
     </style>
@@ -107,7 +129,7 @@
 
 <div class="page-wrap">
     <h2><i class="fa-solid fa-circle-question"></i> Quiz Mode</h2>
-    <p class="sub">Create quizzes for your class. Students take them from the Quiz tab.</p>
+    <p class="sub">Create quizzes by topic, grade, and description. Students can attempt only once per quiz.</p>
 
     <div class="subtabs">
         <div class="stab active" onclick="showTab('list',this)">Saved Quizzes</div>
@@ -124,14 +146,16 @@
             <div class="quiz-icon"><i class="fa-solid fa-circle-question" style="color:white;font-size:1.1rem;"></i></div>
             <div class="quiz-meta">
                 <div class="quiz-title" th:text="${quiz.title}"></div>
+                <div class="quiz-detail" th:text="'Quiz ID: ' + ${quiz.id}" style="margin-top:6px;"></div>
                 <div class="quiz-detail">
-                    <span th:if="${quiz.subject != null and !quiz.subject.isBlank()}" th:text="${quiz.subject + ' · '}"></span>
+                    <span th:if="${quiz.topic != null and !quiz.topic.isBlank()}" th:text="${quiz.topic + ' · '}"></span>
+                    <span th:if="${(quiz.topic == null or quiz.topic.isBlank()) and quiz.subject != null and !quiz.subject.isBlank()}" th:text="${quiz.subject + ' · '}"></span>
                     <span th:if="${quiz.grade != null and !quiz.grade.isBlank()}"   th:text="${quiz.grade + ' · '}"></span>
                     <span th:text="${quiz.questionCount + ' questions'}"></span>
                 </div>
             </div>
             <div class="quiz-actions">
-                <a th:href="@{/quiz/take/{id}(id=${quiz.id})}" class="btn-take">
+                <a th:href="@{/quiz/take/{id}(id=${quiz.id})}" class="btn-take" th:attr="data-id=${quiz.id}">
                     <i class="fa-solid fa-play"></i> Start
                 </a>
                 <button type="button" class="btn-results" th:attr="data-id=${quiz.id}, data-title=${quiz.title}" onclick="showQuizResults(this)">
@@ -149,7 +173,7 @@
         <div class="results-modal">
             <h3 id="resultsModalTitle">Quiz Results</h3>
             <p class="results-count" id="resultsCount"></p>
-            <p class="results-note">Results are stored per student and used in Report Cards.</p>
+            <p class="results-note">Attempt summary is stored per student (score, percentage, timestamp).</p>
             <div class="results-table-wrap" id="resultsTableWrap"></div>
             <button type="button" class="results-close" onclick="closeResultsModal()">Close</button>
         </div>
@@ -161,39 +185,68 @@
         <!-- AI generate -->
         <div class="ai-section">
             <h3><i class="fa-solid fa-wand-magic-sparkles"></i> AI Generate Questions</h3>
-            <!-- Quiz meta (title, subject, grade) inside this tab -->
+            <!-- Structured quiz input -->
             <div class="form-row" style="margin-bottom:14px;">
-                <div class="form-group" style="flex:2; min-width:200px;">
-                    <label>Quiz Title *</label>
-                    <input type="text" id="qTitle" placeholder="e.g. Science Chapter 3 Test"/>
+                <div class="form-group" style="flex:1; min-width:180px;">
+                    <label>Topic *</label>
+                    <input type="text" id="topicInput" placeholder="e.g. Photosynthesis"/>
                 </div>
-                <div class="form-group" style="max-width:150px;">
-                    <label>Subject</label>
-                    <input type="text" id="qSubject" placeholder="Science"/>
+                <div class="form-group" style="flex:1; min-width:140px;">
+                    <label>Grade *</label>
+                    <select id="gradeInput">
+                        <option value="">Select grade</option>
+                        <option value="0">0</option><option value="1">1</option><option value="2">2</option>
+                        <option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                        <option value="6">6</option><option value="7">7</option><option value="8">8</option>
+                        <option value="9">9</option><option value="10">10</option><option value="11">11</option>
+                        <option value="12">12</option>
+                    </select>
                 </div>
-                <div class="form-group" style="max-width:130px;">
-                    <label>Grade</label>
-                    <input type="text" id="qGrade" placeholder="Grade 5"/>
+                <div class="form-group" style="flex:1; min-width:120px;">
+                    <label>Question Count</label>
+                    <input type="number" id="countInput" min="1" max="15" value="5"/>
+                    <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;">Max 15 questions. If you enter more, only 15 will be generated.</div>
+                </div>
+                <div class="form-group" style="flex:1; min-width:140px;">
+                    <label>Language</label>
+                    <select id="languageInput">
+                        <option value="AUTO" selected>Auto</option>
+                        <option value="ENGLISH">English</option>
+                        <option value="HINDI">Hindi</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex:1; min-width:140px;">
+                    <label>Difficulty</label>
+                    <select id="difficultyInput">
+                        <option value="AUTO" selected>Auto</option>
+                        <option value="EASY">Easy</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="HARD">Hard</option>
+                    </select>
                 </div>
             </div>
-            <div class="ai-row">
+            <div class="form-row" style="margin-bottom:14px;">
                 <div class="form-group" style="flex:2; min-width:200px;">
-                    <label>Topic or paste text</label>
-                    <input type="text" id="aiTopic" placeholder="e.g. Water cycle, Photosynthesis, Fractions…"/>
+                    <label>Description *</label>
+                    <textarea id="descriptionInput"
+                              rows="3"
+                              placeholder="Add syllabus points, chapter hints, language preference, difficulty, etc."></textarea>
+                    <div style="margin-top:10px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <button type="button" class="prompt-mic-btn" id="descMicBtn" title="Speak description">
+                            <i class="fa-solid fa-microphone"></i> Speak description
+                        </button>
+                        <button type="button" class="prompt-mic-btn" id="descClearBtn" title="Clear description text"
+                                style="background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.25); color: #f87171;">
+                            <i class="fa-solid fa-eraser"></i> Clear
+                        </button>
+                        <span class="prompt-mic-status" id="descMicStatus">Tap mic and speak</span>
+                    </div>
                 </div>
-                <div class="form-group" style="max-width:90px;">
-                    <label>Count</label>
-                    <input type="number" id="aiCount" value="5" min="1" max="15"/>
-                </div>
-                <div class="form-group" style="max-width:160px;">
-                    <label>Types</label>
-                    <select id="aiTypes">
-                        <option value="MCQ, TF">MCQ + True/False</option>
-                        <option value="MCQ">MCQ only</option>
-                        <option value="TF">True/False only</option>
-                        <option value="SHORT">Short Answer</option>
-                        <option value="MCQ, TF, SHORT">All types</option>
-                    </select>
+            </div>
+            <div class="form-row" style="margin-bottom:14px;">
+                <div class="form-group" style="flex:2; min-width:220px;">
+                    <label>Source URL (optional)</label>
+                    <input type="text" id="sourceUrlInput" placeholder="e.g. https://ncert.nic.in/textbook.php?bhsr1=11-26"/>
                 </div>
             </div>
             <!-- File upload -->
@@ -215,8 +268,6 @@
         <div class="q-editor" id="qEditor"></div>
 
         <button onclick="addQuestion('MCQ')" style="background:rgba(99,102,241,0.15);color:#818cf8;border:1px solid rgba(99,102,241,0.25);padding:8px 16px;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;margin-right:8px;">+ MCQ</button>
-        <button onclick="addQuestion('TF')"  style="background:rgba(16,185,129,0.12);color:#34d399;border:1px solid rgba(16,185,129,0.22);padding:8px 16px;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;margin-right:8px;">+ True/False</button>
-        <button onclick="addQuestion('SHORT')" style="background:rgba(251,191,36,0.1);color:#fbbf24;border:1px solid rgba(251,191,36,0.2);padding:8px 16px;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;">+ Short Answer</button>
 
         <button class="save-quiz-btn" id="saveQuizBtn" onclick="saveQuiz()" style="margin-top:20px;" disabled>
             <i class="fa-solid fa-floppy-disk"></i> Save Quiz
@@ -227,6 +278,7 @@
 <script>
 let questions = [];
 let aiFileData = null;
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5 MB
 
 function updateSaveButton() {
     const btn = document.getElementById('saveQuizBtn');
@@ -244,16 +296,65 @@ function showTab(tab, el) {
 function handleAiFileChange(input) {
     const file = input.files[0];
     if (!file) return;
+    setAiFile(file);
+}
+
+function setAiFile(file) {
+    if (!file) return;
+    const allowed = /^image\//.test(file.type) || file.name.toLowerCase().endsWith('.pdf');
+    if (!allowed) {
+        alert('Please drop an image or PDF file.');
+        return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+        alert('File too large. Maximum allowed size is 5 MB.');
+        return;
+    }
     aiFileData = file;
-    document.getElementById('aiUploadLabel').textContent = ' ' + file.name;
-    document.getElementById('aiUploadZone').classList.add('has-file');
+    const label = document.getElementById('aiUploadLabel');
+    const zone = document.getElementById('aiUploadZone');
+    if (label) label.textContent = ' ' + file.name;
+    if (zone) zone.classList.add('has-file');
+}
+
+function wireAiUploadDnD() {
+    const zone = document.getElementById('aiUploadZone');
+    if (!zone) return;
+
+    const onDragOver = (e) => {
+        e.preventDefault();
+        zone.classList.add('drag-over');
+    };
+    const onDragLeave = (e) => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+    };
+    const onDrop = (e) => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        const file = e.dataTransfer && e.dataTransfer.files ? e.dataTransfer.files[0] : null;
+        if (file) setAiFile(file);
+    };
+
+    zone.addEventListener('dragover', onDragOver);
+    zone.addEventListener('dragleave', onDragLeave);
+    zone.addEventListener('drop', onDrop);
 }
 
 async function aiGenerate() {
-    const topic  = document.getElementById('aiTopic').value.trim();
-    const count  = document.getElementById('aiCount').value;
-    const types  = document.getElementById('aiTypes').value;
-    if (!topic && !aiFileData) { alert('Please enter a topic or upload a file.'); return; }
+    const topic = document.getElementById('topicInput').value.trim();
+    const grade = document.getElementById('gradeInput').value.trim();
+    const description = document.getElementById('descriptionInput').value.trim();
+    const sourceUrl = document.getElementById('sourceUrlInput').value.trim();
+    const requestedCount = parseInt(document.getElementById('countInput').value.trim() || '5', 10);
+    const count = String(Math.max(1, Math.min(Number.isFinite(requestedCount) ? requestedCount : 5, 15)));
+    const language = document.getElementById('languageInput').value.trim() || 'AUTO';
+    const difficulty = document.getElementById('difficultyInput').value.trim() || 'AUTO';
+    console.log('[aiGenerate] inputs', { topic, grade, descriptionLen: description.length, sourceUrl, hasFile: !!aiFileData });
+    if (!topic && !grade && !description && !aiFileData && !sourceUrl) {
+        alert('Please provide at least one input: topic/grade/description, source URL, or upload a file.');
+        return;
+    }
 
     const btn = document.getElementById('aiGenBtn');
     btn.disabled = true;
@@ -261,8 +362,13 @@ async function aiGenerate() {
 
     const fd = new FormData();
     fd.append('topic', topic);
+    fd.append('grade', grade);
+    fd.append('description', description);
+    fd.append('sourceUrl', sourceUrl);
     fd.append('count', count);
-    fd.append('types', types);
+    fd.append('types', 'MCQ');
+    fd.append('language', language);
+    fd.append('difficulty', difficulty);
     if (aiFileData) fd.append('file', aiFileData);
 
     try {
@@ -272,8 +378,24 @@ async function aiGenerate() {
         if (!r.ok) { alert(d.error || 'Server error. Please try again.'); }
         else if (d.error) { alert(d.error); }
         else if (d.questionsJson) {
+            if ((d.topic || '').trim() && !document.getElementById('topicInput').value.trim()) {
+                document.getElementById('topicInput').value = d.topic;
+            }
+            if ((d.grade || '').trim() && !document.getElementById('gradeInput').value.trim()) {
+                document.getElementById('gradeInput').value = d.grade;
+            }
+            if ((d.description || '').trim() && !document.getElementById('descriptionInput').value.trim()) {
+                document.getElementById('descriptionInput').value = d.description;
+            }
             const arr = JSON.parse(d.questionsJson);
-            arr.forEach(q => addQuestionFromData(q));
+            if (!Array.isArray(arr) || arr.length === 0) {
+                alert('No questions were generated. Please add clearer Topic/Grade/Description and try again.');
+                return;
+            }
+            /* Replace editor contents each time — do not stack onto the last generation */
+            questions = Array.isArray(arr) ? arr.slice() : [];
+            renderQuestions();
+            updateSaveButton();
         }
     } catch(e) { alert('AI generation failed. Please try again.'); }
     finally {
@@ -284,12 +406,6 @@ async function aiGenerate() {
 
 function addQuestion(type) {
     const q = { type, text:'', options: type === 'MCQ' ? ['','','',''] : [], answer:'' };
-    questions.push(q);
-    renderQuestions();
-    updateSaveButton();
-}
-
-function addQuestionFromData(q) {
     questions.push(q);
     renderQuestions();
     updateSaveButton();
@@ -349,15 +465,104 @@ function renderShortAnswer(q, i) {
 function updateRadioValues(idx) { renderQuestions(); }
 function esc(s) { return (s||'').replace(/"/g,'&quot;'); }
 
+// ── Description voice input (teacher) ───────────────────────────────────────
+let descIsListening = false;
+let descRecognition = null;
+
+function startAiPromptVoice() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+        alert('Voice input is not supported in this browser. Please use Chrome/Edge.');
+        return;
+    }
+    const inputEl = document.getElementById('descriptionInput');
+    const statusEl = document.getElementById('descMicStatus');
+    const btnEl = document.getElementById('descMicBtn');
+    if (!inputEl || !statusEl || !btnEl) return;
+
+    if (descRecognition) {
+        try { descRecognition.stop(); } catch (_) {}
+        descRecognition = null;
+    }
+
+    descRecognition = new SR();
+    descRecognition.lang = ''; // auto-detect
+    descRecognition.continuous = false;
+    descRecognition.interimResults = true;
+
+    descRecognition.onstart = () => {
+        descIsListening = true;
+        btnEl.classList.add('listening');
+        statusEl.textContent = 'Listening... speak description.';
+    };
+
+    descRecognition.onresult = (e) => {
+        let interimText = '';
+        let finalText = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            const t = e.results[i][0]?.transcript || '';
+            if (e.results[i].isFinal) finalText += t;
+            else interimText += t;
+        }
+        const merged = (finalText || interimText || '').trim();
+        if (merged) inputEl.value = merged;
+    };
+
+    descRecognition.onerror = () => {
+        descIsListening = false;
+        btnEl.classList.remove('listening');
+        statusEl.textContent = 'Voice input error. Try again.';
+    };
+
+    descRecognition.onend = () => {
+        descIsListening = false;
+        btnEl.classList.remove('listening');
+        statusEl.textContent = inputEl.value.trim() ? 'Description captured.' : 'Tap mic and speak';
+    };
+
+    try {
+        descRecognition.start();
+    } catch (err) {
+        console.warn(err);
+    }
+}
+
+function wireAiPromptMic() {
+    const btnEl = document.getElementById('descMicBtn');
+    if (!btnEl) return;
+    btnEl.addEventListener('click', () => {
+        if (descIsListening) return; // single-shot, avoid toggling loops
+        startAiPromptVoice();
+    });
+}
+
+function wireAiPromptClear() {
+    const clearBtn = document.getElementById('descClearBtn');
+    const inputEl = document.getElementById('descriptionInput');
+    const statusEl = document.getElementById('descMicStatus');
+    if (!clearBtn || !inputEl || !statusEl) return;
+    clearBtn.addEventListener('click', () => {
+        inputEl.value = '';
+        statusEl.textContent = 'Tap mic and speak';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', wireAiPromptMic);
+document.addEventListener('DOMContentLoaded', wireAiPromptClear);
+document.addEventListener('DOMContentLoaded', wireAiUploadDnD);
+
 async function saveQuiz() {
-    const title = document.getElementById('qTitle').value.trim();
-    if (!title) { alert('Please enter a quiz title.'); return; }
+    let topic = document.getElementById('topicInput').value.trim();
+    let grade = document.getElementById('gradeInput').value.trim();
+    let description = document.getElementById('descriptionInput').value.trim();
+    if (!topic) topic = 'Auto-detected topic';
+    if (!description) description = 'Auto-generated from uploaded screenshot/text.';
     if (questions.length === 0) { alert('Please add at least one question.'); return; }
 
     const fd = new FormData();
-    fd.append('title',         title);
-    fd.append('subject',       document.getElementById('qSubject').value.trim());
-    fd.append('grade',         document.getElementById('qGrade').value.trim());
+    fd.append('topic',         topic);
+    fd.append('grade',         grade);
+    fd.append('description',   description);
     fd.append('questionsJson', JSON.stringify(questions));
 
     try {
@@ -380,21 +585,33 @@ async function showQuizResults(btn) {
         const r = await fetch('/quiz/' + id + '/results');
         const data = await r.json();
         const list = Array.isArray(data.results) ? data.results : (Array.isArray(data) ? data : (data && typeof data === 'object' && !Array.isArray(data) ? [data] : []));
-        const countEl = document.getElementById('resultsCount');
-        if (countEl) countEl.textContent = list.length === 0 ? '' : list.length + ' attempt(s). Each student must complete and click Submit Quiz to appear here.';
-        if (list.length === 0) {
-            document.getElementById('resultsTableWrap').innerHTML = '<div class="results-empty">No attempts yet. Students will appear here after they take this quiz.</div>';
+        const displayList = list;
+        const distinctNames = new Set();
+        displayList.forEach(row => {
+            const name = row.studentName != null ? row.studentName : (row.student_name != null ? row.student_name : '');
+            const key = (name || '').trim();
+            if (key) distinctNames.add(key);
+        });
+            const countEl = document.getElementById('resultsCount');
+        if (countEl) {
+            countEl.textContent = displayList.length === 0
+                ? ''
+                    : displayList.length + ' attempt summary row(s) from ' + distinctNames.size + ' student(s).';
+        }
+        if (displayList.length === 0) {
+                document.getElementById('resultsTableWrap').innerHTML = '<div class="results-empty">No attempts yet. Students will appear here after they submit this quiz.</div>';
         } else {
-            const rows = list.map((row, i) => {
-                const total = row.totalQuestions != null ? row.totalQuestions : (row.total_questions != null ? row.total_questions : 0);
-                const score = row.score != null ? row.score : 0;
+            const rows = displayList.map((row) => {
                 const name = row.studentName != null ? row.studentName : (row.student_name != null ? row.student_name : '—');
-                const pct = total > 0 ? Math.round(100 * score / total) : 0;
+                const studentId = row.studentId != null ? row.studentId : (row.student_id != null ? row.student_id : '');
+                const score = row.score != null ? row.score : 0;
+                const total = row.totalQuestions != null ? row.totalQuestions : (row.total_questions != null ? row.total_questions : 0);
+                const percent = row.percent != null ? row.percent : (total > 0 ? Math.round((score * 100) / total) : 0);
                 const date = (row.takenAt || row.taken_at) ? new Date(row.takenAt || row.taken_at).toLocaleString(undefined, { dateStyle:'short', timeStyle:'short' }) : '—';
-                return `<tr><td>${escapeHtml(name)}</td><td>${score}/${total}</td><td>${pct}%</td><td>${date}</td></tr>`;
+                return `<tr><td>${escapeHtml(name)}</td><td>${escapeHtml(studentId || '—')}</td><td>${score}/${total}</td><td>${percent}%</td><td>${date}</td></tr>`;
             }).join('');
             document.getElementById('resultsTableWrap').innerHTML =
-                '<table class="results-table"><thead><tr><th>Student</th><th>Score</th><th>%</th><th>Date</th></tr></thead><tbody>' + rows + '</tbody></table>';
+                '<table class="results-table"><thead><tr><th>Student</th><th>Student ID</th><th>Score</th><th>%</th><th>Date</th></tr></thead><tbody>' + rows + '</tbody></table>';
         }
     } catch (e) {
         document.getElementById('resultsTableWrap').innerHTML = '<div class="results-empty">Could not load results. Try again.</div>';
@@ -405,12 +622,43 @@ function closeResultsModal() {
 }
 function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
+async function disableAttemptedQuizStarts() {
+    const startButtons = Array.from(document.querySelectorAll('.btn-take[data-id]'));
+    await Promise.all(startButtons.map(async (btn) => {
+        const id = btn.dataset.id;
+        if (!id) return;
+        try {
+            const r = await fetch('/quiz/' + id + '/results');
+            if (!r.ok) return;
+            const data = await r.json();
+            const list = Array.isArray(data.results) ? data.results : (Array.isArray(data) ? data : []);
+            if (list.length > 0) {
+                btn.classList.add('disabled');
+                btn.removeAttribute('href');
+                btn.innerHTML = '<i class="fa-solid fa-lock"></i> Attempted';
+                btn.title = 'This quiz is locked after first attempt.';
+            }
+        } catch (_) {}
+    }));
+}
+
 async function deleteQuiz(btn) {
     if (!confirm('Delete this quiz?')) return;
     const id = btn.dataset.id;
-    await fetch('/quiz/' + id, { method:'DELETE' });
+    const r = await fetch('/quiz/' + id, { method:'DELETE' });
+    if (!r.ok) {
+        let msg = 'Delete failed.';
+        try {
+            const d = await r.json();
+            if (d && d.error) msg = d.error;
+        } catch (_) {}
+        alert(msg);
+        return;
+    }
     btn.closest('.quiz-card').remove();
 }
+
+document.addEventListener('DOMContentLoaded', disableAttemptedQuizStarts);
 </script>
 </body>
 </html>

@@ -24,6 +24,9 @@ public class StudentEntity {
     @Column(name = "name", length = 200)
     private String name;
 
+    @Column(name = "code", length = 50, unique = true)
+    private String code;
+
     @Column(name = "grade")
     private String grade;
 
@@ -38,6 +41,12 @@ public class StudentEntity {
 
     @Column(name = "active")
     private boolean active;
+
+    @Column(name = "created_at")
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 
     @Column(name = "last_synced_at")
     private Instant lastSyncedAt;

@@ -114,7 +114,14 @@ public class GoogleSheetsService {
                 String weakness = cell(row, 3);
                 String notes    = cell(row, 4);
                 boolean active  = !cell(row, 5).equalsIgnoreCase("No");
-                students.add(new Student(name, grade, strength, weakness, notes, active));
+                Student s = new Student();
+                s.setName(name);
+                s.setGrade(grade);
+                s.setStrength(strength);
+                s.setWeakness(weakness);
+                s.setNotes(notes);
+                s.setActive(active);
+                students.add(s);
             }
             return students;
 

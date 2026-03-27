@@ -12,8 +12,14 @@ public class OpenAiConfig {
     @Value("${openai.api-base-url:https://api.openai.com/v1}")
     private String apiBaseUrl;
 
-    @Value("${openai.model:gpt-4o-mini}")
-    private String model;
+    @Value("${openai.model.assembly:${openai.model:gpt-4o-mini}}")
+    private String assemblyModel;
+
+    @Value("${openai.model.quiz:${openai.model:gpt-4o-mini}}")
+    private String quizModel;
+
+    @Value("${openai.model.teaching:${openai.model:gpt-4o-mini}}")
+    private String teachingModel;
 
     @Value("${openai.api-key:}")
     private String apiKeyProperty;
@@ -36,8 +42,18 @@ public class OpenAiConfig {
     }
 
     @Bean
-    public String openAiModel() {
-        return model;
+    public String openAiTeachingModel() {
+        return teachingModel;
+    }
+
+    @Bean
+    public String openAiAssemblyModel() {
+        return assemblyModel;
+    }
+
+    @Bean
+    public String openAiQuizModel() {
+        return quizModel;
     }
 
     private ExchangeFilterFunction logOnError() {

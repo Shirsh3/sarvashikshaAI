@@ -51,6 +51,16 @@ This guide walks you through deploying the app on [Railway](https://railway.app)
 
 Never put real keys in the repo. Use Railway **Variables** so they are kept secret and injected as environment variables.
 
+**Local file vs environment variable**
+
+| Local file (`application-local.properties`) | Environment variable (Railway / Render) | Description |
+|---------------------------------------------|----------------------------------------|-------------|
+| `openai.api-key` | `OPENAI_API_KEY` | OpenAI API key |
+| `youtube.dataKey` | `YOUTUBE_DATAKEY` | YouTube Data API v3 key |
+| `spring...google.client-id` | `SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `spring...google.client-secret` | `SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| — | `SPRING_PROFILES_ACTIVE` | Set to `prod` in production only (not in local file) |
+
 1. In your service, open the **Variables** tab.
 2. Set the production profile: **`SPRING_PROFILES_ACTIVE`** = **`prod`**.
 3. Add each variable (name and value). Spring Boot will pick them up automatically:
@@ -87,23 +97,30 @@ Never put real keys in the repo. Use Railway **Variables** so they are kept secr
 
 ## 6. Point your domain to Railway (DNS)
 
-At the place where you manage DNS for **sarvashiksaai.in** (e.g. GoDaddy, Namecheap, Cloudflare):
+At the place where you manage DNS for **sarvashiksaai.in** (e.g. Namecheap, GoDaddy, Cloudflare). Railway gives you a **CNAME target** (e.g. `xxxxx.up.railway.app`).
 
-**Option A – Use root domain (sarvashiksaai.in)**
+**Option A – Use subdomain (recommended for Namecheap)**  
+e.g. **app.sarvashiksaai.in** or **www.sarvashiksaai.in**
 
-- If your provider supports **CNAME flattening** or **ALIAS/ANAME** at the root:
-  - Create a CNAME (or ALIAS/ANAME) record:
-    - **Name/host:** `@` (or root/apex).
-    - **Target/value:** the CNAME target Railway gave you (e.g. `xxxxx.up.railway.app`).
-- If your provider does **not** support CNAME at root (e.g. some GoDaddy/Namecheap setups), use a subdomain (Option B) or move DNS to Cloudflare and use their CNAME flattening for the root.
+- Add a **CNAME** record: **Host** = `app` (or `www`), **Value** = Railway’s CNAME target.
 
-**Option B – Use subdomain (e.g. app.sarvashiksaai.in)**
-
-- **Name:** `app` (or `www`, etc.).
-- **Type:** CNAME.
-- **Target:** the Railway CNAME target (e.g. `xxxxx.up.railway.app`).
+**Option B – Root domain (sarvashiksaai.in)**  
+- If your provider supports **CNAME flattening** or **ALIAS** at root, add a CNAME/ALIAS for `@` to the Railway target.  
+- **Namecheap** does not support CNAME at root; use a subdomain (Option A) or a **URL Redirect** in Namecheap from `sarvashiksaai.in` → `https://app.sarvashiksaai.in`.
 
 Save the DNS records. Propagation can take a few minutes up to 48 hours.
+
+### If you use Namecheap
+
+1. Log in at [namecheap.com](https://www.namecheap.com) → **Domain List** → **Manage** next to **sarvashiksaai.in**.
+2. Open the **Advanced DNS** tab.
+3. **Subdomain (e.g. app.sarvashiksaai.in):**
+   - Click **Add New Record** → **CNAME Record**.
+   - **Host:** `app` (for app.sarvashiksaai.in) or `www`.
+   - **Value:** Railway’s CNAME target (e.g. `xxxxx.up.railway.app` — copy from Railway’s custom domain screen).
+   - **TTL:** Automatic or 1 min.
+4. **(Optional) Redirect root to subdomain:** Under **Redirect Domain**, set redirect from `sarvashiksaai.in` to `https://app.sarvashiksaai.in` so visitors to the root domain go to your app.
+5. Save. Verify with [dnschecker.org](https://dnschecker.org).
 
 ---
 

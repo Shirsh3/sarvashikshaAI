@@ -3,6 +3,7 @@ package com.sarvashikshaai.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sarvashikshaai.model.entity.ThoughtEntry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
@@ -37,7 +38,8 @@ public class AssemblyService {
 
     private final ObjectMapper mapper = new ObjectMapper();
     private final WebClient    zenClient;
-    private final StudentSyncService syncService;
+    private final ThoughtConfigService thoughtConfigService;
+    private final AssemblyConfigService assemblyConfigService;
 
     /** Section name keys used to look up teacher's YouTube links */
     public static final String KEY_ANTHEM  = "national anthem";
@@ -50,17 +52,21 @@ public class AssemblyService {
     private List<String> englishQuotes;
     private Map<String, Object> assemblyContent;   // keys: anthem, pledge, prayer
 
-    // ── Daily cache ───────────────────────────────────────────────────────────
-    private final Map<String, String> thoughtCacheHi = new ConcurrentHashMap<>();
-    private final Map<String, String> thoughtCacheEn = new ConcurrentHashMap<>();
-
     // ── Record returned to the controller ─────────────────────────────────────
-    public record DailyThought(String hindi, String english) {}
+    public record DailyThought(
+            String thoughtHi,
+            String thoughtEn,
+            String wordEnglish,
+            String wordHindi,
+            String habit
+    ) {}
     public record AssemblySection(String text, String meaning) {}
     public record AssemblyContent(AssemblySection anthem, AssemblySection pledge, AssemblySection prayer) {}
 
-    public AssemblyService(StudentSyncService syncService) {
-        this.syncService = syncService;
+    public AssemblyService(ThoughtConfigService thoughtConfigService,
+                           AssemblyConfigService assemblyConfigService) {
+        this.thoughtConfigService = thoughtConfigService;
+        this.assemblyConfigService = assemblyConfigService;
         this.zenClient   = WebClient.builder().baseUrl(ZEN_QUOTES_URL).build();
         loadJsonFiles();
     }
@@ -68,23 +74,29 @@ public class AssemblyService {
     // ── Public API ────────────────────────────────────────────────────────────
 
     /**
-     * Returns today's thought in both Hindi and English.
-     * If the teacher's sheet has a "Thoughts" tab, quotes from that list are used (rotated daily).
-     * If the sheet list is empty for that language, falls back to the bundled JSON file.
-     * ZenQuotes API is tried for English before the JSON fallback.
+     * Returns today's Thought of the Day (Hindi + English) plus
+     * Word of the Day (English + Hindi meaning) and a Habit of the Day.
+     *
+     * Hindi and English thoughts are drawn from independent pools, but
+     * the Word + Habit line currently follows the Hindi-style entry.
      */
     public DailyThought getDailyThought(String teacherEmail) {
-        String today = LocalDate.now().toString();
-        GoogleSheetsService.ThoughtsData sheetThoughts =
-                (teacherEmail != null) ? syncService.getThoughts(teacherEmail)
-                                       : new GoogleSheetsService.ThoughtsData(List.of(), List.of());
+        long t0 = System.currentTimeMillis();
+        thoughtConfigService.ensureThoughtPool();
+        ThoughtConfigService.ThoughtPair pair = thoughtConfigService.pickRandomPairAndMarkShown();
+        long t1 = System.currentTimeMillis();
+        log.debug("AssemblyService.getDailyThought: total time {} ms (including any pool/OpenAI work)", (t1 - t0));
 
-        String hindi = thoughtCacheHi.computeIfAbsent(today, d ->
-                pickFromList(sheetThoughts.hindi(), hindiQuotes));
-        String english = thoughtCacheEn.computeIfAbsent(today, d ->
-                pickEnglishWithFallback(sheetThoughts.english()));
+        ThoughtEntry hi = pair.hi();
+        ThoughtEntry en = pair.en();
 
-        return new DailyThought(hindi, english);
+        return new DailyThought(
+                hi.getThoughtHi(),
+                en.getThoughtEn(),
+                hi.getWordEnglish(),
+                hi.getWordHindi(),
+                hi.getHabit()
+        );
     }
 
     public AssemblyContent getAssemblyContent() {
@@ -96,13 +108,11 @@ public class AssemblyService {
     }
 
     /**
-     * Returns the teacher's YouTube links from the synced sheet cache.
+     * Returns YouTube links for assembly sections from in-app config.
      * Keys: "national anthem", "morning prayer", "pledge", "hindi prayer"
-     * Returns empty map if teacher hasn't synced yet.
      */
     public Map<String, String> getAssemblyLinks(String teacherEmail) {
-        if (teacherEmail == null || teacherEmail.isBlank()) return Map.of();
-        return syncService.getAssemblyLinks(teacherEmail);
+        return assemblyConfigService.getLinks();
     }
 
     /**
@@ -146,10 +156,10 @@ public class AssemblyService {
         return source.get(idx);
     }
 
-    private String pickEnglishWithFallback(List<String> sheetEnglish) {
-        if (sheetEnglish != null && !sheetEnglish.isEmpty()) {
-            int idx = LocalDate.now().getDayOfYear() % sheetEnglish.size();
-            return sheetEnglish.get(idx);
+    private String pickEnglishWithFallback(List<String> dbEnglish) {
+        if (dbEnglish != null && !dbEnglish.isEmpty()) {
+            int idx = LocalDate.now().getDayOfYear() % dbEnglish.size();
+            return dbEnglish.get(idx);
         }
         return fetchEnglish();
     }

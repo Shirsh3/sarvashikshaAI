@@ -21,10 +21,15 @@
         }
         .page-hero p { color: var(--muted); font-size: 0.88rem; }
 
+        .maxw-reading-controls {
+            max-width: 860px; margin: 0 auto;
+            padding: 0 24px;
+        }
+
         /* ── Controls bar ── */
         .controls-bar {
             max-width: 860px; margin: 0 auto;
-            padding: 12px 24px;
+            padding: 12px 0;
             display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
         }
         .read-all-btn {
@@ -66,11 +71,7 @@
             max-height: 420px;
             overflow-y: auto;
         }
-        .news-summary.highlighted {
-            background: rgba(251,191,36,0.08);
-            border-left-color: #f59e0b;
-            color: #fef3c7;
-        }
+        /* Passage stays normal contrast while recording (no yellow overlay). */
 
         /* ── Practice section ── */
         .practice-bar {
@@ -94,6 +95,76 @@
         .practice-btn:hover { background: #059669; }
         .practice-btn.listening { background: #ef4444; animation: pulse 1.2s infinite; }
         .practice-btn.loading   { background: #6366f1; cursor: not-allowed; }
+
+        .evaluate-btn {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 9px 18px; border-radius: 50px; border: none;
+            background: #6366f1; color: white;
+            font-size: 0.88rem; font-weight: 600; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .evaluate-btn:hover:not(:disabled) { background: #4f46e5; }
+        .evaluate-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+        .evaluate-btn.loading { cursor: wait; }
+        .practice-btn:disabled:not(.listening) {
+            opacity: 0.65; cursor: not-allowed;
+        }
+
+        .live-read-wrap {
+            flex-basis: 100%; width: 100%; margin-top: 10px;
+        }
+        .live-read-label {
+            font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+            color: var(--muted); margin-bottom: 6px;
+        }
+        .live-read-preview {
+            min-height: 3.2em; padding: 12px 14px; border-radius: 12px;
+            border: 1px solid var(--surface2); background: var(--surface2);
+            color: var(--text); font-size: 0.95rem; line-height: 1.55;
+            white-space: pre-wrap; word-break: break-word;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .live-read-preview.is-recording {
+            border-color: #10b981; background: rgba(16, 185, 129, 0.08);
+        }
+        .live-read-preview.is-placeholder {
+            color: var(--muted); font-style: italic;
+        }
+
+        .reading-options-row {
+            flex-basis: 100%; width: 100%; display: flex; flex-wrap: wrap; align-items: center;
+            gap: 14px 18px; margin-top: 8px; padding: 10px 12px; border-radius: 12px;
+            background: var(--surface2); border: 1px solid var(--surface2);
+            font-size: 0.82rem;
+        }
+        .reading-options-row label { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; color: var(--text); }
+        .reading-options-row .reading-mode-radios { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+        .reading-clear-btn {
+            margin-left: auto; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--surface2);
+            background: var(--surface); color: var(--muted); font-size: 0.78rem; cursor: pointer;
+        }
+        .reading-clear-btn:hover { color: var(--text); border-color: #f87171; color: #f87171; }
+
+        .reading-session-summary {
+            flex-basis: 100%; width: 100%; margin-top: 10px; padding: 12px 14px; border-radius: 12px;
+            border: 1px dashed #6366f1; background: rgba(99, 102, 241, 0.06);
+        }
+        .reading-session-summary .session-attempt {
+            font-size: 0.86rem; margin-bottom: 8px; line-height: 1.45; color: var(--text);
+        }
+        .reading-session-summary .session-attempt .session-snippet { color: var(--muted); }
+        .reading-session-summary .session-rehearsed {
+            margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--surface2);
+            font-size: 0.84rem; line-height: 1.5;
+        }
+        .word-hear {
+            display: inline-flex; align-items: center; gap: 4px; margin: 3px 6px 3px 0;
+            padding: 3px 8px; border-radius: 999px; border: 1px solid var(--surface2);
+            background: var(--surface); font-size: 0.78rem; cursor: pointer; color: var(--text);
+        }
+        .word-hear:hover { border-color: #10b981; color: #10b981; }
+
+        .practice-hint { font-size: 0.75rem; color: var(--muted); width: 100%; flex-basis: 100%; margin-top: 2px; }
 
         /* ── Feedback panel ── */
         .feedback-panel {
@@ -237,6 +308,30 @@
         .teacher-reading-link { font-size: 0.82rem; color: var(--primary); text-decoration: none; }
         .teacher-reading-link:hover { text-decoration: underline; }
 
+        /* Passage box: speak-to-type (same pattern as quiz prompt mic) */
+        .reading-passage-mic-row {
+            display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+            margin-top: 10px;
+        }
+        .prompt-mic-btn {
+            padding: 10px 14px; border-radius: 12px; border: 1px solid var(--surface2);
+            background: var(--surface2); color: var(--text); font-size: 0.9rem; font-weight: 800;
+            cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .prompt-mic-btn.listening {
+            background: rgba(239,68,68,0.95); border-color: rgba(239,68,68,1); color: white;
+        }
+        .prompt-mic-status { font-size: 0.82rem; color: var(--muted); flex: 1; min-width: 160px; }
+
+        .reading-practice-panel--hidden { display: none !important; }
+        .reading-practice-unlock-hint {
+            margin-top: 14px; padding: 12px 14px; border-radius: 10px;
+            font-size: 0.86rem; line-height: 1.5; color: var(--text);
+            background: rgba(239, 68, 68, 0.07);
+            border: 1px solid rgba(239, 68, 68, 0.18);
+        }
+        .reading-practice-unlock-hint strong { color: var(--text); }
+
         @media(max-width:600px){ .news-list { padding: 0 16px 32px; } .news-card { padding: 18px; } }
     </style>
 </head>
@@ -245,46 +340,49 @@
 <div th:replace="~{fragments/tabs :: tabBar('reading')}"></div>
 
 <div class="page-hero">
-    <h2><i class="fa-solid fa-newspaper"></i> Reading Practice</h2>
-    <p>Today's student-friendly news. Listen, read aloud, and get AI feedback on your reading.</p>
+    <h2><i class="fa-solid fa-book-open"></i> Reading Practice</h2>
+    <p>Paste a passage, type a prompt, or use <strong>Speak to type</strong> below. Submit sends it to AI to build the reading text, then students use Practice Reading for voice feedback.</p>
 </div>
 
-<!-- Teacher-only: prompt + fetch news -->
+<!-- Teacher-only: prompt to define/customize the passage (no news or external sources) -->
 <div class="teacher-reading-section" th:if="${isTeacher}">
     <div class="teacher-reading-card">
-        <h3 class="teacher-reading-heading"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate reading content</h3>
-        <label class="teacher-reading-label">Write a prompt (e.g. topic, grade, style)</label>
-        <textarea id="readingPromptInput" class="teacher-reading-textarea" placeholder="e.g. An article about Chandrayaan-3 for class 8" rows="3"></textarea>
+        <h3 class="teacher-reading-heading"><i class="fa-solid fa-pen"></i> Choose or paste the passage</h3>
+        <label class="teacher-reading-label">Paste a passage from the textbook, type a prompt, or dictate with the mic</label>
+        <textarea id="readingPromptInput" class="teacher-reading-textarea" placeholder="Example: Generate a passage on Ram Dhari — or paste your full paragraph here." rows="4"></textarea>
+        <div class="reading-passage-mic-row">
+            <button type="button" class="prompt-mic-btn" id="readingPassageMicBtn" onclick="toggleReadingPassageMic()">
+                <i class="fa-solid fa-microphone"></i> Speak to type
+            </button>
+            <button type="button" class="prompt-mic-btn" id="readingPassageMicClearBtn" title="Clear box"
+                    style="background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.25); color: #f87171;"
+                    onclick="clearReadingPassageInput()">
+                <i class="fa-solid fa-eraser"></i> Clear
+            </button>
+            <span class="prompt-mic-status" id="readingPassageMicStatus">Tap mic to dictate into the box (Chrome / Edge works best).</span>
+        </div>
         <div class="teacher-reading-actions">
-            <button type="button" class="teacher-reading-btn gen-btn-reading" id="generateReadingBtn" onclick="generateReadingContent()">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
+            <button type="button" class="teacher-reading-btn gen-btn-reading" onclick="applyTeacherPassage()">
+                <i class="fa-solid fa-paper-plane"></i> Submit passage
             </button>
-        </div>
-        <div class="teacher-reading-divider"></div>
-        <div class="teacher-reading-toggle-row">
-            <span class="teacher-reading-toggle-label">Or use fetched news (tech, space, science, innovation only, 80–100 lines)</span>
-            <button type="button" class="teacher-reading-btn fetch-news-btn" id="fetchNewsBtn" onclick="fetchTechNews()">
-                <i class="fa-solid fa-newspaper"></i> Fetch news now
-            </button>
-        </div>
-        <div class="teacher-reading-link-row">
-            <a href="#" class="teacher-reading-link" id="useDefaultLink" onclick="useDefaultNews(); return false;">Use default news</a>
         </div>
     </div>
 </div>
 
-<div class="controls-bar">
-    <button class="read-all-btn" id="readAllBtn" onclick="readAllNews(this)">
-        <i class="fa-solid fa-volume-high"></i> Read All News Aloud
-    </button>
-    <span style="font-size:0.8rem; color:#475569;">
-        <i class="fa-solid fa-circle-info"></i> Source: The Hindu — filtered for school content
-    </span>
+<div class="reading-unlocks-with-passage reading-practice-panel--hidden maxw-reading-controls">
+    <div class="controls-bar">
+        <button class="read-all-btn" id="readAllBtn" onclick="readAllNews(this)">
+            <i class="fa-solid fa-volume-high"></i> Read Passage Aloud
+        </button>
+        <span style="font-size:0.8rem; color:#475569;">
+            <i class="fa-solid fa-circle-info"></i> Use your own safe, age-appropriate passages for practice.
+        </span>
+    </div>
 </div>
 
 <div class="news-list">
     <div th:each="news, stat : ${newsList}" class="news-card">
-        <div class="news-num">News #<span th:text="${stat.index + 1}"></span></div>
+        <div class="news-num" style="display:none;">&nbsp;</div>
         <div class="news-title">
             <a th:href="${news.url()}" th:if="${!news.url().isBlank()}" target="_blank" rel="noopener">
                 <span th:text="${news.title()}"></span>
@@ -293,13 +391,18 @@
             <span th:if="${news.url().isBlank()}" th:text="${news.title()}"></span>
         </div>
 
-        <!-- Summary text (highlighted during practice) -->
+        <!-- Summary text (stays same colors while recording — no yellow highlight) -->
         <div class="news-summary"
              th:id="'summary-' + ${stat.index}"
              th:text="${news.summary()}"></div>
 
+        <th:block th:if="${!news.title().contains('not available')}">
+        <p class="reading-practice-unlock-hint">
+            <strong>Next step:</strong> Use <strong>Submit passage</strong> above (paste text or a prompt). After the passage is ready, student controls, live transcription, and “Read passage aloud” will appear here.
+        </p>
+        <div class="reading-unlocks-with-passage reading-practice-panel--hidden">
         <!-- Practice bar -->
-        <div class="practice-bar" th:if="${!news.title().contains('not available')}">
+        <div class="practice-bar">
             <!-- Student name selector -->
             <select class="student-select" th:id="'student-' + ${stat.index}"
                     th:if="${studentList != null and !studentList.isEmpty()}">
@@ -311,12 +414,48 @@
                    placeholder="Enter student name"
                    th:if="${studentList == null or studentList.isEmpty()}"/>
 
-            <button class="practice-btn"
+            <button type="button" class="practice-btn"
                     th:id="'practiceBtn-' + ${stat.index}"
                     th:attr="data-index=${stat.index}, data-title=${news.title()}, data-text=${news.summary()}"
-                    onclick="startPractice(this)">
-                <i class="fa-solid fa-microphone"></i> Practice Reading
+                    onclick="togglePracticeReading(this)">
+                <i class="fa-solid fa-microphone"></i> Start reading
             </button>
+            <button type="button" class="evaluate-btn"
+                    th:id="'evaluateBtn-' + ${stat.index}"
+                    th:attr="data-index=${stat.index}, data-title=${news.title()}, data-text=${news.summary()}"
+                    onclick="evaluateReadingNow(this)" disabled>
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Evaluate now
+            </button>
+            <p class="practice-hint">Tap <strong>Stop recording</strong> when the student finishes (or pauses). Then tap <strong>Evaluate now</strong> to send speech to AI — recording does not auto-submit.</p>
+            <div class="reading-options-row">
+                <label th:for="'persistReadingChk-' + ${stat.index}">
+                    <input type="checkbox" th:id="'persistReadingChk-' + ${stat.index}"/>
+                    Remember text on this device
+                </label>
+                <div class="reading-mode-radios">
+                    <span style="color:var(--muted); font-size:0.75rem;">Next recording:</span>
+                    <label th:for="'readingModeReplace-' + ${stat.index}">
+                        <input type="radio" th:name="'readingMode-' + ${stat.index}" th:id="'readingModeReplace-' + ${stat.index}" value="replace" checked/>
+                        Replace text
+                    </label>
+                    <label th:for="'readingModeAppend-' + ${stat.index}">
+                        <input type="radio" th:name="'readingMode-' + ${stat.index}" th:id="'readingModeAppend-' + ${stat.index}" value="append"/>
+                        Add to end (re-read / continue)
+                    </label>
+                </div>
+                <button type="button" class="reading-clear-btn" th:attr="onclick=|clearReadingSession(${stat.index})|">Clear text &amp; log</button>
+            </div>
+            <div class="live-read-wrap">
+                <div class="live-read-label">What we hear as you read (live)</div>
+                <div class="live-read-preview is-placeholder"
+                     th:id="'liveReadPreview-' + ${stat.index}"
+                     aria-live="polite"
+                     aria-relevant="additions text">Words and punctuation from speech recognition appear here while you read.</div>
+            </div>
+            <div class="reading-session-summary" th:id="'readingSessionSummary-' + ${stat.index}" style="display:none;">
+                <div class="live-read-label">Practice log (updates after each Stop)</div>
+                <div th:id="'readingSessionSummaryBody-' + ${stat.index}"></div>
+            </div>
         </div>
 
         <!-- Feedback panel (hidden until result arrives) -->
@@ -417,6 +556,10 @@
                         <i class="fa-solid fa-volume-high"></i> सुनें
                     </button>
                 </div>
+                <div class="fb-block fb-tip" th:id="'fb-coach-wrap-' + ${stat.index}" style="display:none;">
+                    <div class="fb-label"><i class="fa-solid fa-book-open"></i> Punctuation, pace &amp; practice words</div>
+                    <div th:id="'fb-coach-' + ${stat.index}"></div>
+                </div>
                 <div class="fb-block fb-tip" th:id="'fb-tip-wrap-' + ${stat.index}" style="display:none;">
                     <div class="fb-label"><i class="fa-solid fa-lightbulb"></i> Next Session Tip</div>
                     <div th:id="'fb-tip-' + ${stat.index}"></div>
@@ -428,10 +571,173 @@
                 </div>
             </div>
         </div>
+        </div>
+        </th:block>
     </div>
 </div>
 
 <script>
+// ── Teacher: Speak-to-type into passage / prompt box ───────────────────────
+let readingPassageDictation = null;
+let readingPassageMicListening = false;
+
+function clearReadingPassageInput() {
+    const input = document.getElementById('readingPromptInput');
+    const status = document.getElementById('readingPassageMicStatus');
+    if (input) input.value = '';
+    if (status) status.textContent = 'Tap mic to dictate into the box (Chrome / Edge works best).';
+}
+
+function toggleReadingPassageMic() {
+    const input = document.getElementById('readingPromptInput');
+    const btn = document.getElementById('readingPassageMicBtn');
+    const status = document.getElementById('readingPassageMicStatus');
+    if (!input || !btn) return;
+
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+        alert('Voice input is not supported in this browser. Please use Chrome or Edge.');
+        return;
+    }
+
+    if (readingPassageMicListening && readingPassageDictation) {
+        try { readingPassageDictation.stop(); } catch (e) { /* ignore */ }
+        return;
+    }
+
+    const rec = new SR();
+    rec.lang = '';
+    rec.continuous = true;
+    rec.interimResults = true;
+    readingPassageDictation = rec;
+
+    rec.onstart = function () {
+        readingPassageMicListening = true;
+        btn.classList.add('listening');
+        btn.innerHTML = '<i class="fa-solid fa-stop"></i> Stop speaking';
+        if (status) status.textContent = 'Listening… speak your passage or prompt.';
+    };
+
+    rec.onresult = function (e) {
+        let interim = '';
+        let finalChunk = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            const t = e.results[i][0].transcript;
+            if (e.results[i].isFinal) finalChunk += t;
+            else interim += t;
+        }
+        if (finalChunk) {
+            const chunk = finalChunk.trim();
+            if (chunk) {
+                const v = input.value;
+                const sep = v.length > 0 && !/\s$/.test(v) ? ' ' : '';
+                input.value = v + sep + chunk;
+            }
+        }
+        if (status) {
+            status.textContent = interim
+                ? 'Listening… (preview: ' + interim.trim() + ')'
+                : 'Listening… speak your passage or prompt.';
+        }
+    };
+
+    rec.onerror = function () {
+        if (status) status.textContent = 'Voice error. Tap mic to try again.';
+    };
+
+    rec.onend = function () {
+        readingPassageMicListening = false;
+        readingPassageDictation = null;
+        btn.classList.remove('listening');
+        btn.innerHTML = '<i class="fa-solid fa-microphone"></i> Speak to type';
+        if (status) {
+            status.textContent = (input.value || '').trim()
+                ? 'Text updated. Edit if needed, then Submit passage.'
+                : 'Tap mic to dictate into the box (Chrome / Edge works best).';
+        }
+    };
+
+    try {
+        rec.start();
+    } catch (err) {
+        readingPassageMicListening = false;
+        readingPassageDictation = null;
+        btn.classList.remove('listening');
+        btn.innerHTML = '<i class="fa-solid fa-microphone"></i> Speak to type';
+        console.warn(err);
+        if (status) status.textContent = 'Could not start microphone.';
+    }
+}
+
+function unlockReadingPracticeUI() {
+    document.querySelectorAll('.reading-unlocks-with-passage').forEach(function (el) {
+        el.classList.remove('reading-practice-panel--hidden');
+    });
+    document.querySelectorAll('.reading-practice-unlock-hint').forEach(function (el) {
+        el.classList.add('reading-practice-panel--hidden');
+    });
+}
+
+// ── Teacher: Generate passage via AI, then apply to cards (optional instant feedback if student selected) ──
+async function applyTeacherPassage() {
+    const input = document.getElementById('readingPromptInput');
+    const submitBtn = document.querySelector('.teacher-reading-card .teacher-reading-btn.gen-btn-reading');
+    if (!input) return;
+
+    const raw = (input.value || '').trim();
+    if (!raw) {
+        alert('Please enter a prompt or paste a passage.');
+        return;
+    }
+
+    const prevBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner"></span> Generating…';
+    }
+
+    let customTitle = 'Custom reading passage';
+    let passage = raw;
+
+    try {
+        const r = await fetch('/reading/generate-passage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: raw })
+        });
+        const data = await r.json().catch(() => ({}));
+        if (r.ok && data.passage && String(data.passage).trim()) {
+            passage = String(data.passage).trim();
+            customTitle = (data.title && String(data.title).trim()) || customTitle;
+        } else if (data.error) {
+            alert(data.error);
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Could not generate passage. Check your connection and OpenAI key; using what you typed as the passage.');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = prevBtnHtml || '<i class="fa-solid fa-paper-plane"></i> Submit passage';
+        }
+    }
+
+    document.querySelectorAll('.news-summary').forEach(el => { el.textContent = passage; });
+    document.querySelectorAll('.practice-btn').forEach(btn => {
+        btn.dataset.text  = passage;
+        btn.dataset.title = customTitle;
+    });
+    document.querySelectorAll('.evaluate-btn').forEach(btn => {
+        btn.dataset.text  = passage;
+        btn.dataset.title = customTitle;
+    });
+    document.querySelectorAll('.news-title span').forEach(el => { el.textContent = customTitle; });
+
+    if ((passage || '').trim().length > 0) {
+        unlockReadingPracticeUI();
+    }
+}
+
 // ── Teacher: Generate / Fetch news / Use default ───────────────────────────
 function generateReadingContent() {
     var input = document.getElementById('readingPromptInput');
@@ -502,8 +808,8 @@ function stopSpeaking() {
 function readAllNews(btn) {
     if (activeSpeech) { stopSpeaking(); return; }
     const texts = [];
-    document.querySelectorAll('.news-title').forEach((el, i) => {
-        texts.push('News number ' + (i+1) + '. ' + el.textContent.trim() + '.');
+    document.querySelectorAll('.news-summary').forEach((el, i) => {
+        texts.push('Passage ' + (i+1) + '. ' + el.textContent.trim() + '.');
     });
     const fullText = texts.join(' ');
     const utter = new SpeechSynthesisUtterance(fullText);
@@ -516,79 +822,481 @@ function readAllNews(btn) {
     setTimeout(() => window.speechSynthesis.speak(utter), 80);
 }
 
-// ── Reading Practice ───────────────────────────────────────────────────────
+// ── Reading Practice: continuous capture, manual stop, separate Evaluate ──
 let practiceRecognition = null;
+let practiceRecordingIdx = null;
+/** User tapped Start and has not tapped Stop — used to auto-restart Chrome sessions that end mid-reading */
+let practiceUserWantsRecording = false;
+const readingTranscripts = {};
+const readingAttempts = {};
 
-function startPractice(btn) {
-    const idx   = btn.dataset.index;
-    const title = btn.dataset.title;
-    const text  = btn.dataset.text;
+const READING_STOPWORDS = new Set(['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'its', 'may', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'she', 'use', 'many', 'then', 'them', 'these', 'this', 'that', 'with', 'from', 'have', 'been', 'they', 'will', 'your', 'said', 'each', 'which', 'time', 'very', 'when', 'what', 'some', 'into', 'more', 'than', 'only', 'come', 'over', 'also', 'back', 'after', 'first', 'well', 'being', 'last', 'long', 'made', 'make', 'most', 'much', 'such', 'their', 'would', 'there', 'could', 'other', 'about', 'just', 'like', 'had', 'were', 'been']);
+
+function readingStorageKey(idx, title) {
+    const slug = (title || 'p').trim().substring(0, 80);
+    let h = 0;
+    for (let i = 0; i < slug.length; i++) {
+        h = Math.imul(31, h) + slug.charCodeAt(i) | 0;
+    }
+    return 'sarvsReading_v1_' + idx + '_' + h;
+}
+
+function countWords(t) {
+    if (!t || !String(t).trim()) return 0;
+    return String(t).trim().split(/\s+/).length;
+}
+
+/**
+ * Web Speech often emits the same word twice in a row (e.g. "chemical chemical") when a segment
+ * restarts or finalizes. Removes only *consecutive* duplicates so real repetition in the passage stays.
+ */
+function collapseConsecutiveDuplicateWords(s) {
+    if (!s || !String(s).trim()) return (s || '').trim();
+    const tokens = String(s).trim().split(/\s+/);
+    const stripEdgePunct = function (t) {
+        return t.replace(/^[.,!?;:'"¿¡]+|[.,!?;:'"¿¡]+$/g, '');
+    };
+    const out = [];
+    for (let i = 0; i < tokens.length; i++) {
+        const t = tokens[i];
+        if (out.length === 0) {
+            out.push(t);
+            continue;
+        }
+        const prev = out[out.length - 1];
+        const n1 = stripEdgePunct(t).toLowerCase();
+        const n2 = stripEdgePunct(prev).toLowerCase();
+        if (n1.length > 0 && n1 === n2) continue;
+        out.push(t);
+    }
+    return out.join(' ');
+}
+
+function normalizeReadingWord(w) {
+    return String(w).toLowerCase().replace(/[^a-z']/g, '');
+}
+
+function computeRehearsedWords(attempts) {
+    if (!attempts || attempts.length < 2) return [];
+    const wordToAttempts = new Map();
+    attempts.forEach(function (a, ai) {
+        const words = String(a.text || '').split(/\s+/).map(normalizeReadingWord)
+            .filter(function (w) { return w.length > 2 && !READING_STOPWORDS.has(w); });
+        const uniq = [...new Set(words)];
+        uniq.forEach(function (w) {
+            if (!wordToAttempts.has(w)) wordToAttempts.set(w, new Set());
+            wordToAttempts.get(w).add(ai);
+        });
+    });
+    const out = [];
+    wordToAttempts.forEach(function (set, w) {
+        if (set.size >= 2) out.push(w);
+    });
+    return out.slice(0, 14);
+}
+
+function escapeHtmlJs(s) {
+    if (!s) return '';
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+function maybePersist(idx) {
+    const idxKey = String(idx);
+    const chk = document.getElementById('persistReadingChk-' + idxKey);
+    if (!chk || !chk.checked) return;
+    const ev = document.getElementById('evaluateBtn-' + idxKey);
+    const title = ev ? ev.dataset.title : '';
+    try {
+        localStorage.setItem(readingStorageKey(idxKey, title), JSON.stringify({
+            transcript: readingTranscripts[idxKey] || '',
+            attempts: readingAttempts[idxKey] || []
+        }));
+    } catch (e) { console.warn(e); }
+}
+
+function loadReadingFromStorage(idx, title) {
+    const idxKey = String(idx);
+    try {
+        const raw = localStorage.getItem(readingStorageKey(idxKey, title));
+        if (!raw) return;
+        const o = JSON.parse(raw);
+        readingTranscripts[idxKey] = o.transcript || '';
+        readingAttempts[idxKey] = o.attempts || [];
+        refreshLiveReadPreview(idxKey, false);
+        updateSessionSummaryPanel(idxKey);
+        updateEvaluateButtonState(idxKey);
+    } catch (e) { console.warn(e); }
+}
+
+function clearReadingSession(idx) {
+    const idxKey = String(idx);
+    readingTranscripts[idxKey] = '';
+    readingAttempts[idxKey] = [];
+    const ev = document.getElementById('evaluateBtn-' + idxKey);
+    const title = ev ? ev.dataset.title : '';
+    try { localStorage.removeItem(readingStorageKey(idxKey, title)); } catch (e) { /* ignore */ }
+    const chk = document.getElementById('persistReadingChk-' + idxKey);
+    if (chk) chk.checked = false;
+    refreshLiveReadPreview(idxKey, false);
+    updateSessionSummaryPanel(idxKey);
+    updateEvaluateButtonState(idxKey);
+}
+
+function updateSessionSummaryPanel(idx) {
+    const idxKey = String(idx);
+    const attempts = readingAttempts[idxKey] || [];
+    const rehearsed = computeRehearsedWords(attempts);
+    const body = document.getElementById('readingSessionSummaryBody-' + idxKey);
+    const wrap = document.getElementById('readingSessionSummary-' + idxKey);
+    if (!body || !wrap) return;
+    if (attempts.length === 0 && rehearsed.length === 0) {
+        wrap.style.display = 'none';
+        body.innerHTML = '';
+        return;
+    }
+    let html = '';
+    attempts.forEach(function (a) {
+        const wpm = a.durationSeconds > 0.4 ? Math.round((a.wordCount / a.durationSeconds) * 60) : '—';
+        const tx = a.text || '';
+        const snip = tx.substring(0, 140);
+        html += '<div class="session-attempt"><strong>Try ' + a.attemptNumber + '</strong> (~' + wpm + ' wpm, ' + a.durationSeconds.toFixed(0) + 's): <span class="session-snippet">' + escapeHtmlJs(snip) + (tx.length > 140 ? '…' : '') + '</span></div>';
+    });
+    if (rehearsed.length) {
+        html += '<div class="session-rehearsed"><strong>Words practised more than once:</strong> ';
+        rehearsed.forEach(function (w) {
+            html += '<button type="button" class="word-hear" data-word="' + escapeHtmlJs(w) + '" onclick="speakPracticeWordFromBtn(this)">' + escapeHtmlJs(w) + ' <i class="fa-solid fa-volume-high"></i></button>';
+        });
+        html += ' <span style="color:var(--muted);font-size:0.78rem;">(tap to hear)</span></div>';
+    }
+    body.innerHTML = html;
+    wrap.style.display = 'block';
+}
+
+function speakPracticeWordFromBtn(btn) {
+    const w = btn.getAttribute('data-word');
+    if (!w) return;
+    const u = new SpeechSynthesisUtterance(w);
+    u.lang = 'en-IN';
+    u.rate = 0.82;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+}
+
+function isAppendMode(idx) {
+    const idxKey = String(idx);
+    const el = document.getElementById('readingModeAppend-' + idxKey);
+    return !!(el && el.checked);
+}
+
+function buildPracticePayload(idx) {
+    const idxKey = String(idx);
+    const attempts = readingAttempts[idxKey] || [];
+    const rehearsed = computeRehearsedWords(attempts);
+    let summary = '';
+    attempts.forEach(function (a) {
+        const wpm = a.durationSeconds > 0.4 ? Math.round((a.wordCount / a.durationSeconds) * 60) : 0;
+        const sn = String(a.text || '').substring(0, 220).replace(/"/g, "'");
+        summary += 'Attempt ' + a.attemptNumber + ': ~' + wpm + ' wpm over ' + a.durationSeconds.toFixed(1) + 's. Snippet: "' + sn + '". ';
+    });
+    let measuredWpm = null;
+    if (attempts.length) {
+        const last = attempts[attempts.length - 1];
+        if (last.durationSeconds > 0.4) {
+            measuredWpm = Math.round((last.wordCount / last.durationSeconds) * 60);
+        }
+    }
+    return {
+        readingAttempts: attempts.map(function (a) {
+            return {
+                text: a.text,
+                durationSeconds: a.durationSeconds,
+                wordCount: a.wordCount,
+                attemptNumber: a.attemptNumber
+            };
+        }),
+        measuredWpm: measuredWpm,
+        rehearsedWordsClient: rehearsed.join(', '),
+        practiceSessionSummary: summary
+    };
+}
+
+function refreshLiveReadPreview(idx, isRecording) {
+    const idxKey = String(idx);
+    const el = document.getElementById('liveReadPreview-' + idxKey);
+    if (!el) return;
+    const raw = (readingTranscripts[idxKey] || '').trim();
+    el.classList.toggle('is-recording', !!isRecording);
+    if (raw.length > 0) {
+        el.textContent = raw;
+        el.classList.remove('is-placeholder');
+    } else {
+        el.textContent = isRecording
+            ? 'Speak clearly — words and punctuation appear here as you read.'
+            : 'Words and punctuation from speech recognition appear here while you read.';
+        el.classList.add('is-placeholder');
+    }
+}
+
+function getReadingStudentName(idx) {
+    const el = document.getElementById('student-' + idx);
+    return el ? (el.value || '').trim() : '';
+}
+
+function updateEvaluateButtonState(idx) {
+    const idxKey = String(idx);
+    const eb = document.getElementById('evaluateBtn-' + idxKey);
+    if (!eb) return;
+    const recActive = String(practiceRecordingIdx) === idxKey && practiceRecognition != null;
+    const hasText = (readingTranscripts[idxKey] || '').trim().length > 0;
+    eb.disabled = recActive || !hasText;
+}
+
+function stopOtherRecording(exceptIdx) {
+    const ex = String(exceptIdx);
+    if (practiceRecognition != null && String(practiceRecordingIdx) !== ex) {
+        practiceUserWantsRecording = false;
+        try { practiceRecognition.stop(); } catch (e) { /* ignore */ }
+    }
+}
+
+function resetPracticeMicButton(btn) {
+    btn.classList.remove('listening', 'loading');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-microphone"></i> Start reading';
+}
+
+function togglePracticeReading(btn) {
+    const idx = String(btn.dataset.index);
 
     if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-        alert('Speech recognition is not supported on this browser. Please use Chrome on Android.');
+        alert('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
         return;
     }
 
-    const studentEl = document.getElementById('student-' + idx);
-    const studentName = studentEl ? (studentEl.value || studentEl.tagName === 'INPUT' ? studentEl.value : '').trim() : '';
+    const studentName = getReadingStudentName(idx);
     if (!studentName) {
         alert('Please select or enter the student name first.');
         return;
     }
 
-    if (practiceRecognition) {
-        practiceRecognition.stop();
+    if (practiceRecognition && String(practiceRecordingIdx) === idx) {
+        practiceUserWantsRecording = false;
+        try { practiceRecognition.stop(); } catch (e) { /* onend will tidy */ }
         return;
     }
 
-    // Highlight the text
-    document.getElementById('summary-' + idx).classList.add('highlighted');
+    stopOtherRecording(idx);
 
-    // Update button
+    const useAppend = isAppendMode(idx);
+    const appendBase = useAppend ? (readingTranscripts[idx] || '').trim() : '';
+    if (!useAppend) {
+        readingTranscripts[idx] = '';
+        readingAttempts[idx] = [];
+        updateSessionSummaryPanel(idx);
+    }
+    updateEvaluateButtonState(idx);
+    refreshLiveReadPreview(idx, true);
+
     btn.classList.add('listening');
-    btn.querySelector('i').className = 'fa-solid fa-stop';
-    btn.innerHTML = '<i class="fa-solid fa-stop"></i> Stop Recording';
+    btn.innerHTML = '<i class="fa-solid fa-stop"></i> Stop recording';
 
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SR();
     recognition.lang = 'en-IN';
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    let sessionLiveText = '';
+    const recordingStartMs = performance.now();
+
+    practiceUserWantsRecording = true;
     practiceRecognition = recognition;
+    practiceRecordingIdx = idx;
 
-    recognition.onresult = (event) => {
-        const spoken = event.results[0][0].transcript;
-        submitFeedback(idx, studentName, title, text, spoken, btn);
+    function finalizeRecording(recognitionInstance) {
+        if (practiceRecognition !== recognitionInstance) return;
+        practiceUserWantsRecording = false;
+        practiceRecognition = null;
+        practiceRecordingIdx = null;
+        const dur = Math.max(0.25, (performance.now() - recordingStartMs) / 1000);
+        const segWords = countWords(sessionLiveText);
+        if (sessionLiveText.trim().length > 0) {
+            const arr = readingAttempts[idx] || (readingAttempts[idx] = []);
+            arr.push({
+                text: sessionLiveText,
+                durationSeconds: dur,
+                wordCount: segWords,
+                attemptNumber: arr.length + 1
+            });
+            updateSessionSummaryPanel(idx);
+            maybePersist(idx);
+        }
+        const p = document.getElementById('practiceBtn-' + idx);
+        if (p) resetPracticeMicButton(p);
+        updateEvaluateButtonState(idx);
+        refreshLiveReadPreview(idx, false);
+    }
+
+    function finishPracticeSession(recognitionInstance, allowRestart) {
+        if (practiceRecognition !== recognitionInstance) return;
+        if (allowRestart && practiceUserWantsRecording && String(practiceRecordingIdx) === idx) {
+            window.setTimeout(function () {
+                if (practiceRecognition !== recognitionInstance) return;
+                if (!practiceUserWantsRecording || String(practiceRecordingIdx) !== idx) return;
+                try {
+                    recognitionInstance.start();
+                } catch (e) {
+                    console.warn('Speech restart failed', e);
+                    finalizeRecording(recognitionInstance);
+                }
+            }, 160);
+            return;
+        }
+        finalizeRecording(recognitionInstance);
+    }
+
+    recognition.onresult = function (event) {
+        let full = '';
+        for (let i = 0; i < event.results.length; i++) {
+            full += event.results[i][0].transcript;
+        }
+        sessionLiveText = collapseConsecutiveDuplicateWords(full.trim());
+        let merged = (useAppend && appendBase)
+            ? (appendBase + ' ' + sessionLiveText).trim()
+            : sessionLiveText;
+        readingTranscripts[idx] = collapseConsecutiveDuplicateWords(merged);
+        updateEvaluateButtonState(idx);
+        refreshLiveReadPreview(idx, true);
     };
 
-    recognition.onerror = (e) => {
-        console.error('Speech error', e);
-        resetPracticeBtn(btn, idx);
-        alert('Could not capture speech. Please try again.');
+    recognition.onerror = function (e) {
+        if (practiceRecognition !== recognition) return;
+        const code = e.error || '';
+        /* aborted: user stopped; no-speech: silence — onend will restart or finalize */
+        if (code === 'aborted') return;
+        if (code === 'no-speech') return;
+        /*
+         * Chrome often fires "network" after the user already received transcripts (service blip).
+         * Do not tear down or alert — onend runs next and will restart or finalize.
+         */
+        if (code === 'network') {
+            console.warn('Speech recognition network event (often harmless after partial results):', code, e.message || '');
+            return;
+        }
+        if (code === 'bad-grammar') return;
+        const hasCaptured = (sessionLiveText || '').trim().length > 0 || (readingTranscripts[idx] || '').trim().length > 0;
+        if (code === 'audio-capture' && hasCaptured) {
+            console.warn('Speech audio-capture after partial results; letting session end cleanly:', code);
+            return;
+        }
+        console.error('Speech error', code, e.message || '', e);
+        practiceUserWantsRecording = false;
+        practiceRecognition = null;
+        practiceRecordingIdx = null;
+        const p = document.getElementById('practiceBtn-' + idx);
+        if (p) resetPracticeMicButton(p);
+        updateEvaluateButtonState(idx);
+        refreshLiveReadPreview(idx, false);
+        if (code === 'not-allowed' || code === 'service-not-allowed') {
+            alert('Microphone or speech permission is required. Use Chrome/Edge and allow the mic; HTTPS (or localhost) is required for speech in the browser.');
+        } else if (code === 'audio-capture') {
+            alert('No microphone was found or it is in use by another app. Check your mic and try again.');
+        } else {
+            alert('Speech recognition stopped (' + code + '). If you already see your words above, tap Stop recording, then Evaluate now.');
+        }
     };
 
-    recognition.onend = () => { practiceRecognition = null; };
-    recognition.start();
+    recognition.onend = function () {
+        if (practiceRecognition !== recognition) return;
+        finishPracticeSession(recognition, true);
+    };
+
+    try {
+        recognition.start();
+    } catch (err) {
+        console.warn(err);
+        practiceUserWantsRecording = false;
+        practiceRecognition = null;
+        practiceRecordingIdx = null;
+        resetPracticeMicButton(btn);
+        updateEvaluateButtonState(idx);
+        refreshLiveReadPreview(idx, false);
+    }
 }
 
-function submitFeedback(idx, studentName, title, originalText, spokenText, btn) {
-    resetPracticeBtn(btn, idx);
-    btn.disabled = true;
-    btn.classList.add('loading');
-    btn.innerHTML = '<span class="spinner"></span> Evaluating...';
+function evaluateReadingNow(btn) {
+    const idx = String(btn.dataset.index);
+    const title = btn.dataset.title;
+    const text = btn.dataset.text;
+    const studentName = getReadingStudentName(idx);
+    if (!studentName) {
+        alert('Please select or enter the student name first.');
+        return;
+    }
+    const spoken = (readingTranscripts[idx] || '').trim();
+    if (!spoken) {
+        alert('No speech captured yet. Use Start reading, then Stop recording when the student finishes.');
+        return;
+    }
+    if (practiceRecognition && String(practiceRecordingIdx) === idx) {
+        alert('Please stop recording first, then tap Evaluate now.');
+        return;
+    }
 
+    const practiceBtn = document.getElementById('practiceBtn-' + idx);
+    submitFeedback(idx, studentName, title, text, spoken, practiceBtn, btn);
+}
+
+function submitFeedback(idx, studentName, title, originalText, spokenText, practiceBtn, evaluateBtn) {
+    if (practiceBtn) {
+        practiceBtn.disabled = true;
+        practiceBtn.classList.remove('listening');
+    }
+    if (evaluateBtn) {
+        evaluateBtn.disabled = true;
+        evaluateBtn.classList.add('loading');
+        evaluateBtn.innerHTML = '<span class="spinner"></span> Evaluating…';
+    }
+
+    const extra = buildPracticePayload(idx);
     fetch('/reading/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentName, articleTitle: title, originalText, spokenText })
+        body: JSON.stringify({
+            studentName,
+            articleTitle: title,
+            originalText,
+            spokenText,
+            readingAttempts: extra.readingAttempts,
+            measuredWpm: extra.measuredWpm,
+            rehearsedWordsClient: extra.rehearsedWordsClient,
+            practiceSessionSummary: extra.practiceSessionSummary
+        })
     })
     .then(r => r.json())
-    .then(data => showFeedback(idx, data, btn))
+    .then(data => {
+        showFeedback(idx, data, practiceBtn);
+        readingTranscripts[idx] = '';
+        readingAttempts[idx] = [];
+        updateSessionSummaryPanel(idx);
+        updateEvaluateButtonState(idx);
+        refreshLiveReadPreview(idx, false);
+        maybePersist(idx);
+    })
     .catch(err => {
         console.error(err);
-        btn.disabled = false;
-        btn.classList.remove('loading');
-        btn.innerHTML = '<i class="fa-solid fa-microphone"></i> Practice Reading';
+        if (practiceBtn) {
+            practiceBtn.disabled = false;
+            resetPracticeMicButton(practiceBtn);
+        }
+        if (evaluateBtn) {
+            evaluateBtn.classList.remove('loading');
+            evaluateBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Evaluate now';
+            updateEvaluateButtonState(idx);
+        }
+        refreshLiveReadPreview(idx, false);
         alert('Could not get feedback. Please try again.');
     });
 }
@@ -614,10 +1322,17 @@ function setMetric(idx, key, value, max) {
     }
 }
 
-function showFeedback(idx, data, btn) {
-    btn.disabled = false;
-    btn.classList.remove('loading');
-    btn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Try Again';
+function showFeedback(idx, data, practiceBtn) {
+    if (practiceBtn) {
+        practiceBtn.disabled = false;
+        practiceBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Try again';
+    }
+    const evaluateBtn = document.getElementById('evaluateBtn-' + idx);
+    if (evaluateBtn) {
+        evaluateBtn.classList.remove('loading');
+        evaluateBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Evaluate now';
+        evaluateBtn.disabled = true;
+    }
 
     // ── Overall badge ──────────────────────────────────────────────────────
     const score = data.fluencyScore || 0;
@@ -673,16 +1388,29 @@ function showFeedback(idx, data, btn) {
         document.getElementById('fb-tip-wrap-' + idx).style.display = 'block';
     }
 
-    document.getElementById('feedback-' + idx).classList.add('visible');
-    document.getElementById('summary-' + idx).classList.remove('highlighted');
-}
+    const coachParts = [];
+    if (data.punctuationCoach) {
+        coachParts.push('<p><strong>Punctuation &amp; pauses:</strong> ' + escapeHtmlJs(data.punctuationCoach) + '</p>');
+    }
+    if (data.paceCoach) {
+        coachParts.push('<p><strong>Reading speed:</strong> ' + escapeHtmlJs(data.paceCoach) + '</p>');
+    }
+    if (data.repeatedWordsCoach) {
+        coachParts.push('<p><strong>Words you practised:</strong> ' + escapeHtmlJs(data.repeatedWordsCoach) + '</p>');
+    }
+    const coachEl = document.getElementById('fb-coach-' + idx);
+    const coachWrap = document.getElementById('fb-coach-wrap-' + idx);
+    if (coachEl && coachWrap) {
+        if (coachParts.length) {
+            coachEl.innerHTML = coachParts.join('');
+            coachWrap.style.display = 'block';
+        } else {
+            coachWrap.style.display = 'none';
+            coachEl.innerHTML = '';
+        }
+    }
 
-function resetPracticeBtn(btn, idx) {
-    btn.classList.remove('listening');
-    btn.querySelector && (btn.querySelector('i') || { className: '' });
-    btn.innerHTML = '<i class="fa-solid fa-microphone"></i> Practice Reading';
-    document.getElementById('summary-' + idx).classList.remove('highlighted');
-    practiceRecognition = null;
+    document.getElementById('feedback-' + idx).classList.add('visible');
 }
 
 // ── Read Aloud for feedback blocks ────────────────────────────────────────
@@ -741,6 +1469,30 @@ function readFeedback(btn) {
 // Prime voice list
 window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 window.speechSynthesis.getVoices();
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('input[id^="persistReadingChk-"]').forEach(function (chk) {
+        const idx = chk.id.replace('persistReadingChk-', '');
+        const ev = document.getElementById('evaluateBtn-' + idx);
+        const title = ev ? ev.dataset.title : '';
+        chk.addEventListener('change', function () {
+            if (chk.checked) {
+                maybePersist(idx);
+            } else {
+                try { localStorage.removeItem(readingStorageKey(idx, title)); } catch (e) { /* ignore */ }
+            }
+        });
+        try {
+            if (localStorage.getItem(readingStorageKey(idx, title))) {
+                chk.checked = true;
+                loadReadingFromStorage(idx, title);
+                if ((readingTranscripts[idx] || '').trim()) {
+                    unlockReadingPracticeUI();
+                }
+            }
+        } catch (e) { /* ignore */ }
+    });
+});
 </script>
 </body>
 </html>

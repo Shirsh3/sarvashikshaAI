@@ -23,4 +23,7 @@ public class TeachingResponse {
 
     /** Wikipedia animated GIF URL. Null if not found. Used when videoId is null. */
     private final String wikiGifUrl;
+
+    /** True when the query was blocked as non-educational; only {@link #explanation} is shown. */
+    private final boolean nonEducational;
 }
