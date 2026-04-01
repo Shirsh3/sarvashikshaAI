@@ -33,5 +33,3 @@ logs/
 *.winmd
 *.exe
 *.mdc
-*.md
-*.java
