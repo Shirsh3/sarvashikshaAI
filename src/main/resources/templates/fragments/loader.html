@@ -4,7 +4,7 @@
 <th:block th:fragment="loader">
 <div id="global-loader" aria-hidden="true">
     <div class="loader-spinner"></div>
-    <img class="loader-logo" src="/favicon.svg" alt="SarvashikshaAI"/>
+    <img class="loader-logo" th:src="@{/favicon.svg}" alt="SarvashikshaAI"/>
 </div>
 <div th:replace="~{fragments/projector-toggle :: projectorToggle}"></div>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" crossorigin="anonymous"></script>

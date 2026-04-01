@@ -55,7 +55,13 @@ public class SecurityConfig {
                     "/reading/feedback",
                     "/reading/generate-passage",
                     "/attendance/mark",
-                    "/quiz/create", "/quiz/ai-generate", "/quiz/**"
+                    "/quiz/create", "/quiz/ai-generate", "/quiz/**",
+                    // Teacher backoffice (Thymeleaf forms): JWT + role checks are enough; CSRF token is
+                    // often missing when _csrf is not bound (stateless JWT), which looked like "logout"
+                    // (403 / redirect to login) on first student save.
+                    "/teacher/students/save",
+                    "/teacher/students/delete",
+                    "/teacher/assembly/save"
                 )
             );
 
