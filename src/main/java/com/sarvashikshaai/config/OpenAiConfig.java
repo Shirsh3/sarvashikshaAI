@@ -30,6 +30,9 @@ public class OpenAiConfig {
     @Value("${openai.api-key:}")
     private String apiKeyProperty;
 
+    @Value("${openai.http.response-timeout-seconds:60}")
+    private long responseTimeoutSeconds;
+
     @Bean
     public WebClient openAiWebClient() {
         String apiKey = (apiKeyProperty != null && !apiKeyProperty.isBlank())
@@ -39,8 +42,9 @@ public class OpenAiConfig {
             throw new IllegalStateException("OpenAI API key is not configured. Set openai.api-key in application.properties or the OPENAI_API_KEY environment variable.");
         }
 
+        long timeout = responseTimeoutSeconds <= 0 ? 60 : responseTimeoutSeconds;
         HttpClient httpClient = HttpClient.create()
-                .responseTimeout(Duration.ofSeconds(25));
+                .responseTimeout(Duration.ofSeconds(timeout));
 
         return WebClient.builder()
                 .baseUrl(apiBaseUrl)

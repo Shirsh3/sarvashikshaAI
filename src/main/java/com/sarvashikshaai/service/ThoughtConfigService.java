@@ -97,7 +97,14 @@ Example of the overall JSON SHAPE (values are just examples, do NOT reuse):
 }
 """;
 
-            String raw = openAIClient.generateAssemblyCompletion(prompt);
+            String raw;
+            try {
+                raw = openAIClient.generateAssemblyCompletion(prompt);
+            } catch (Exception ex) {
+                long tFail = System.currentTimeMillis();
+                log.warn("ThoughtConfigService.ensureThoughtPool: OpenAI call failed after {} ms: {}", (tFail - t0), ex.getMessage());
+                return; // keep app responsive; fallback is handled in pickRandomPairAndMarkShown()
+            }
             long t1 = System.currentTimeMillis();
             log.info("ThoughtConfigService.ensureThoughtPool: OpenAI call completed in {} ms", (t1 - t0));
             try {

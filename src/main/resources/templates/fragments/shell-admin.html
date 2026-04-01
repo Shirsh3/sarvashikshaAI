@@ -146,17 +146,30 @@
             const pathname = norm(window.location.pathname);
             const needsAuthShell = /^\/(teacher|admin|superadmin)(\/|$)/.test(pathname);
 
+            const showLoader = () => {
+                if (typeof window.showGlobalLoader === 'function' && needsAuthShell) {
+                    window.showGlobalLoader('Loading…');
+                }
+            };
+            const hideLoader = () => {
+                if (typeof window.hideGlobalLoader === 'function' && needsAuthShell) {
+                    try { window.hideGlobalLoader(); } catch (e) {}
+                }
+            };
+
+            showLoader();
             fetch('/api/menu', { credentials: 'same-origin' })
-                .then((res) => {
-                    if (!res.ok) throw new Error('menu fetch failed');
+                .then(async (res) => {
+                    if (res.status === 401 || res.status === 403) {
+                        window.location.replace('/login?redirect=' + encodeURIComponent(window.location.pathname + window.location.search));
+                        return null;
+                    }
+                    if (!res.ok) throw new Error('menu fetch failed: ' + res.status);
                     return res.json();
                 })
                 .then((items) => {
+                    if (items == null) return;
                     nav.innerHTML = '';
-                    if ((!items || items.length === 0) && needsAuthShell) {
-                        window.location.replace('/login?redirect=' + encodeURIComponent(window.location.pathname + window.location.search));
-                        return;
-                    }
                     if (!items || items.length === 0) {
                         const login = document.createElement('a');
                         login.href = '/login';
@@ -252,7 +265,8 @@
                 })
                 .catch(() => {
                     // Keep the login fallback link.
-                });
+                })
+                .finally(hideLoader);
         })();
     </script>
 </aside>
