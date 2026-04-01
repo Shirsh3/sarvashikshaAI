@@ -2,6 +2,7 @@ package com.sarvashikshaai.config;
 
 import lombok.RequiredArgsConstructor;
 import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.exception.FlywayValidateException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -29,6 +30,9 @@ public class FlywayManualMigrationRunner implements ApplicationRunner {
     @Value("${flyway.manual.fail-on-unsupported:true}")
     private boolean failOnUnsupported;
 
+    @Value("${flyway.manual.repair-on-validation-error:false}")
+    private boolean repairOnValidationError;
+
     @Override
     public void run(ApplicationArguments args) {
         try {
@@ -37,6 +41,17 @@ public class FlywayManualMigrationRunner implements ApplicationRunner {
                     .locations("classpath:db/migration")
                     .baselineOnMigrate(true)
                     .load();
+            flyway.migrate();
+        } catch (FlywayValidateException ve) {
+            if (!repairOnValidationError) {
+                throw ve;
+            }
+            Flyway flyway = Flyway.configure()
+                    .dataSource(dataSource)
+                    .locations("classpath:db/migration")
+                    .baselineOnMigrate(true)
+                    .load();
+            flyway.repair();
             flyway.migrate();
         } catch (Exception e) {
             // Flyway can fail for brand-new PostgreSQL versions that its engine doesn't know yet.

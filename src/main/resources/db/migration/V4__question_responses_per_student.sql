@@ -24,16 +24,5 @@ BEGIN
   END LOOP;
 END $$;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1
-    FROM pg_constraint c
-    JOIN pg_class t ON c.conrelid = t.oid
-    WHERE t.relname = 'question_responses'
-      AND c.conname = 'uq_question_responses_question_student'
-  ) THEN
-    ALTER TABLE question_responses
-        ADD CONSTRAINT uq_question_responses_question_student UNIQUE (question_id, student_id);
-  END IF;
-END $$;
+ALTER TABLE question_responses
+    ADD CONSTRAINT uq_question_responses_question_student UNIQUE (question_id, student_id);
