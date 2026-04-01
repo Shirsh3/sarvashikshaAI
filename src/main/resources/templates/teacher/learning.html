@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Learning — SarvaSikshaAI</title>
+    <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+    <style>
+        .learning-hub {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm, 10px);
+            padding: 20px 22px 22px;
+            margin-bottom: 1.5rem;
+            box-shadow: none;
+        }
+        .learning-hub h3 { margin: 0 0 6px; font-size: 1.15rem; color: var(--text); }
+        .learning-hub .learning-hub-lead {
+            margin: 0 0 14px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+        .learning-hub-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px 16px;
+            margin-bottom: 16px;
+        }
+        .learning-hub-toolbar label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+        .learning-hub-toolbar select {
+            font-family: inherit;
+            font-size: 0.95rem;
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--surface-elevated);
+            color: var(--text);
+            min-width: 140px;
+        }
+        .learning-hub-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+        }
+        .learning-hub-card {
+            display: block;
+            text-decoration: none;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            padding: 16px 18px;
+            background: var(--surface-elevated);
+            color: var(--text);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .learning-hub-card:hover {
+            border-color: var(--primary);
+            box-shadow: none;
+        }
+        .learning-hub-card h4 { margin: 0 0 6px; font-size: 1rem; color: var(--text); }
+        .learning-hub-card p { margin: 0; font-size: 0.85rem; color: var(--text-muted); line-height: 1.45; }
+        .learning-hub-card .learning-hub-icon { font-size: 1.35rem; margin-bottom: 8px; display: block; }
+        .learning-hub-voice {
+            grid-column: 1 / -1;
+            padding: 0;
+            border: none;
+            background: transparent;
+        }
+        .learning-hub-voice details.classroom-details {
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 12px 14px;
+            background: var(--surface-elevated);
+        }
+        .learning-hub-voice summary {
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--text);
+            list-style: none;
+        }
+        .learning-hub-voice summary::-webkit-details-marker { display: none; }
+        .learning-hub-voice summary::before {
+            content: '▸ ';
+            display: inline-block;
+            transition: transform 0.15s;
+            color: var(--primary);
+        }
+        .learning-hub-voice details[open] summary::before { transform: rotate(90deg); }
+        .learning-hub-voice .classroom-embed-shell { margin-top: 12px; }
+        .learning-hub-voice .classroom-embed-layout .panel { min-height: 0; }
+    </style>
+</head>
+<body class="app-layout">
+<div th:replace="~{fragments/loader :: loader}"></div>
+<div th:replace="~{fragments/shell-teacher :: sidebar('learning')}"></div>
+<main class="layout-main">
+    <div class="layout-header">
+        <div>
+            <h2>Learning</h2>
+            <p class="layout-lead">One place for reading and quizzes.</p>
+        </div>
+    </div>
+
+    <section id="learning-hub" class="learning-hub" aria-labelledby="learning-hub-title">
+        <h3 id="learning-hub-title">Learning hub</h3>
+        <p class="learning-hub-lead">Choose a grade to match one class, or leave <strong>Open</strong> for any grade.</p>
+        <div class="learning-hub-toolbar">
+            <label for="learningGradeSelect">Grade</label>
+            <select id="learningGradeSelect" aria-label="Grade for preparation">
+                <option value="">Open (any grade)</option>
+                <option th:each="g : ${gradeOptions}" th:value="${g.code}" th:text="${g.label}">Grade</option>
+            </select>
+        </div>
+        <div class="learning-hub-grid" id="learningNavGrid">
+            <a href="#" class="learning-hub-card" id="learningLinkReading"
+               th:data-path-reading="@{/reading}">
+                <span class="learning-hub-icon" aria-hidden="true">📖</span>
+                <h4>Reading</h4>
+                <p>Opens the Reading page on the Search tab (recent sessions and passages).</p>
+            </a>
+            <a href="#" class="learning-hub-card" id="learningLinkQuiz"
+               th:data-path-quiz="@{/quiz/teacher}">
+                <span class="learning-hub-icon" aria-hidden="true">❓</span>
+                <h4>Quiz</h4>
+                <p>Open quiz section.</p>
+            </a>
+        </div>
+    </section>
+
+    <p style="margin-top:1.25rem;">
+        <a th:href="@{/teacher/dashboard}" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;padding:10px 16px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:600;font-size:0.92rem;">← Dashboard</a>
+    </p>
+
+</main>
+<script th:src="@{/js/scenes.js}"></script>
+<script th:src="@{/js/app.js}"></script>
+<script th:src="@{/js/voice.js}"></script>
+<script th:src="@{/js/mic.js}"></script>
+<script th:src="@{/js/learning-grade-context.js}"></script>
+<script>
+(function syncLearningGrade() {
+    var K = 'sarva.prepareGrade';
+    var sel = document.getElementById('learningGradeSelect');
+    var reading = document.getElementById('learningLinkReading');
+    var quiz = document.getElementById('learningLinkQuiz');
+
+    function gradeQuery() {
+        if (!sel) return '';
+        var v = (sel.value || '').trim();
+        return v === '' ? '' : ('?grade=' + encodeURIComponent(v));
+    }
+
+    function updateLinks() {
+        var q = gradeQuery();
+        if (reading) {
+            var pr = reading.getAttribute('data-path-reading') || '/reading';
+            var params = new URLSearchParams();
+            if (sel && (sel.value || '').trim() !== '') {
+                params.set('grade', sel.value.trim());
+            }
+            params.set('mode', 'search');
+            var qs = params.toString();
+            reading.setAttribute('href', pr + (qs ? '?' + qs : ''));
+        }
+        if (quiz) {
+            var pq = quiz.getAttribute('data-path-quiz') || '/quiz/teacher';
+            quiz.setAttribute('href', pq + q);
+        }
+        try {
+            if (sel && (sel.value || '').trim() !== '') localStorage.setItem(K, sel.value.trim());
+            else localStorage.removeItem(K);
+        } catch (e) {}
+        var pg = document.getElementById('inputPrepareGrade');
+        if (pg) pg.value = (sel && sel.value) ? sel.value : '';
+        if (typeof window.syncPrepareGradeToFormAndBanners === 'function') {
+            window.syncPrepareGradeToFormAndBanners();
+        }
+    }
+
+    if (!sel) return;
+    try {
+        var v = localStorage.getItem(K);
+        if (v !== null && v !== '') sel.value = v;
+    } catch (e) {}
+    updateLinks();
+    sel.addEventListener('change', updateLinks);
+})();
+(function learningTabFromQuery() {
+    var tab = new URLSearchParams(window.location.search).get('tab');
+    if (tab === 'quiz') {
+        var q = document.getElementById('learningLinkQuiz');
+        if (q && q.scrollIntoView) q.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    if (tab === 'reading') {
+        var r = document.getElementById('learningLinkReading');
+        if (r && r.scrollIntoView) r.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+})();
+window.speechSynthesis.onvoiceschanged = function () { window.speechSynthesis.getVoices(); };
+window.speechSynthesis.getVoices();
+</script>
+</body>
+</html>

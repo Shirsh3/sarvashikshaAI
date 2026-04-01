@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="active">
+<div class="monitor-fab">
+    <button type="button" class="monitor-toggle-btn" id="monitorToggleBtn" onclick="toggleMonitor()" aria-label="Monitor OFF">
+        <i class="fa-solid fa-ear-listen" id="monitorToggleIcon"></i> Monitor <span class="monitor-badge" id="monitorBadge">OFF</span>
+    </button>
+</div>
+</th:block>
+
+<th:block th:fragment="disabled">
+<div></div>
+</th:block>
+</body>
+</html>

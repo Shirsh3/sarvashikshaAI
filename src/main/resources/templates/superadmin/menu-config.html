@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Super Admin — Menu Configuration</title>
+    <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body class="app-layout admin-console">
+<div th:replace="~{fragments/shell-superadmin :: sidebar('menu')}"></div>
+
+<main class="layout-main">
+    <div class="layout-header">
+        <div>
+            <h2 style="margin:0;">Super Admin — Menu Configuration</h2>
+            <p class="layout-lead" style="margin:0.25rem 0 0;">Welcome SuperAdmin</p>
+        </div>
+        <div>
+            <!-- Removed: "View as Teacher" shortcut -->
+        </div>
+    </div>
+
+    <div style="margin-top:14px;border:1px solid var(--border);border-radius:16px;overflow:hidden;">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface);">
+            <strong>Menu items</strong>
+            <div style="margin-top:6px;font-size:0.86rem;color:var(--muted);font-weight:400;">
+                For Super Admin navigation, Quiz and Reading appear under Learning; enable or disable each row below to show or hide those links (including in the submenu).
+            </div>
+        </div>
+
+        <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead>
+                <tr>
+                    <th style="text-align:left;padding:10px 14px;border-bottom:1px solid var(--border);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;">
+                        Key
+                    </th>
+                    <th style="text-align:left;padding:10px 14px;border-bottom:1px solid var(--border);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;">
+                        Label
+                    </th>
+                    <th style="text-align:left;padding:10px 14px;border-bottom:1px solid var(--border);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;">
+                        Href
+                    </th>
+                    <th style="text-align:left;padding:10px 14px;border-bottom:1px solid var(--border);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;">
+                        Icon
+                    </th>
+                    <th style="text-align:left;padding:10px 14px;border-bottom:1px solid var(--border);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;">
+                        Sort
+                    </th>
+                    <th style="text-align:left;padding:10px 14px;border-bottom:1px solid var(--border);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;">
+                        Enabled (Teacher)
+                    </th>
+                    <th style="text-align:left;padding:10px 14px;border-bottom:1px solid var(--border);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;">
+                        Enabled (Admin)
+                    </th>
+                </tr>
+                </thead>
+                <tbody id="menuItemsBody">
+                <tr>
+                    <td colspan="7" style="padding:18px 14px;color:var(--muted);">Loading…</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div style="padding:14px 16px;border-top:1px solid var(--border);display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
+            <div style="color:var(--muted);font-size:0.9rem;">
+                Changes affect what <code>/api/menu</code> returns immediately.
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;">
+                <button type="button" class="btn-primary" id="saveBtn" style="border:none;padding:10px 16px;border-radius:12px;cursor:pointer;font-weight:700;">
+                    Save changes
+                </button>
+                <span id="saveStatus" style="color:var(--muted);font-size:0.9rem;"></span>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    (function () {
+        const API = '/api/superadmin/menu-items';
+        const body = document.getElementById('menuItemsBody');
+        const saveBtn = document.getElementById('saveBtn');
+        const saveStatus = document.getElementById('saveStatus');
+
+        function rowHtml(item) {
+            const checkedTeacher = item.enabledTeacher ? 'checked' : '';
+            const checkedAdmin = item.enabledAdmin ? 'checked' : '';
+            const icon = item.icon ? String(item.icon) : '';
+
+            return '' +
+                '<tr data-key=\"' + item.key + '\">' +
+                '  <td style=\"padding:12px 14px;border-bottom:1px solid var(--border);font-size:0.9rem;\">' + item.key + '</td>' +
+                '  <td style=\"padding:12px 14px;border-bottom:1px solid var(--border);\">' +
+                '      <input type=\"text\" value=\"' + item.label + '\" style=\"width:100%;min-width:160px;padding:8px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);font-family:inherit;\" class=\"labelInput\" />' +
+                '  </td>' +
+                '  <td style=\"padding:12px 14px;border-bottom:1px solid var(--border);\">' +
+                '      <input type=\"text\" value=\"' + item.href + '\" style=\"width:100%;min-width:180px;padding:8px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);font-family:monospace;font-size:0.85rem;\" class=\"hrefInput\" />' +
+                '  </td>' +
+                '  <td style=\"padding:12px 14px;border-bottom:1px solid var(--border);\">' +
+                '      <input type=\"text\" value=\"' + icon + '\" style=\"width:100%;min-width:90px;padding:8px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);font-family:inherit;\" class=\"iconInput\" />' +
+                '  </td>' +
+                '  <td style=\"padding:12px 14px;border-bottom:1px solid var(--border);\">' +
+                '      <input type=\"number\" value=\"' + item.sortOrder + '\" style=\"width:100px;padding:8px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);font-family:inherit;\" class=\"sortInput\" />' +
+                '  </td>' +
+                '  <td style=\"padding:12px 14px;border-bottom:1px solid var(--border);\">' +
+                '      <input type=\"checkbox\" ' + checkedTeacher + ' class=\"teacherChk\" />' +
+                '  </td>' +
+                '  <td style=\"padding:12px 14px;border-bottom:1px solid var(--border);\">' +
+                '      <input type=\"checkbox\" ' + checkedAdmin + ' class=\"adminChk\" />' +
+                '  </td>' +
+                '</tr>';
+        }
+
+        function load() {
+            body.innerHTML = '<tr><td colspan=\"7\" style=\"padding:18px 14px;color:var(--muted);\">Loading…</td></tr>';
+            fetch(API, { credentials: 'same-origin' })
+                .then(r => {
+                    if (!r.ok) throw new Error('Failed to load menu items');
+                    return r.json();
+                })
+                .then(items => {
+                    body.innerHTML = '';
+                    (items || []).forEach(item => body.insertAdjacentHTML('beforeend', rowHtml(item)));
+                })
+                .catch(err => {
+                    body.innerHTML = '<tr><td colspan=\"7\" style=\"padding:18px 14px;color:var(--danger);\">' + (err && err.message ? err.message : 'Error') + '</td></tr>';
+                });
+        }
+
+        function save() {
+            saveBtn.disabled = true;
+            saveStatus.textContent = 'Saving…';
+
+            const updates = [];
+            body.querySelectorAll('tr[data-key]').forEach(tr => {
+                const key = tr.getAttribute('data-key');
+                const label = tr.querySelector('.labelInput')?.value || '';
+                const href = tr.querySelector('.hrefInput')?.value || '';
+                const icon = tr.querySelector('.iconInput')?.value || '';
+                const sortOrder = parseInt(tr.querySelector('.sortInput')?.value || '0', 10);
+                const enabledTeacher = !!tr.querySelector('.teacherChk')?.checked;
+                const enabledAdmin = !!tr.querySelector('.adminChk')?.checked;
+                updates.push({ key, label, href, icon, sortOrder, enabledTeacher, enabledAdmin });
+            });
+
+            fetch(API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify(updates)
+            }).then(r => {
+                if (!r.ok) throw new Error('Save failed');
+                return r.json().catch(() => ({}));
+            }).then(() => {
+                saveStatus.textContent = 'Saved.';
+                load();
+            }).catch(err => {
+                saveStatus.textContent = err && err.message ? err.message : 'Save failed';
+            }).finally(() => {
+                saveBtn.disabled = false;
+            });
+        }
+
+        saveBtn.addEventListener('click', save);
+        load();
+    })();
+</script>
+</body>
+</html>
+

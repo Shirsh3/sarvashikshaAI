@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Leaderboard — SarvashikshaAI</title>
+    <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body class="app-layout">
+<div th:replace="~{fragments/loader :: loader}"></div>
+<div th:replace="~{fragments/shell-teacher :: sidebar('leaderboard')}"></div>
+<audio id="lbClapAudio" preload="auto">
+    <source src="/sounds/clap.wav" type="audio/wav"/>
+</audio>
+<main class="lb-main">
+    <header class="lb-header">
+        <div>
+            <h1 style="margin:0;font-size:1.6rem;">Class Hall of Fame</h1>
+            <p style="color:var(--muted);margin:0.5rem 0 0;">Top performers this month.</p>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <form method="get" th:action="@{/leaderboard}" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <select name="range" id="leaderboardRangeInput" style="padding:8px 10px;border:1px solid var(--border);border-radius:10px;">
+                    <option value="yesterday" th:selected="${filterRange == 'yesterday'}">Yesterday</option>
+                    <option value="today" th:selected="${filterRange == 'today'}">Today</option>
+                    <option value="tomorrow" th:selected="${filterRange == 'tomorrow'}">Tomorrow</option>
+                    <option value="week" th:selected="${filterRange == 'week'}">Last 1 week</option>
+                    <option value="month" th:selected="${filterRange == 'month'}">Last 1 month</option>
+                    <option value="2month" th:selected="${filterRange == '2month'}">Last 2 month</option>
+                    <option value="4month" th:selected="${filterRange == '4month'}">Last 4 month</option>
+                    <option value="custom" th:selected="${filterRange == 'custom'}">Custom</option>
+                </select>
+                <input type="date" id="leaderboardDateFrom" name="dateFrom" th:value="${filterDateFrom}" style="padding:8px 10px;border:1px solid var(--border);border-radius:10px;">
+                <input type="date" id="leaderboardDateTo" name="dateTo" th:value="${filterDateTo}" style="padding:8px 10px;border:1px solid var(--border);border-radius:10px;">
+                <button type="submit" class="btn-primary" style="padding:8px 12px;border-radius:10px;">Apply</button>
+            </form>
+        </div>
+    </header>
+
+    <div class="lb-podium" th:if="${leaderboardRows != null and !leaderboardRows.isEmpty()}">
+        <div class="lb-podium-card rank-2" th:if="${podiumSecond != null}">
+            <div style="font-size:1.5rem;">🥈</div>
+            <h3 style="margin:8px 0 4px;" th:text="${podiumSecond.studentName}">Second</h3>
+            <div class="lb-score-pill" th:text="${podiumSecond.totalPoints} + ' pts'">0 pts</div>
+        </div>
+        <div class="lb-podium-card rank-1" th:if="${podiumFirst != null}">
+            <div style="font-size:1.6rem;">🥇</div>
+            <h2 style="margin:8px 0 4px;" th:text="${podiumFirst.studentName}">First</h2>
+            <div class="lb-score-pill" style="background:var(--gold);color:#92400e;" th:text="${podiumFirst.totalPoints} + ' pts'">0 pts</div>
+        </div>
+        <div class="lb-podium-card rank-3" th:if="${podiumThird != null}">
+            <div style="font-size:1.5rem;">🥉</div>
+            <h3 style="margin:8px 0 4px;" th:text="${podiumThird.studentName}">Third</h3>
+            <div class="lb-score-pill" th:text="${podiumThird.totalPoints} + ' pts'">0 pts</div>
+        </div>
+    </div>
+
+    <div class="lb-table-wrap" th:if="${leaderboardRows != null and !leaderboardRows.isEmpty()}">
+        <table>
+            <thead>
+            <tr>
+                <th>Rank</th>
+                <th>Student Name</th>
+                <th>Student ID</th>
+                <th>Streak</th>
+                <th>Quiz answers</th>
+                <th>Avg. Accuracy</th>
+                <th>Attendance</th>
+                <th>Reading</th>
+                <th>Total Points</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${leaderboardRows}">
+                <td th:text="${row.rank}">1</td>
+                <td th:text="${row.studentName}">Name</td>
+                <td th:text="${row.studentId}">ID</td>
+                <td><span class="lb-score-pill" style="background:rgba(37,99,235,0.10);color:#1d4ed8;border:1px solid rgba(37,99,235,0.18);" th:text="${row.currentStreakDays} + ' days'">0 days</span></td>
+                <td th:text="${row.questionsAnswered}">0</td>
+                <td th:text="${row.accuracyPercent} + '%'">0%</td>
+                <td><span class="lb-score-pill" style="background:rgba(16,185,129,0.12);color:#065f46;border:1px solid rgba(16,185,129,0.18);" th:text="${row.attendancePoints}">0</span></td>
+                <td><span class="lb-score-pill" style="background:rgba(245,158,11,0.14);color:#92400e;border:1px solid rgba(245,158,11,0.22);" th:text="${row.readingPoints}">0</span></td>
+                <td><span class="lb-score-pill" th:text="${row.totalPoints}">0</span></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p th:if="${leaderboardRows == null or leaderboardRows.isEmpty()}" style="color:var(--muted);">No activity yet.</p>
+
+</main>
+<script th:inline="javascript">
+    var LB_HAS_RESULTS = /*[[${leaderboardRows != null && !leaderboardRows.isEmpty()}]]*/ false;
+</script>
+<script>
+(function leaderboardRangeFilter() {
+    var rangeInput = document.getElementById('leaderboardRangeInput');
+    var dateFrom = document.getElementById('leaderboardDateFrom');
+    var dateTo = document.getElementById('leaderboardDateTo');
+    if (!rangeInput) return;
+    function sync() {
+        var custom = rangeInput.value === 'custom';
+        if (dateFrom) dateFrom.style.display = custom ? '' : 'none';
+        if (dateTo) dateTo.style.display = custom ? '' : 'none';
+    }
+    rangeInput.addEventListener('change', sync);
+    sync();
+})();
+
+(function leaderboardCelebrateOnOpen() {
+    function celebrate() {
+        // Confetti + clap on each refresh (audio may be blocked until user gesture).
+        if (typeof window.fireCenterExplosion === 'function') window.fireCenterExplosion();
+        if (typeof window.playClap === 'function') window.playClap();
+    }
+
+    // Try on open; if audio/speech is blocked, re-trigger on first user gesture.
+    function celebrateWithFallback() {
+        if (typeof LB_HAS_RESULTS !== 'undefined' && !LB_HAS_RESULTS) return;
+
+        // Attempt on page load (browser may block autoplay audio).
+        celebrate();
+
+        // A couple of short retries can help on some devices/browsers once audio is decoded.
+        setTimeout(function () { if (typeof window.playClap === 'function') window.playClap(); }, 250);
+        setTimeout(function () { if (typeof window.playClap === 'function') window.playClap(); }, 1200);
+
+        // If the user returns to the tab, retry clap (some browsers allow after focus).
+        window.addEventListener('focus', function () {
+            if (typeof window.playClap === 'function') window.playClap();
+        }, { passive: true });
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible' && typeof window.playClap === 'function') window.playClap();
+        }, { passive: true });
+
+        var armed = false;
+        function armOnce() {
+            if (armed) return;
+            armed = true;
+            // Retry only audio on first user gesture (confetti already shown).
+            if (typeof window.playClap === 'function') window.playClap();
+        }
+        window.addEventListener('pointerdown', armOnce, { once: true, passive: true });
+        window.addEventListener('keydown', armOnce, { once: true, passive: true });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', celebrateWithFallback);
+    } else {
+        celebrateWithFallback();
+    }
+})();
+</script>
+</body>
+</html>

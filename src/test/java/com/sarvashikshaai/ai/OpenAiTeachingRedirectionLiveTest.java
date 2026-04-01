@@ -132,7 +132,9 @@ class OpenAiTeachingRedirectionLiveTest {
     private static String callChatCompletions(String prompt) {
         OpenAiChatRequest req = new OpenAiChatRequest(
                 model,
-                List.of(new OpenAiMessage("user", prompt)));
+                List.of(new OpenAiMessage("user", prompt)),
+                0.7,
+                1.0);
 
         OpenAiChatResponse response = webClient.post()
                 .uri("/chat/completions")

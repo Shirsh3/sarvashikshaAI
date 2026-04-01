@@ -7,30 +7,58 @@
     <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
     <link rel="stylesheet" th:href="@{/css/app.css}"/>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
     <style>
-        body { }
+        body.reading-bg {
+            background: #ffffff;
+        }
+        body.reading-bg .reading-page-inner {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 16px 20px 48px;
+            box-sizing: border-box;
+        }
+        @media (max-width: 640px) {
+            body.reading-bg .reading-page-inner { padding: 12px 14px 40px; }
+        }
 
         .page-hero {
-            padding: 24px 24px 8px;
-            max-width: 860px; margin: 0 auto;
+            padding: 1.25rem 0 1.1rem;
+            margin: 0 0 1.25rem;
+            width: 100%;
             color: var(--text);
+            border-bottom: 1px solid var(--border);
         }
         .page-hero h2 {
-            font-size: 1.3rem; font-weight: 800; color: var(--text);
-            display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
+            font-size: 1.45rem; font-weight: 800; color: var(--text);
+            display: flex; align-items: center; gap: 10px; margin: 0 0 10px;
+            line-height: 1.25;
         }
-        .page-hero p { color: var(--muted); font-size: 0.88rem; }
+        .page-hero p {
+            color: var(--muted);
+            font-size: 1rem;
+            line-height: 1.6;
+            margin: 0;
+            max-width: 52rem;
+        }
 
         .maxw-reading-controls {
-            max-width: 860px; margin: 0 auto;
-            padding: 0 24px;
+            max-width: none;
+            margin: 0 0 1rem;
+            padding: 0;
         }
 
-        /* ── Controls bar ── */
+        /* ── Controls bar (strip, not a card) ── */
         .controls-bar {
-            max-width: 860px; margin: 0 auto;
-            padding: 12px 0;
-            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+            max-width: none;
+            margin: 0 0 1rem;
+            padding: 12px 0 14px;
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--border);
+            border-radius: 0;
+            box-shadow: none;
         }
         .read-all-btn {
             display: inline-flex; align-items: center; gap: 8px;
@@ -41,14 +69,28 @@
         .read-all-btn:hover { background: #2563eb; }
         .read-all-btn.speaking { animation: pulse 1.2s infinite; }
 
-        /* ── Article cards ── */
-        .news-list { max-width: 860px; margin: 0 auto; padding: 0 24px 40px; display: flex; flex-direction: column; gap: 20px; }
+        /* ── Article list (dividers, not boxed cards) ── */
+        .news-list {
+            max-width: none;
+            margin: 0;
+            padding: 0 0 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
 
         .news-card {
-            background: var(--surface);
-            border: 1px solid var(--surface2);
-            border-radius: 16px; padding: 24px;
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            padding: 1.35rem 0;
             color: var(--text);
+            box-shadow: none;
+            border-top: 1px solid var(--border);
+        }
+        .news-list .news-card:first-child {
+            border-top: none;
+            padding-top: 0;
         }
         .news-num {
             font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em;
@@ -63,10 +105,10 @@
         .news-summary {
             font-size: 0.92rem; color: var(--text); line-height: 1.75;
             margin-bottom: 18px;
-            padding: 14px 18px;
-            background: var(--surface2);
+            padding: 12px 0 12px 14px;
+            background: transparent;
             border-left: 3px solid var(--primary);
-            border-radius: 0 8px 8px 0;
+            border-radius: 0;
             white-space: pre-line;
             max-height: 420px;
             overflow-y: auto;
@@ -139,39 +181,46 @@
         }
         .reading-options-row label { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; color: var(--text); }
         .reading-options-row .reading-mode-radios { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
-        .reading-clear-btn {
-            margin-left: auto; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--surface2);
-            background: var(--surface); color: var(--muted); font-size: 0.78rem; cursor: pointer;
+        /* Clear actions — match soft-UI outline buttons (same family as Speak to type) */
+        .reading-btn-outline {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            font-weight: 600;
+            font-family: 'Quicksand', 'Segoe UI', sans-serif;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s, color 0.2s;
         }
-        .reading-clear-btn:hover { color: var(--text); border-color: #f87171; color: #f87171; }
-
-        .reading-session-summary {
-            flex-basis: 100%; width: 100%; margin-top: 10px; padding: 12px 14px; border-radius: 12px;
-            border: 1px dashed #6366f1; background: rgba(99, 102, 241, 0.06);
+        .reading-btn-outline:hover {
+            border-color: rgba(239, 68, 68, 0.45);
+            color: var(--danger);
+            background: #fef2f2;
         }
-        .reading-session-summary .session-attempt {
-            font-size: 0.86rem; margin-bottom: 8px; line-height: 1.45; color: var(--text);
+        .reading-passage-mic-row .reading-btn-outline {
+            margin-left: 0;
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 0.9rem;
         }
-        .reading-session-summary .session-attempt .session-snippet { color: var(--muted); }
-        .reading-session-summary .session-rehearsed {
-            margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--surface2);
-            font-size: 0.84rem; line-height: 1.5;
-        }
-        .word-hear {
-            display: inline-flex; align-items: center; gap: 4px; margin: 3px 6px 3px 0;
-            padding: 3px 8px; border-radius: 999px; border: 1px solid var(--surface2);
-            background: var(--surface); font-size: 0.78rem; cursor: pointer; color: var(--text);
-        }
-        .word-hear:hover { border-color: #10b981; color: #10b981; }
 
         .practice-hint { font-size: 0.75rem; color: var(--muted); width: 100%; flex-basis: 100%; margin-top: 2px; }
 
-        /* ── Feedback panel ── */
+        /* ── Feedback panel (flat strip) ── */
         .feedback-panel {
             margin-top: 16px; display: none;
-            border-radius: 16px; overflow: hidden;
-            border: 1px solid var(--surface2);
-            background: var(--surface); color: var(--text);
+            border-radius: 0;
+            overflow: hidden;
+            border: none;
+            border-top: 1px solid var(--border);
+            background: transparent;
+            color: var(--text);
         }
         .feedback-panel.visible { display: block; }
 
@@ -200,9 +249,10 @@
             border-bottom: 1px solid var(--surface2);
         }
         .metric-card {
-            background: var(--surface); border-radius: 12px;
+            background: var(--bg-main);
+            border-radius: 0;
             padding: 12px 10px; text-align: center;
-            border: 1px solid var(--surface2);
+            border: 1px solid var(--border);
         }
         .metric-value {
             font-size: 1.5rem; font-weight: 900; line-height: 1;
@@ -278,20 +328,55 @@
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
 
         /* Teacher reading section */
-        .teacher-reading-section { max-width: 860px; margin: 0 auto; padding: 0 24px 20px; }
-        .teacher-reading-card {
-            background: var(--surface); border: 1px solid var(--surface2);
-            border-radius: 16px; padding: 20px;
+        .teacher-reading-section {
+            max-width: none;
+            margin: 0 0 1.25rem;
+            padding: 0;
         }
-        .teacher-reading-heading { font-size: 0.95rem; font-weight: 700; color: var(--text); margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
-        .teacher-reading-label { font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 6px; }
+        .teacher-reading-card {
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            padding: 0 0 1.25rem;
+            margin-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border);
+            box-shadow: none;
+        }
+        .teacher-reading-heading {
+            font-size: 1.02rem;
+            font-weight: 700;
+            color: var(--text);
+            margin: 0 0 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            line-height: 1.3;
+        }
+        .teacher-reading-label {
+            font-size: 0.76rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            display: block;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
         .teacher-reading-textarea {
-            width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--surface2);
-            background: var(--surface); color: var(--text); font-size: 0.9rem; resize: vertical; min-height: 80px;
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            font-size: 0.92rem;
+            line-height: 1.55;
+            resize: vertical;
+            min-height: 96px;
             box-sizing: border-box;
         }
         .teacher-reading-textarea:focus { outline: none; border-color: var(--primary); }
-        .teacher-reading-actions { margin-top: 12px; }
+        .teacher-reading-actions { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
         .teacher-reading-btn {
             display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 50px; border: none;
             font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
@@ -307,6 +392,172 @@
         .teacher-reading-link-row { margin-top: 12px; }
         .teacher-reading-link { font-size: 0.82rem; color: var(--primary); text-decoration: none; }
         .teacher-reading-link:hover { text-decoration: underline; }
+
+        /* Student: mic-only — read from book, transcript below */
+        .student-oral-panel {
+            margin-bottom: 1.5rem;
+            padding: 0 0 1.25rem;
+            border: none;
+            border-radius: 0;
+            border-bottom: 1px solid var(--border);
+            background: transparent;
+        }
+        .student-oral-panel h3 {
+            margin: 0 0 8px;
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #047857;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .student-oral-intro {
+            font-size: 0.92rem;
+            color: var(--muted);
+            line-height: 1.55;
+            margin: 0 0 14px;
+        }
+        .student-oral-panel .practice-bar {
+            margin-top: 0;
+        }
+        .student-oral-panel .practice-btn {
+            padding: 12px 22px;
+            font-size: 0.95rem;
+        }
+        .student-oral-panel .live-read-preview {
+            min-height: 5rem;
+            font-size: 1rem;
+        }
+
+        .reading-source-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 1rem;
+        }
+        .reading-source-tab {
+            padding: 10px 18px;
+            border-radius: var(--radius-sm, 10px);
+            border: 1px solid var(--border);
+            background: #fff;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            font-family: inherit;
+            color: var(--text-main);
+        }
+        .reading-source-tab:hover { border-color: var(--primary); color: var(--primary); }
+        .reading-source-tab.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+        .reading-source-panel { display: none; }
+        .reading-source-panel.active { display: block; }
+        .reading-search-panel {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--surface);
+            padding: 14px;
+        }
+        .reading-search-panel h3 { margin: 0 0 6px; font-size: 1rem; }
+        .reading-search-panel p { margin: 0 0 10px; color: var(--muted); font-size: 0.88rem; }
+        .reading-search-input {
+            width: 100%;
+            max-width: 420px;
+            padding: 9px 10px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        .reading-search-list { margin: 0; padding-left: 18px; }
+        .reading-search-list li { margin-bottom: 6px; }
+        .reading-passage-search-card {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+            background: #fff;
+            max-width: 760px;
+        }
+        .reading-passage-search-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .reading-passage-search-input {
+            flex: 1;
+            min-width: 240px;
+            padding: 9px 11px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.9rem;
+        }
+        .reading-passage-last5 {
+            margin: 0;
+            padding-left: 18px;
+            font-size: 0.88rem;
+            line-height: 1.55;
+        }
+        .reading-passage-last5 button {
+            border: 0;
+            background: transparent;
+            color: var(--primary);
+            cursor: pointer;
+            padding: 0;
+            font: inherit;
+            text-align: left;
+        }
+        .reading-passage-last5 button:hover { text-decoration: underline; }
+        .reading-passage-search-pager { border-top: 1px solid var(--border); padding-top: 12px; }
+        .reading-server-sessions { margin: 0 0 14px; padding: 0; list-style: none; }
+        .reading-server-sessions li { margin-bottom: 8px; }
+        .reading-server-row {
+            width: 100%;
+            text-align: left;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            cursor: pointer;
+            font: inherit;
+            color: var(--text);
+        }
+        .reading-server-row:hover, .reading-server-row.is-selected {
+            border-color: var(--primary);
+            background: #f8fafc;
+        }
+        .reading-server-row .rs-title { font-weight: 700; display: block; margin-bottom: 4px; }
+        .reading-server-row .rs-sub { font-size: 0.82rem; color: var(--muted); }
+        .reading-session-detail {
+            margin-top: 14px;
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+        }
+        .reading-session-detail h4 { margin: 0 0 8px; font-size: 1rem; }
+        .reading-session-detail .rs-meta { font-size: 0.85rem; color: var(--muted); margin: 0 0 10px; }
+        .reading-session-detail .rs-summary { font-size: 0.9rem; line-height: 1.55; margin: 0 0 12px; white-space: pre-wrap; }
+        .reading-session-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+            gap: 8px;
+            font-size: 0.8rem;
+        }
+        .reading-session-metrics span {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 8px;
+            background: #fff;
+        }
+        .reading-search-divider { border: none; border-top: 1px solid var(--border); margin: 18px 0 14px; }
+        .reading-local-sub { font-size: 0.82rem; color: var(--muted); margin: 0 0 10px; }
+        .page-hero-lead { margin: 0; font-size: 0.95rem; color: var(--muted); line-height: 1.5; }
+        .fb-coach-row { margin-bottom: 14px; }
+        .fb-coach-row .fb-label { margin-bottom: 6px; }
+        .fb-coach-row p { margin: 0 0 8px; line-height: 1.55; }
 
         /* Passage box: speak-to-type (same pattern as quiz prompt mic) */
         .reading-passage-mic-row {
@@ -325,24 +576,167 @@
 
         .reading-practice-panel--hidden { display: none !important; }
         .reading-practice-unlock-hint {
-            margin-top: 14px; padding: 12px 14px; border-radius: 10px;
-            font-size: 0.86rem; line-height: 1.5; color: var(--text);
-            background: rgba(239, 68, 68, 0.07);
-            border: 1px solid rgba(239, 68, 68, 0.18);
+            margin-top: 16px;
+            padding: 12px 0 0;
+            border-radius: 0;
+            font-size: 0.88rem;
+            line-height: 1.55;
+            color: var(--text-main);
+            background: transparent;
+            border: none;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
         }
-        .reading-practice-unlock-hint strong { color: var(--text); }
+        .reading-practice-unlock-hint .reading-hint-icon {
+            color: var(--primary);
+            font-size: 1.05rem;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+        .reading-practice-unlock-hint .reading-hint-text { flex: 1; min-width: 0; }
+        .reading-practice-unlock-hint strong { color: #1e40af; font-weight: 700; }
 
-        @media(max-width:600px){ .news-list { padding: 0 16px 32px; } .news-card { padding: 18px; } }
+        @media (max-width: 600px) {
+            .news-card { padding: 1.15rem 0; }
+            .news-list .news-card:first-child { padding-top: 0; }
+        }
     </style>
 </head>
-<body>
+<body class="app-layout reading-bg">
 <div th:replace="~{fragments/loader :: loader}"></div>
-<div th:replace="~{fragments/tabs :: tabBar('reading')}"></div>
+<div th:replace="~{fragments/shell-teacher :: sidebar('learning')}"></div>
 
+<main class="layout-main">
+<div class="reading-page-inner">
 <div class="page-hero">
-    <h2><i class="fa-solid fa-book-open"></i> Reading Practice</h2>
-    <p>Paste a passage, type a prompt, or use <strong>Speak to type</strong> below. Submit sends it to AI to build the reading text, then students use Practice Reading for voice feedback.</p>
+    <h2><i class="fa-solid fa-book-open"></i> Learning Reading</h2>
+    <p class="page-hero-lead">Use tabs: <strong>Read from Book</strong> and <strong>Read from Passage</strong>.</p>
+    <p id="readingGradeBanner" data-prepare-grade-banner style="display:none;margin-top:10px;font-size:0.9rem;color:var(--muted);"></p>
 </div>
+<nav class="reading-source-tabs" aria-label="Reading source">
+    <button type="button" class="reading-source-tab active" data-reading-panel="book">Read from Book</button>
+    <button type="button" class="reading-source-tab" data-reading-panel="class">Read from Passage</button>
+</nav>
+
+<div id="reading-panel-book" class="reading-source-panel active">
+<!-- Student: mic only — transcript below, then AI (no pasted passage) -->
+<div class="student-oral-panel">
+    <h3><i class="fa-solid fa-microphone-lines"></i> Read from your book</h3>
+    <p class="student-oral-intro">Pick your name, tap <strong>Start reading</strong>, read aloud from your book, then <strong>Stop</strong>. Your words show below. Tap <strong>Evaluate</strong> to send the transcript to AI for scores and tips. (Chrome / Edge; allow microphone.)</p>
+    <div class="practice-bar">
+        <select class="student-select" id="student-oral"
+                th:if="${studentList != null and !studentList.isEmpty()}">
+            <option value="">— Select student —</option>
+            <option th:each="s : ${studentList}" th:value="${s.name}" th:text="${s.name}"></option>
+        </select>
+        <input type="text" class="student-select" id="student-oral" placeholder="Enter your name"
+               th:if="${studentList == null or studentList.isEmpty()}"/>
+        <button type="button" class="practice-btn" id="practiceBtn-oral"
+                data-index="oral" data-title="Reading aloud" data-text=""
+                onclick="togglePracticeReading(this)">
+            <i class="fa-solid fa-microphone"></i> Start reading
+        </button>
+        <button type="button" class="evaluate-btn" id="evaluateBtn-oral"
+                data-index="oral" data-title="Reading aloud" data-text=""
+                onclick="evaluateReadingNow(this)" disabled>
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Evaluate
+        </button>
+    </div>
+    <p class="practice-hint" style="margin-top:8px;">Tap <strong>Stop recording</strong> when you finish a segment, then <strong>Evaluate</strong> — we do not send to AI until you tap Evaluate.</p>
+    <div class="live-read-wrap" style="margin-top:12px;">
+        <div class="live-read-label">What you read (from speech)</div>
+        <div class="live-read-preview is-placeholder" id="liveReadPreview-oral"
+             aria-live="polite" aria-relevant="additions text">Your words will appear here as you read.</div>
+    </div>
+    <div class="feedback-panel" id="feedback-oral">
+        <div class="score-bar">
+            <div class="score-badge" id="scoreBadge-oral">—</div>
+            <div>
+                <div class="score-title" id="scoreTitle-oral">Fluency Score</div>
+                <div class="score-label">Overall reading quality</div>
+            </div>
+        </div>
+        <div class="analytics-grid">
+            <div class="metric-card">
+                <div class="metric-value clr-blue" id="m-fluency-oral">—</div>
+                <div class="metric-label">Fluency</div>
+                <div class="metric-bar"><div class="metric-bar-fill fill-blue" id="mb-fluency-oral" style="width:0%"></div></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value clr-high" id="m-pronun-oral">—</div>
+                <div class="metric-label">Pronunciation</div>
+                <div class="metric-bar"><div class="metric-bar-fill fill-high" id="mb-pronun-oral" style="width:0%"></div></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value clr-mid" id="m-pace-oral">—</div>
+                <div class="metric-label">Pace</div>
+                <div class="metric-bar"><div class="metric-bar-fill fill-mid" id="mb-pace-oral" style="width:0%"></div></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value clr-high" id="m-accuracy-oral">—</div>
+                <div class="metric-label">Clarity</div>
+                <div class="metric-bar"><div class="metric-bar-fill fill-high" id="mb-accuracy-oral" style="width:0%"></div></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value clr-blue" id="m-confidence-oral">—</div>
+                <div class="metric-label">Confidence</div>
+                <div class="metric-bar"><div class="metric-bar-fill fill-blue" id="mb-confidence-oral" style="width:0%"></div></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value clr-mid" id="m-accpct-oral">—</div>
+                <div class="metric-label">Overall %</div>
+                <div class="metric-bar"><div class="metric-bar-fill fill-mid" id="mb-accpct-oral" style="width:0%"></div></div>
+            </div>
+        </div>
+        <div class="word-count-row">
+            <span><i class="fa-solid fa-file-lines" style="color:#6366f1"></i> Reference passage: <b id="wc-orig-oral">—</b> words</span>
+            <span><i class="fa-solid fa-microphone" style="color:#10b981"></i> Heard: <b id="wc-spoken-oral">—</b> words</span>
+        </div>
+        <div class="feedback-body">
+            <div id="fb-words-wrap-oral" style="display:none;">
+                <div style="display:flex; gap:20px; flex-wrap:wrap;">
+                    <div id="fb-good-wrap-oral" style="flex:1; min-width:140px; display:none;">
+                        <div class="fb-label" style="color:#34d399; font-size:0.68rem; margin-bottom:4px;"><i class="fa-solid fa-star"></i> <span id="fb-good-lbl-oral">GOOD WORDS</span></div>
+                        <div class="word-pills" id="fb-good-oral"></div>
+                    </div>
+                    <div id="fb-hard-wrap-oral" style="flex:1; min-width:140px; display:none;">
+                        <div class="fb-label" style="color:#f87171; font-size:0.68rem; margin-bottom:4px;"><i class="fa-solid fa-triangle-exclamation"></i> <span id="fb-hard-lbl-oral">NEEDS WORK</span></div>
+                        <div class="word-pills" id="fb-hard-oral"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="fb-block fb-hindi">
+                <div class="fb-label">हिन्दी फीडबैक</div>
+                <div id="fb-hindi-oral"></div>
+                <button type="button" class="read-btn read-btn-indigo" data-target="fb-hindi-oral" data-lang="hi-IN" onclick="readFeedback(this)"><i class="fa-solid fa-volume-high"></i> सुनें</button>
+            </div>
+            <div class="fb-block fb-english">
+                <div class="fb-label">English Feedback</div>
+                <div id="fb-english-oral"></div>
+                <button type="button" class="read-btn read-btn-green" data-target="fb-english-oral" data-lang="en-IN" onclick="readFeedback(this)"><i class="fa-solid fa-volume-high"></i> Read Aloud</button>
+            </div>
+            <div class="fb-block fb-question" id="fb-question-wrap-oral" style="display:none;">
+                <div class="fb-label">Check understanding</div>
+                <div id="fb-question-oral"></div>
+                <button type="button" class="read-btn read-btn-yellow" data-target="fb-question-oral" data-lang="hi-IN" onclick="readFeedback(this)"><i class="fa-solid fa-volume-high"></i> सुनें</button>
+            </div>
+            <div class="fb-block fb-tip" id="fb-coach-wrap-oral" style="display:none;">
+                <div id="fb-coach-oral"></div>
+            </div>
+            <div class="fb-block fb-tip" id="fb-tip-wrap-oral" style="display:none;">
+                <div class="fb-label"><i class="fa-solid fa-lightbulb"></i> Next Session Tip</div>
+                <div id="fb-tip-oral"></div>
+                <button type="button" class="read-btn read-btn-indigo" id="fb-tip-read-oral" data-target="fb-tip-oral" data-lang="en-IN" onclick="readFeedback(this)"><i class="fa-solid fa-volume-high"></i> Read Aloud</button>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<div id="reading-panel-class" class="reading-source-panel">
+<div data-prepare-grade-banner class="prepare-grade-page-banner" style="display:none;margin:0 0 1rem;padding:10px 14px;border-radius:12px;background:var(--primary-soft);border:1px solid var(--border);font-size:0.88rem;font-weight:600;color:var(--text);"></div>
 
 <!-- Teacher-only: prompt to define/customize the passage (no news or external sources) -->
 <div class="teacher-reading-section" th:if="${isTeacher}">
@@ -354,8 +748,7 @@
             <button type="button" class="prompt-mic-btn" id="readingPassageMicBtn" onclick="toggleReadingPassageMic()">
                 <i class="fa-solid fa-microphone"></i> Speak to type
             </button>
-            <button type="button" class="prompt-mic-btn" id="readingPassageMicClearBtn" title="Clear box"
-                    style="background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.25); color: #f87171;"
+            <button type="button" class="reading-btn-outline" id="readingPassageMicClearBtn" title="Clear box"
                     onclick="clearReadingPassageInput()">
                 <i class="fa-solid fa-eraser"></i> Clear
             </button>
@@ -397,9 +790,12 @@
              th:text="${news.summary()}"></div>
 
         <th:block th:if="${!news.title().contains('not available')}">
-        <p class="reading-practice-unlock-hint">
-            <strong>Next step:</strong> Use <strong>Submit passage</strong> above (paste text or a prompt). After the passage is ready, student controls, live transcription, and “Read passage aloud” will appear here.
-        </p>
+        <div class="reading-practice-unlock-hint">
+            <i class="fa-solid fa-circle-info reading-hint-icon" aria-hidden="true"></i>
+            <div class="reading-hint-text">
+                <strong>Next step:</strong> On the <strong>Class passage</strong> tab, use <strong>Submit passage</strong> — then these controls unlock.
+            </div>
+        </div>
         <div class="reading-unlocks-with-passage reading-practice-panel--hidden">
         <!-- Practice bar -->
         <div class="practice-bar">
@@ -426,35 +822,13 @@
                     onclick="evaluateReadingNow(this)" disabled>
                 <i class="fa-solid fa-wand-magic-sparkles"></i> Evaluate now
             </button>
-            <p class="practice-hint">Tap <strong>Stop recording</strong> when the student finishes (or pauses). Then tap <strong>Evaluate now</strong> to send speech to AI — recording does not auto-submit.</p>
-            <div class="reading-options-row">
-                <label th:for="'persistReadingChk-' + ${stat.index}">
-                    <input type="checkbox" th:id="'persistReadingChk-' + ${stat.index}"/>
-                    Remember text on this device
-                </label>
-                <div class="reading-mode-radios">
-                    <span style="color:var(--muted); font-size:0.75rem;">Next recording:</span>
-                    <label th:for="'readingModeReplace-' + ${stat.index}">
-                        <input type="radio" th:name="'readingMode-' + ${stat.index}" th:id="'readingModeReplace-' + ${stat.index}" value="replace" checked/>
-                        Replace text
-                    </label>
-                    <label th:for="'readingModeAppend-' + ${stat.index}">
-                        <input type="radio" th:name="'readingMode-' + ${stat.index}" th:id="'readingModeAppend-' + ${stat.index}" value="append"/>
-                        Add to end (re-read / continue)
-                    </label>
-                </div>
-                <button type="button" class="reading-clear-btn" th:attr="onclick=|clearReadingSession(${stat.index})|">Clear text &amp; log</button>
-            </div>
+            <p class="practice-hint">Tap <strong>Stop recording</strong> when finished, then <strong>Evaluate now</strong>. Each new <strong>Start reading</strong> begins fresh from the beginning.</p>
             <div class="live-read-wrap">
                 <div class="live-read-label">What we hear as you read (live)</div>
                 <div class="live-read-preview is-placeholder"
                      th:id="'liveReadPreview-' + ${stat.index}"
                      aria-live="polite"
                      aria-relevant="additions text">Words and punctuation from speech recognition appear here while you read.</div>
-            </div>
-            <div class="reading-session-summary" th:id="'readingSessionSummary-' + ${stat.index}" style="display:none;">
-                <div class="live-read-label">Practice log (updates after each Stop)</div>
-                <div th:id="'readingSessionSummaryBody-' + ${stat.index}"></div>
             </div>
         </div>
 
@@ -516,13 +890,13 @@
                     <div style="display:flex; gap:20px; flex-wrap:wrap;">
                         <div th:id="'fb-good-wrap-' + ${stat.index}" style="flex:1; min-width:140px; display:none;">
                             <div class="fb-label" style="color:#34d399; font-size:0.68rem; margin-bottom:4px;">
-                                <i class="fa-solid fa-star"></i> GOOD WORDS
+                                <i class="fa-solid fa-star"></i> <span th:id="'fb-good-lbl-' + ${stat.index}">GOOD WORDS</span>
                             </div>
                             <div class="word-pills" th:id="'fb-good-' + ${stat.index}"></div>
                         </div>
                         <div th:id="'fb-hard-wrap-' + ${stat.index}" style="flex:1; min-width:140px; display:none;">
                             <div class="fb-label" style="color:#f87171; font-size:0.68rem; margin-bottom:4px;">
-                                <i class="fa-solid fa-triangle-exclamation"></i> NEEDS WORK
+                                <i class="fa-solid fa-triangle-exclamation"></i> <span th:id="'fb-hard-lbl-' + ${stat.index}">NEEDS WORK</span>
                             </div>
                             <div class="word-pills" th:id="'fb-hard-' + ${stat.index}"></div>
                         </div>
@@ -557,13 +931,13 @@
                     </button>
                 </div>
                 <div class="fb-block fb-tip" th:id="'fb-coach-wrap-' + ${stat.index}" style="display:none;">
-                    <div class="fb-label"><i class="fa-solid fa-book-open"></i> Punctuation, pace &amp; practice words</div>
                     <div th:id="'fb-coach-' + ${stat.index}"></div>
                 </div>
                 <div class="fb-block fb-tip" th:id="'fb-tip-wrap-' + ${stat.index}" style="display:none;">
                     <div class="fb-label"><i class="fa-solid fa-lightbulb"></i> Next Session Tip</div>
                     <div th:id="'fb-tip-' + ${stat.index}"></div>
-                    <button class="read-btn read-btn-indigo"
+                    <button type="button" class="read-btn read-btn-indigo"
+                            th:id="'fb-tip-read-' + ${stat.index}"
                             th:attr="data-target='fb-tip-' + ${stat.index}, data-lang='en-IN'"
                             onclick="readFeedback(this)">
                         <i class="fa-solid fa-volume-high"></i> Read Aloud
@@ -575,11 +949,134 @@
         </th:block>
     </div>
 </div>
+</div>
 
+<!-- Search Reading Passage tab removed -->
+
+</main>
+<div th:replace="~{fragments/monitor-panel :: active}"></div>
+
+<script th:src="@{/js/monitor.js}"></script>
+<script th:src="@{/js/learning-grade-context.js}"></script>
 <script>
 // ── Teacher: Speak-to-type into passage / prompt box ───────────────────────
 let readingPassageDictation = null;
 let readingPassageMicListening = false;
+const READING_RECENT_PASSAGES_KEY = 'sarvsReadingRecentPassages_v1';
+let readingServerSessions = [];
+
+function fetchReadingServerSessions() {
+    fetch('/reading/api/recent-sessions?limit=5', { credentials: 'same-origin' })
+        .then(function (res) {
+            if (res.status === 401) {
+                var ret = encodeURIComponent(window.location.pathname + window.location.search);
+                window.location.href = '/login?redirect=' + ret;
+                return Promise.reject(new Error('unauthorized'));
+            }
+            if (!res.ok) throw new Error('fetch failed');
+            return res.json();
+        })
+        .then(function (data) {
+            readingServerSessions = Array.isArray(data) ? data : [];
+            renderReadingServerSessionsList();
+        })
+        .catch(function () {
+            readingServerSessions = [];
+            renderReadingServerSessionsList();
+        });
+}
+
+function filterReadingServerSessions(items) {
+    var input = document.getElementById('readingServerSearchInput');
+    var q = String(input && input.value || '').toLowerCase().trim();
+    if (!q) return items.slice();
+    return items.filter(function (s) {
+        var blob = [
+            s.studentName, s.articleTitle, s.summaryWords,
+            String(s.fluencyScore != null ? s.fluencyScore : ''),
+            String(s.accuracyPercent != null ? s.accuracyPercent : '')
+        ].join(' ').toLowerCase();
+        return blob.indexOf(q) >= 0;
+    });
+}
+
+function formatReadingSessionDate(iso) {
+    if (!iso) return '';
+    try {
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) return iso;
+        return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    } catch (e) {
+        return iso;
+    }
+}
+
+function showReadingSessionDetail(s) {
+    var box = document.getElementById('readingSessionDetail');
+    if (!box || !s) return;
+    box.style.display = 'block';
+    var t = document.getElementById('readingSessionDetailTitle');
+    if (t) t.textContent = s.articleTitle || 'Reading session';
+    var meta = document.getElementById('readingSessionDetailMeta');
+    if (meta) {
+        var m = 'Read by: ' + (s.studentName || '—');
+        if (s.createdAt) m += ' · ' + formatReadingSessionDate(s.createdAt);
+        meta.textContent = m;
+    }
+    var sum = document.getElementById('readingSessionDetailSummary');
+    if (sum) sum.textContent = s.summaryWords || '';
+    var parts = [];
+    if (s.fluencyScore != null) parts.push('<span>Fluency: <strong>' + s.fluencyScore + '</strong>/10</span>');
+    if (s.pronunciationScore != null) parts.push('<span>Pronunciation: <strong>' + s.pronunciationScore + '</strong>/10</span>');
+    if (s.paceScore != null) parts.push('<span>Pace: <strong>' + s.paceScore + '</strong>/10</span>');
+    if (s.accuracyScore != null) parts.push('<span>Accuracy: <strong>' + s.accuracyScore + '</strong>/10</span>');
+    if (s.confidenceScore != null) parts.push('<span>Confidence: <strong>' + s.confidenceScore + '</strong>/10</span>');
+    if (s.accuracyPercent != null) parts.push('<span>Word match: <strong>' + s.accuracyPercent + '</strong>%</span>');
+    if (s.originalWordCount != null) parts.push('<span>Article words: <strong>' + s.originalWordCount + '</strong></span>');
+    if (s.spokenWordCount != null) parts.push('<span>Spoken words: <strong>' + s.spokenWordCount + '</strong></span>');
+    var met = document.getElementById('readingSessionDetailMetrics');
+    if (met) met.innerHTML = parts.join('');
+}
+
+function renderReadingServerSessionsList() {
+    var list = document.getElementById('readingServerSessionsList');
+    var empty = document.getElementById('readingServerSessionsEmpty');
+    if (!list) return;
+    if (!readingServerSessions.length) {
+        list.innerHTML = '';
+        if (empty) empty.style.display = '';
+        var det = document.getElementById('readingSessionDetail');
+        if (det) det.style.display = 'none';
+        return;
+    }
+    if (empty) empty.style.display = 'none';
+    var filtered = filterReadingServerSessions(readingServerSessions);
+    if (!filtered.length) {
+        list.innerHTML = '<li style="color:var(--muted);font-size:0.9rem;">No matches. Try another search.</li>';
+        return;
+    }
+    list.innerHTML = filtered.map(function (s) {
+        var title = escapeHtmlJs(String(s.articleTitle || 'Reading session'));
+        var who = escapeHtmlJs(String(s.studentName || '—'));
+        var line = String(s.summaryWords || '').replace(/\s+/g, ' ');
+        if (line.length > 90) line = line.substring(0, 90) + '…';
+        var preview = escapeHtmlJs(line);
+        var when = s.createdAt ? ' · ' + escapeHtmlJs(formatReadingSessionDate(s.createdAt)) : '';
+        return '<li><button type="button" class="reading-server-row" data-reading-id="' + s.id + '">' +
+            '<span class="rs-title">' + title + '</span>' +
+            '<span class="rs-sub">' + who + when + '</span>' +
+            '<span class="rs-sub" style="margin-top:4px;display:block;">' + preview + '</span></button></li>';
+    }).join('');
+    list.querySelectorAll('.reading-server-row').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var id = parseInt(btn.getAttribute('data-reading-id'), 10);
+            var found = readingServerSessions.find(function (x) { return x.id === id; });
+            if (found) showReadingSessionDetail(found);
+            list.querySelectorAll('.reading-server-row').forEach(function (b) { b.classList.remove('is-selected'); });
+            btn.classList.add('is-selected');
+        });
+    });
+}
 
 function clearReadingPassageInput() {
     const input = document.getElementById('readingPromptInput');
@@ -678,6 +1175,159 @@ function unlockReadingPracticeUI() {
     });
 }
 
+/** Push passage + title into the teacher practice card only (not the student oral-only mic block). */
+function applyPassageToReadingUI(passage, title) {
+    const p = String(passage || '').trim();
+    if (!p) {
+        alert('Passage text is empty.');
+        return false;
+    }
+    const customTitle = (title && String(title).trim()) || 'Reading passage';
+    document.querySelectorAll('.news-list .news-summary').forEach(function (el) { el.textContent = p; });
+    document.querySelectorAll('.news-list .practice-btn').forEach(function (btn) {
+        btn.dataset.text = p;
+        btn.dataset.title = customTitle;
+    });
+    document.querySelectorAll('.news-list .evaluate-btn').forEach(function (btn) {
+        btn.dataset.text = p;
+        btn.dataset.title = customTitle;
+    });
+    document.querySelectorAll('.news-list .news-title span').forEach(function (el) { el.textContent = customTitle; });
+    unlockReadingPracticeUI();
+    return true;
+}
+
+function loadRecentReadingPassages() {
+    try {
+        const raw = localStorage.getItem(READING_RECENT_PASSAGES_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveRecentReadingPassage(passage, title) {
+    const p = String(passage || '').trim();
+    if (!p) return;
+    const t = String(title || 'Reading passage').trim() || 'Reading passage';
+    const current = loadRecentReadingPassages();
+    const withoutDup = current.filter(function (x) {
+        return String((x && x.passage) || '').trim().toLowerCase() !== p.toLowerCase();
+    });
+    withoutDup.unshift({ title: t, passage: p, savedAt: Date.now() });
+    const next = withoutDup.slice(0, 5);
+    try { localStorage.setItem(READING_RECENT_PASSAGES_KEY, JSON.stringify(next)); } catch (e) { /* ignore */ }
+    renderReadingPassageSearch();
+}
+
+var readingPassageSearchPage = 0;
+var READING_PASSAGE_PAGE_SIZE = 3;
+
+function getReadingPassageSearchQuery() {
+    const input = document.getElementById('readingPassageTypeahead');
+    return String(input && input.value || '').toLowerCase().trim();
+}
+
+function filterReadingPassageItems(items, q) {
+    if (!q) return items.slice();
+    return items.filter(function (x) {
+        const title = String((x && x.title) || '').toLowerCase();
+        const passage = String((x && x.passage) || '').toLowerCase();
+        return title.indexOf(q) >= 0 || passage.indexOf(q) >= 0;
+    });
+}
+
+function renderReadingPassageSearch() {
+    const items = loadRecentReadingPassages();
+    const datalist = document.getElementById('readingPassageTypeaheadList');
+    const last5 = document.getElementById('readingPassageLast5');
+    const pager = document.getElementById('readingPassageSearchPager');
+    const meta = document.getElementById('readingPassageSearchPageMeta');
+    const prevBtn = document.getElementById('readingPassageSearchPrev');
+    const nextBtn = document.getElementById('readingPassageSearchNext');
+    if (datalist) {
+        datalist.innerHTML = items.map(function (x) {
+            const title = String((x && x.title) || 'Reading passage');
+            return '<option value="' + escapeHtmlJs(title + ' — ' + String(x.passage || '').substring(0, 160)) + '"></option>';
+        }).join('');
+    }
+    if (last5) {
+        if (!items.length) {
+            last5.innerHTML = '<li style="color:var(--muted);">No saved passages yet. Submit a passage first.</li>';
+            if (pager) pager.style.display = 'none';
+            return;
+        }
+        const q = getReadingPassageSearchQuery();
+        const filtered = filterReadingPassageItems(items, q);
+        const totalPages = Math.max(1, Math.ceil(filtered.length / READING_PASSAGE_PAGE_SIZE));
+        if (readingPassageSearchPage >= totalPages) readingPassageSearchPage = Math.max(0, totalPages - 1);
+        const start = readingPassageSearchPage * READING_PASSAGE_PAGE_SIZE;
+        const pageSlice = filtered.slice(start, start + READING_PASSAGE_PAGE_SIZE);
+        last5.innerHTML = pageSlice.map(function (x) {
+            const origIdx = items.indexOf(x);
+            const title = escapeHtmlJs(String(x.title || 'Reading passage'));
+            const preview = escapeHtmlJs(String(x.passage || '').replace(/\s+/g, ' ').substring(0, 100));
+            return '<li><button type="button" onclick="useRecentReadingPassage(' + origIdx + ')"><strong>' + title + '</strong> — ' + preview + '</button></li>';
+        }).join('');
+        if (pager && meta && prevBtn && nextBtn) {
+            const showPager = filtered.length > READING_PASSAGE_PAGE_SIZE;
+            pager.style.display = showPager ? 'flex' : 'none';
+            meta.textContent = showPager ? ('Page ' + (readingPassageSearchPage + 1) + ' of ' + totalPages) : '';
+            prevBtn.disabled = readingPassageSearchPage <= 0;
+            nextBtn.disabled = readingPassageSearchPage >= totalPages - 1;
+        }
+    }
+}
+
+function readingPassageSearchPrevPage() {
+    if (readingPassageSearchPage > 0) {
+        readingPassageSearchPage--;
+        renderReadingPassageSearch();
+    }
+}
+
+function readingPassageSearchNextPage() {
+    const items = loadRecentReadingPassages();
+    const filtered = filterReadingPassageItems(items, getReadingPassageSearchQuery());
+    const totalPages = Math.max(1, Math.ceil(filtered.length / READING_PASSAGE_PAGE_SIZE));
+    if (readingPassageSearchPage < totalPages - 1) {
+        readingPassageSearchPage++;
+        renderReadingPassageSearch();
+    }
+}
+
+function useRecentReadingPassage(idx) {
+    const items = loadRecentReadingPassages();
+    const selected = items[idx];
+    if (!selected || !selected.passage) return;
+    if (!applyPassageToReadingUI(selected.passage, selected.title || 'Reading passage')) return;
+    const classTab = document.querySelector('.reading-source-tab[data-reading-panel="class"]');
+    if (classTab) classTab.click();
+}
+
+function usePassageFromSearch() {
+    const input = document.getElementById('readingPassageTypeahead');
+    const q = String(input && input.value || '').trim().toLowerCase();
+    if (!q) {
+        alert('Type and pick a saved passage first.');
+        return;
+    }
+    const items = loadRecentReadingPassages();
+    const picked = items.find(function (x) {
+        const title = String((x && x.title) || '').toLowerCase();
+        const passage = String((x && x.passage) || '').toLowerCase();
+        return title.indexOf(q) >= 0 || passage.indexOf(q) >= 0 || (title + ' — ' + passage.substring(0, 160)).indexOf(q) >= 0;
+    });
+    if (!picked) {
+        alert('No matching saved passage in the last 5.');
+        return;
+    }
+    if (!applyPassageToReadingUI(picked.passage, picked.title || 'Reading passage')) return;
+    const classTab = document.querySelector('.reading-source-tab[data-reading-panel="class"]');
+    if (classTab) classTab.click();
+}
+
 // ── Teacher: Generate passage via AI, then apply to cards (optional instant feedback if student selected) ──
 async function applyTeacherPassage() {
     const input = document.getElementById('readingPromptInput');
@@ -700,10 +1350,11 @@ async function applyTeacherPassage() {
     let passage = raw;
 
     try {
+        var gradeCtx = (typeof window.getPrepareGradeContext === 'function' && window.getPrepareGradeContext()) || '';
         const r = await fetch('/reading/generate-passage', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: raw })
+            body: JSON.stringify({ prompt: raw, grade: gradeCtx })
         });
         const data = await r.json().catch(() => ({}));
         if (r.ok && data.passage && String(data.passage).trim()) {
@@ -714,7 +1365,7 @@ async function applyTeacherPassage() {
         }
     } catch (e) {
         console.error(e);
-        alert('Could not generate passage. Check your connection and OpenAI key; using what you typed as the passage.');
+        alert('Could not generate passage. Check your connection; using what you typed as the passage.');
     } finally {
         if (submitBtn) {
             submitBtn.disabled = false;
@@ -722,20 +1373,7 @@ async function applyTeacherPassage() {
         }
     }
 
-    document.querySelectorAll('.news-summary').forEach(el => { el.textContent = passage; });
-    document.querySelectorAll('.practice-btn').forEach(btn => {
-        btn.dataset.text  = passage;
-        btn.dataset.title = customTitle;
-    });
-    document.querySelectorAll('.evaluate-btn').forEach(btn => {
-        btn.dataset.text  = passage;
-        btn.dataset.title = customTitle;
-    });
-    document.querySelectorAll('.news-title span').forEach(el => { el.textContent = customTitle; });
-
-    if ((passage || '').trim().length > 0) {
-        unlockReadingPracticeUI();
-    }
+    applyPassageToReadingUI(passage, customTitle);
 }
 
 // ── Teacher: Generate / Fetch news / Use default ───────────────────────────
@@ -807,6 +1445,10 @@ function stopSpeaking() {
 
 function readAllNews(btn) {
     if (activeSpeech) { stopSpeaking(); return; }
+    if (window.monitorIsPriorityActive && window.monitorIsPriorityActive()) {
+        setTimeout(function () { readAllNews(btn); }, 900);
+        return;
+    }
     const texts = [];
     document.querySelectorAll('.news-summary').forEach((el, i) => {
         texts.push('Passage ' + (i+1) + '. ' + el.textContent.trim() + '.');
@@ -945,43 +1587,7 @@ function clearReadingSession(idx) {
 }
 
 function updateSessionSummaryPanel(idx) {
-    const idxKey = String(idx);
-    const attempts = readingAttempts[idxKey] || [];
-    const rehearsed = computeRehearsedWords(attempts);
-    const body = document.getElementById('readingSessionSummaryBody-' + idxKey);
-    const wrap = document.getElementById('readingSessionSummary-' + idxKey);
-    if (!body || !wrap) return;
-    if (attempts.length === 0 && rehearsed.length === 0) {
-        wrap.style.display = 'none';
-        body.innerHTML = '';
-        return;
-    }
-    let html = '';
-    attempts.forEach(function (a) {
-        const wpm = a.durationSeconds > 0.4 ? Math.round((a.wordCount / a.durationSeconds) * 60) : '—';
-        const tx = a.text || '';
-        const snip = tx.substring(0, 140);
-        html += '<div class="session-attempt"><strong>Try ' + a.attemptNumber + '</strong> (~' + wpm + ' wpm, ' + a.durationSeconds.toFixed(0) + 's): <span class="session-snippet">' + escapeHtmlJs(snip) + (tx.length > 140 ? '…' : '') + '</span></div>';
-    });
-    if (rehearsed.length) {
-        html += '<div class="session-rehearsed"><strong>Words practised more than once:</strong> ';
-        rehearsed.forEach(function (w) {
-            html += '<button type="button" class="word-hear" data-word="' + escapeHtmlJs(w) + '" onclick="speakPracticeWordFromBtn(this)">' + escapeHtmlJs(w) + ' <i class="fa-solid fa-volume-high"></i></button>';
-        });
-        html += ' <span style="color:var(--muted);font-size:0.78rem;">(tap to hear)</span></div>';
-    }
-    body.innerHTML = html;
-    wrap.style.display = 'block';
-}
-
-function speakPracticeWordFromBtn(btn) {
-    const w = btn.getAttribute('data-word');
-    if (!w) return;
-    const u = new SpeechSynthesisUtterance(w);
-    u.lang = 'en-IN';
-    u.rate = 0.82;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
+    /* Practice log panel removed — attempts still stored for Evaluate payload */
 }
 
 function isAppendMode(idx) {
@@ -1228,8 +1834,8 @@ function togglePracticeReading(btn) {
 
 function evaluateReadingNow(btn) {
     const idx = String(btn.dataset.index);
-    const title = btn.dataset.title;
-    const text = btn.dataset.text;
+    const title = btn.dataset.title || 'Reading aloud';
+    const text = btn.dataset.text != null ? btn.dataset.text : '';
     const studentName = getReadingStudentName(idx);
     if (!studentName) {
         alert('Please select or enter the student name first.');
@@ -1293,7 +1899,9 @@ function submitFeedback(idx, studentName, title, originalText, spokenText, pract
         }
         if (evaluateBtn) {
             evaluateBtn.classList.remove('loading');
-            evaluateBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Evaluate now';
+            evaluateBtn.innerHTML = (idx === 'oral')
+                ? '<i class="fa-solid fa-wand-magic-sparkles"></i> Evaluate'
+                : '<i class="fa-solid fa-wand-magic-sparkles"></i> Evaluate now';
             updateEvaluateButtonState(idx);
         }
         refreshLiveReadPreview(idx, false);
@@ -1322,6 +1930,19 @@ function setMetric(idx, key, value, max) {
     }
 }
 
+/** Heuristic: Hindi/Devanagari content for labels + TTS lang on coach lines */
+function readingFeedbackIsHindi(data) {
+    if (!data) return false;
+    var blob = [
+        data.goodWords || '', data.difficultWords || '',
+        data.hindiFeedback || '', data.punctuationCoach || '',
+        data.paceCoach || '', data.repeatedWordsCoach || ''
+    ].join(' ');
+    var dev = (blob.match(/[\u0900-\u097F]/g) || []).length;
+    var lat = (blob.match(/[A-Za-z]/g) || []).length;
+    return dev >= 10 && dev >= lat * 0.45;
+}
+
 function showFeedback(idx, data, practiceBtn) {
     if (practiceBtn) {
         practiceBtn.disabled = false;
@@ -1330,13 +1951,16 @@ function showFeedback(idx, data, practiceBtn) {
     const evaluateBtn = document.getElementById('evaluateBtn-' + idx);
     if (evaluateBtn) {
         evaluateBtn.classList.remove('loading');
-        evaluateBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Evaluate now';
+        evaluateBtn.innerHTML = (idx === 'oral')
+            ? '<i class="fa-solid fa-wand-magic-sparkles"></i> Evaluate'
+            : '<i class="fa-solid fa-wand-magic-sparkles"></i> Evaluate now';
         evaluateBtn.disabled = true;
     }
 
     // ── Overall badge ──────────────────────────────────────────────────────
     const score = data.fluencyScore || 0;
     const badge = document.getElementById('scoreBadge-' + idx);
+    if (!badge) return;
     badge.textContent = score + '/10';
     badge.className = 'score-badge ' + (score >= 8 ? 'score-high' : score >= 5 ? 'score-mid' : 'score-low');
     document.getElementById('scoreTitle-' + idx).textContent =
@@ -1353,31 +1977,51 @@ function showFeedback(idx, data, practiceBtn) {
     // ── Word counts ────────────────────────────────────────────────────────
     const origEl   = document.getElementById('wc-orig-'   + idx);
     const spokenEl = document.getElementById('wc-spoken-' + idx);
-    if (origEl)   origEl.textContent   = data.originalWordCount || '—';
-    if (spokenEl) spokenEl.textContent = data.spokenWordCount   || '—';
+    if (origEl) {
+        const ow = data.originalWordCount;
+        origEl.textContent = (ow != null && ow > 0) ? ow : '—';
+    }
+    if (spokenEl) spokenEl.textContent = data.spokenWordCount != null ? data.spokenWordCount : '—';
 
-    // ── Word pills ─────────────────────────────────────────────────────────
+    // ── Word pills (labels in Hindi when passage feedback is Hindi) ───────
+    const hi = readingFeedbackIsHindi(data);
+    const glGood = document.getElementById('fb-good-lbl-' + idx);
+    const glHard = document.getElementById('fb-hard-lbl-' + idx);
+    if (glGood) glGood.textContent = hi ? 'अच्छे शब्द' : 'GOOD WORDS';
+    if (glHard) glHard.textContent = hi ? 'सुधार ज़रूरी' : 'NEEDS WORK';
+
     const wordsWrap = document.getElementById('fb-words-wrap-' + idx);
     const goodWords = (data.goodWords    || '').split(',').map(w => w.trim()).filter(Boolean);
     const hardWords = (data.difficultWords || '').split(',').map(w => w.trim()).filter(Boolean);
 
-    if (goodWords.length || hardWords.length) {
-        wordsWrap.style.display = 'block';
-        if (goodWords.length) {
-            document.getElementById('fb-good-wrap-' + idx).style.display = 'block';
-            document.getElementById('fb-good-' + idx).innerHTML =
-                goodWords.map(w => `<span class="pill pill-good">${w}</span>`).join('');
-        }
-        if (hardWords.length) {
-            document.getElementById('fb-hard-wrap-' + idx).style.display = 'block';
-            document.getElementById('fb-hard-' + idx).innerHTML =
-                hardWords.map(w => `<span class="pill pill-hard">${w}</span>`).join('');
-        }
+    const gw = document.getElementById('fb-good-wrap-' + idx);
+    const hw = document.getElementById('fb-hard-wrap-' + idx);
+    if (gw) { gw.style.display = goodWords.length ? 'block' : 'none'; }
+    if (hw) { hw.style.display = hardWords.length ? 'block' : 'none'; }
+    if (wordsWrap) {
+        wordsWrap.style.display = (goodWords.length || hardWords.length) ? 'block' : 'none';
+    }
+    if (goodWords.length) {
+        const el = document.getElementById('fb-good-' + idx);
+        if (el) el.innerHTML = goodWords.map(w => '<span class="pill pill-good">' + escapeHtmlJs(w) + '</span>').join('');
+    }
+    if (hardWords.length) {
+        const el = document.getElementById('fb-hard-' + idx);
+        if (el) el.innerHTML = hardWords.map(w => '<span class="pill pill-hard">' + escapeHtmlJs(w) + '</span>').join('');
     }
 
-    // ── Text feedback ──────────────────────────────────────────────────────
-    document.getElementById('fb-hindi-'   + idx).textContent = data.hindiFeedback   || '';
-    document.getElementById('fb-english-' + idx).textContent = data.englishFeedback || '';
+    // ── Text feedback (punctuation coach merged into both language blocks) ─
+    var pun = (data.punctuationCoach || '').trim();
+    var hiBase = data.hindiFeedback || '';
+    var enBase = data.englishFeedback || '';
+    if (pun) {
+        if (hiBase) hiBase += '\n\n';
+        hiBase += 'विराम चिह्न व रुकावट\n' + pun;
+        if (enBase) enBase += '\n\n';
+        enBase += 'Punctuation & pauses\n' + pun;
+    }
+    document.getElementById('fb-hindi-'   + idx).textContent = hiBase;
+    document.getElementById('fb-english-' + idx).textContent = enBase;
 
     if (data.comprehensionQuestion) {
         document.getElementById('fb-question-' + idx).textContent = data.comprehensionQuestion;
@@ -1387,22 +2031,33 @@ function showFeedback(idx, data, practiceBtn) {
         document.getElementById('fb-tip-' + idx).textContent = data.improvementTip;
         document.getElementById('fb-tip-wrap-' + idx).style.display = 'block';
     }
-
-    const coachParts = [];
-    if (data.punctuationCoach) {
-        coachParts.push('<p><strong>Punctuation &amp; pauses:</strong> ' + escapeHtmlJs(data.punctuationCoach) + '</p>');
+    var tipRead = document.getElementById('fb-tip-read-' + idx);
+    if (tipRead) {
+        tipRead.dataset.lang = hi ? 'hi-IN' : 'en-IN';
     }
+
+    const coachLang = hi ? 'hi-IN' : 'en-IN';
+    const L = function (en, hiStr) { return hi ? hiStr : en; };
+    var coachHtml = '';
     if (data.paceCoach) {
-        coachParts.push('<p><strong>Reading speed:</strong> ' + escapeHtmlJs(data.paceCoach) + '</p>');
+        coachHtml += '<div class="fb-coach-row">' +
+            '<div class="fb-label"><i class="fa-solid fa-gauge-high"></i> ' + escapeHtmlJs(L('Pace', 'गति')) + '</div>' +
+            '<p id="fb-pace-txt-' + idx + '">' + escapeHtmlJs(data.paceCoach) + '</p>' +
+            '<button type="button" class="read-btn read-btn-green" data-target="fb-pace-txt-' + idx + '" data-lang="' + coachLang + '" onclick="readFeedback(this)"><i class="fa-solid fa-volume-high"></i> ' +
+            escapeHtmlJs(L('Listen', 'सुनें')) + '</button></div>';
     }
     if (data.repeatedWordsCoach) {
-        coachParts.push('<p><strong>Words you practised:</strong> ' + escapeHtmlJs(data.repeatedWordsCoach) + '</p>');
+        coachHtml += '<div class="fb-coach-row">' +
+            '<div class="fb-label"><i class="fa-solid fa-rotate"></i> ' + escapeHtmlJs(L('Practice words', 'अभ्यास वाले शब्द')) + '</div>' +
+            '<p id="fb-rep-txt-' + idx + '">' + escapeHtmlJs(data.repeatedWordsCoach) + '</p>' +
+            '<button type="button" class="read-btn read-btn-yellow" data-target="fb-rep-txt-' + idx + '" data-lang="' + coachLang + '" onclick="readFeedback(this)"><i class="fa-solid fa-volume-high"></i> ' +
+            escapeHtmlJs(L('Listen', 'सुनें')) + '</button></div>';
     }
     const coachEl = document.getElementById('fb-coach-' + idx);
     const coachWrap = document.getElementById('fb-coach-wrap-' + idx);
     if (coachEl && coachWrap) {
-        if (coachParts.length) {
-            coachEl.innerHTML = coachParts.join('');
+        if (coachHtml) {
+            coachEl.innerHTML = coachHtml;
             coachWrap.style.display = 'block';
         } else {
             coachWrap.style.display = 'none';
@@ -1422,6 +2077,10 @@ function readFeedback(btn) {
     const text     = document.getElementById(targetId)?.textContent.trim();
 
     if (!text) return;
+    if (window.monitorIsPriorityActive && window.monitorIsPriorityActive()) {
+        setTimeout(function () { readFeedback(btn); }, 900);
+        return;
+    }
 
     // If this button is already speaking, stop
     if (activeFeedbackBtn === btn) {
@@ -1471,27 +2130,42 @@ window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices(
 window.speechSynthesis.getVoices();
 
 document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('input[id^="persistReadingChk-"]').forEach(function (chk) {
-        const idx = chk.id.replace('persistReadingChk-', '');
-        const ev = document.getElementById('evaluateBtn-' + idx);
-        const title = ev ? ev.dataset.title : '';
-        chk.addEventListener('change', function () {
-            if (chk.checked) {
-                maybePersist(idx);
-            } else {
-                try { localStorage.removeItem(readingStorageKey(idx, title)); } catch (e) { /* ignore */ }
-            }
+    document.querySelectorAll('.reading-source-tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            var panel = tab.getAttribute('data-reading-panel');
+            document.querySelectorAll('.reading-source-tab').forEach(function (t) {
+                t.classList.toggle('active', t === tab);
+            });
+            document.querySelectorAll('.reading-source-panel').forEach(function (p) {
+                p.classList.toggle('active', p.id === 'reading-panel-' + panel);
+            });
         });
-        try {
-            if (localStorage.getItem(readingStorageKey(idx, title))) {
-                chk.checked = true;
-                loadReadingFromStorage(idx, title);
-                if ((readingTranscripts[idx] || '').trim()) {
-                    unlockReadingPracticeUI();
-                }
-            }
-        } catch (e) { /* ignore */ }
     });
+    var mode = new URLSearchParams(window.location.search).get('mode');
+    if (mode === 'class') {
+        var tab = document.querySelector('.reading-source-tab[data-reading-panel="class"]');
+        if (tab) tab.click();
+    }
+    if (mode === 'book') {
+        var tab2 = document.querySelector('.reading-source-tab[data-reading-panel="book"]');
+        if (tab2) tab2.click();
+    }
+    // Search Reading Passage tab removed.
+});
+window.addEventListener('beforeunload', function (e) {
+    var recording = !!readingPassageMicListening || !!practiceRecognition;
+    if (!recording) return;
+    e.preventDefault();
+    e.returnValue = '';
+});
+document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a) return;
+    var recording = !!readingPassageMicListening || !!practiceRecognition;
+    if (!recording) return;
+    if (!confirm('Recording is in progress. Leaving will stop it.')) {
+        e.preventDefault();
+    }
 });
 </script>
 </body>

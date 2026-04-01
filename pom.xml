@@ -60,6 +60,19 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
+        <!-- JWT encode/decode helpers (used by our auth filter + login API) -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-oauth2-jose</artifactId>
+        </dependency>
+
+        <!-- Flyway migrations -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+            <version>11.20.3</version>
+        </dependency>
+
         <!-- JPA + PostgreSQL (local and production on Render) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -7,6 +7,7 @@
     <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
     <link rel="stylesheet" th:href="@{/css/app.css}"/>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
     <style>
         .followup-hint { font-size: 0.86rem; color: var(--muted); margin-top: 14px; line-height: 1.45; }
         .followup-hint i { color: var(--primary); margin-right: 6px; }
@@ -24,20 +25,25 @@
         .btn-load-video:hover { border-color: var(--primary); color: var(--primary); }
     </style>
 </head>
-<body>
+<body class="app-layout">
 <div th:replace="~{fragments/loader :: loader}"></div>
-<div th:replace="~{fragments/tabs :: tabBar('classroom')}"></div>
+<div th:replace="~{fragments/shell-teacher :: sidebar('none')}"></div>
 
+<main class="layout-main">
 <header>
     <p>Ask any question — speak or type. Get a clear answer in your language.</p>
+    <p class="home-quick-links" style="margin:12px 0 0;font-size:0.92rem;">
+        <a th:href="@{/teacher/dashboard}" style="color:var(--primary);font-weight:700;text-decoration:none;">Teacher dashboard</a>
+        <span style="color:var(--muted);margin:0 8px;">·</span>
+        <a th:href="@{/teacher/learning}" style="color:var(--primary);font-weight:700;text-decoration:none;">Learning hub</a>
+    </p>
 </header>
-
 
 <div class="layout">
 
     <!-- ══ LEFT PANEL ══ -->
     <div class="panel">
-        <div class="panel-label"><i class="fa-solid fa-microphone-lines"></i>&nbsp; Ask a Question</div>
+        <div class="panel-label" id="classroomPanelLabel"><i class="fa-solid fa-microphone-lines"></i>&nbsp; Ask a question</div>
 
         <div class="mic-area">
             <button class="mic-btn" id="micBtn" type="button" title="Click to speak">
@@ -49,7 +55,11 @@
             <div class="mic-status" id="micStatus">Tap the mic and ask your question</div>
         </div>
 
-        <form id="explainForm" th:action="@{/explain}" th:object="${teachingRequest}" method="post">
+        <!-- Use th:attr for action (not th:action) to avoid SpringActionTagProcessor + session edge-case; CSRF ignored for /explain in SecurityConfig. -->
+        <form id="explainForm" method="post" th:object="${teachingRequest}" th:attr="action=@{/explain}">
+            <input type="hidden" name="classSessionMode" id="inputClassSessionMode" value="live"/>
+            <input type="hidden" name="prepareFocus" id="inputPrepareFocus" value="revision"/>
+            <input type="hidden" name="prepareGrade" id="inputPrepareGrade" value="" autocomplete="off"/>
             <textarea id="topicInput"
                       th:field="*{topic}"
                       placeholder="Your question will appear here — or type it directly..."
@@ -84,26 +94,29 @@
             <span th:text="${response.explanation}">We can only show educational content.</span>
         </div>
 
-        <!-- Tier 1: Lazy YouTube (click to load iframe) -->
-        <div class="media-visual video-lazy-wrap" th:if="${response != null and !response.nonEducational and response.videoId != null}">
+        <!-- Tier 1: Lazy YouTube (videoId is fetched on click for quiz mode) -->
+        <div class="media-visual video-lazy-wrap"
+             th:if="${response != null and !response.nonEducational and (response.videoId != null or (teachingRequest != null and teachingRequest.classSessionMode == 'quiz'))}">
             <div class="video-lazy" th:attr="data-videoid=${response.videoId}">
-                <button type="button" class="btn-load-video">
+                <button type="button" class="btn-load-video" onclick="loadYouTubeForCurrentAnswer(event)">
                     <i class="fa-brands fa-youtube"></i> Load video
                 </button>
             </div>
         </div>
 
-        <!-- Tier 2: Wikipedia animated GIF -->
+        <!-- Tier 2: Wikipedia animated GIF (not used in quiz explain mode) -->
         <div class="media-visual"
-             th:if="${response != null and !response.nonEducational and response.videoId == null and response.wikiGifUrl != null}">
+             th:if="${response != null and !response.nonEducational and response.videoId == null and response.wikiGifUrl != null and (teachingRequest == null or teachingRequest.classSessionMode == null or teachingRequest.classSessionMode != 'quiz')}">
             <img th:src="${response.wikiGifUrl}" class="wiki-gif" alt="Educational animation"/>
         </div>
 
-        <!-- Tier 3: CSS animated scene (injected by app.js when no video/gif) -->
+        <!-- Tier 3: CSS animated scene (injected by app.js when no video/gif; not used in quiz explain mode) -->
         <div class="media-visual" id="cssScene"
-             th:if="${response != null and !response.nonEducational and response.videoId == null and response.wikiGifUrl == null}"
+             th:if="${response != null and !response.nonEducational and response.videoId == null and response.wikiGifUrl == null and (teachingRequest == null or teachingRequest.classSessionMode == null or teachingRequest.classSessionMode != 'quiz')}"
              style="display:none;">
         </div>
+
+        <!-- Quiz mode: we load YouTube only on click; no animation fallback -->
 
         <!-- Thinking state (shown by app.js while waiting) -->
         <div class="thinking-dots" id="thinkingDots">
@@ -154,347 +167,57 @@
 <div id="hasWikiGif" style="display:none"
      th:text="${response != null and response.wikiGifUrl != null ? 'true' : 'false'}"></div>
 
-<!-- ══ MONITOR MODE PANEL ══════════════════════════════════════════════════ -->
-<div class="monitor-section">
-    <div class="monitor-toggle-bar">
-        <div class="monitor-toggle-label">
-            <i class="fa-solid fa-ear-listen"></i>
-            <span>Classroom Monitor</span>
-            <span class="monitor-badge" id="monitorBadge">OFF</span>
-            <span class="monitor-mic-hint">Same mic as &quot;Ask a question&quot; — allow if prompted</span>
-        </div>
-        <button class="monitor-toggle-btn" id="monitorToggleBtn" onclick="toggleMonitor()">
-            <i class="fa-solid fa-play" id="monitorToggleIcon"></i> Start Monitor
-        </button>
-    </div>
-
-    <div class="monitor-panel" id="monitorPanel" style="display:none;">
-        <!-- Noise meter -->
-        <div class="monitor-meter-wrap">
-            <div class="monitor-meter-bar">
-                <div class="monitor-meter-fill" id="monitorFill"></div>
-            </div>
-            <div class="monitor-meter-labels">
-                <span>Silent</span><span>Normal</span><span>Loud</span>
-            </div>
-        </div>
-
-        <!-- Status card -->
-        <div class="monitor-status-card" id="monitorStatusCard">
-            <div class="monitor-status-emoji" id="monitorEmoji">👂</div>
-            <div class="monitor-status-text" id="monitorStatusText">Listening to classroom...</div>
-            <div class="monitor-db-level" id="monitorDbLevel">— dB</div>
-        </div>
-
-        <!-- Sensitivity -->
-        <div class="monitor-sensitivity">
-            <label>Sensitivity
-                <span id="sensitivityLabel">Medium</span>
-            </label>
-            <input type="range" id="sensitivitySlider" min="1" max="3" value="2"
-                   oninput="updateSensitivity(this.value)" class="monitor-slider"/>
-        </div>
-        <div style="margin-top:10px;">
-            <button type="button" class="monitor-toggle-btn" style="font-size:0.8rem; padding:8px 16px;"
-                    onclick="speak('Monitor voice test. If you hear this, voice is working.', 'en-IN', 0.88, 1);">
-                <i class="fa-solid fa-volume-high"></i> Test voice
-            </button>
-        </div>
-    </div>
-</div>
+</main>
 
 <!-- JS: load order matters — scenes.js first, then app.js, voice.js, mic.js -->
 <script th:src="@{/js/scenes.js}"></script>
+<script th:src="@{/js/learning-grade-context.js}"></script>
 <script th:src="@{/js/app.js}"></script>
 <script th:src="@{/js/voice.js}"></script>
 <script th:src="@{/js/mic.js}"></script>
 
 <script>
-// ══ CLASSROOM MONITOR MODE ══════════════════════════════════════════════════
-let monitorActive       = false;
-let monitorAudioCtx     = null;
-let monitorAnalyser     = null;
-let monitorStream       = null;
-let monitorAnimFrame    = null;
-let monitorNoiseStart   = null;   // timestamp when noise started
-let monitorQuietStart   = null;   // timestamp when quiet started after noise
-let monitorLastWarning  = 0;      // timestamp of last TTS warning
-let monitorLastPraise   = 0;      // timestamp of last TTS praise
-let monitorLastSpoken   = 0;      // timestamp of last ANY spoken message
-let monitorWasNoisy     = false;  // were we just noisy?
-let monitorSpeaking     = false;
-
-// Thresholds — adjusted by sensitivity slider (lower = easier to trigger for testing)
-// Sensitivity 1=Low(tolerant), 2=Medium, 3=High(strict)
-const THRESHOLDS = {
-    1: { noisy: 65, loud: 52 },
-    2: { noisy: 55, loud: 42 },
-    3: { noisy: 45, loud: 35 }
-};
-let currentSensitivity = 2;
-
-const NOISY_PHRASES = [
-    { text: "कृपया चुप रहें।", lang: "hi-IN" },
-    { text: "Please keep quiet.", lang: "en-IN" },
-    { text: "शांति से बैठो।", lang: "hi-IN" },
-    { text: "Too much noise. Settle down please.", lang: "en-IN" },
-    { text: "कक्षा, कृपया चुप रहो।", lang: "hi-IN" },
-    { text: "Class, please be quiet.", lang: "en-IN" }
-];
-const PRAISE_PHRASES = [
-    { text: "बहुत अच्छा! कक्षा शांत है।", lang: "hi-IN" },
-    { text: "Well done! The class is peaceful.", lang: "en-IN" },
-    { text: "शाबाश! ऐसे ही चुप रहो।", lang: "hi-IN" },
-    { text: "Excellent! Keep this quiet going.", lang: "en-IN" },
-    { text: "अच्छा काम। शांति बनाए रखो।", lang: "hi-IN" },
-    { text: "Good class. Keep the peace.", lang: "en-IN" }
-];
-let noisyPhraseIdx = 0;
-let praisePhraseIdx = 0;
-
-function updateSensitivity(val) {
-    currentSensitivity = parseInt(val);
-    const labels = { 1: 'Low', 2: 'Medium', 3: 'High' };
-    document.getElementById('sensitivityLabel').textContent = labels[val];
-}
-
-async function toggleMonitor() {
-    console.log('[monitor] toggle clicked, active =', monitorActive);
-    if (monitorActive) {
-        stopMonitor();
-    } else {
-        await startMonitor();
-    }
-}
-
-async function startMonitor() {
-    const badgeEl  = document.getElementById('monitorBadge');
-    const statusEl = document.getElementById('monitorStatusText');
-
-    // Feature detection: older/locked-down browsers
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        console.warn('[monitor] navigator.mediaDevices.getUserMedia is not available');
-        badgeEl.textContent = 'UNSUPPORTED';
-        badgeEl.className   = 'monitor-badge';
-        statusEl.textContent = 'Microphone is not supported in this browser.';
-        return;
-    }
-
-    // Create AudioContext *now* (same tick as the click) so Chrome has a user gesture and won't keep it suspended
-    if (!monitorAudioCtx || monitorAudioCtx.state === 'closed') {
-        monitorAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (monitorAudioCtx.state === 'suspended') {
-        monitorAudioCtx.resume(); // fire-and-forget while we still have the gesture
-    }
-
-    badgeEl.textContent = 'WAITING';
-    badgeEl.className   = 'monitor-badge';
-    statusEl.textContent = 'Connecting microphone…';
-
-    let stream = null;
-    try {
-        const timeoutMs = 12000;
-        stream = await Promise.race([
-            navigator.mediaDevices.getUserMedia({ audio: true, video: false }),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs))
-        ]);
-        monitorStream = stream;
-        console.log('[monitor] getUserMedia success');
-    } catch (e) {
-        console.warn('[monitor] getUserMedia error', e);
-        let msg = 'Microphone access is required for Monitor Mode.';
-        if (e && e.message === 'TIMEOUT') {
-            msg = 'No response from microphone. Click the lock icon next to the address bar, set Microphone to Allow, then click Start Monitor again.';
-        } else if (e && e.name === 'NotAllowedError') {
-            msg = 'Mic permission was blocked. Click the lock icon, allow microphone, then try again.';
-        } else if (e && e.name === 'NotFoundError') {
-            msg = 'No microphone was found. Please plug in or enable a microphone.';
+// ══ Sync prepare-class prefs from Teacher dashboard (localStorage) ══
+(function syncClassModeFromDashboard() {
+    var K_MODE = 'sarva.classSessionMode';
+    var K_FOCUS = 'sarva.prepareFocus';
+    var inputMode = document.getElementById('inputClassSessionMode');
+    var inputFocus = document.getElementById('inputPrepareFocus');
+    var topicInput = document.getElementById('topicInput');
+    var panelLabel = document.getElementById('classroomPanelLabel');
+    var PLACEHOLDER_LIVE = 'Your question will appear here — or type it directly...';
+    var PLACEHOLDERS_PREPARE = {
+        revision: 'e.g. Quick revision: key points from last chapter for tomorrow’s class…',
+        new_topic: 'e.g. Simple hook + explanation plan for introducing a new topic…',
+        doubt_clearing: 'e.g. Clear common mistakes students make — step by step…',
+        quiz_review: 'e.g. Oral quiz questions to review before the unit test…',
+        reading_literacy: 'e.g. Vocabulary and comprehension focus for today’s passage…',
+        homework_help: 'e.g. Hints and worked example style help for homework problems…'
+    };
+    function apply() {
+        var mode = 'live';
+        var focus = 'revision';
+        try {
+            mode = localStorage.getItem(K_MODE) || 'live';
+            focus = localStorage.getItem(K_FOCUS) || 'revision';
+        } catch (e) {}
+        if (inputMode) inputMode.value = mode;
+        if (inputFocus) inputFocus.value = focus;
+        document.body.classList.toggle('class-prepare-class', mode === 'prepare');
+        if (panelLabel) {
+            panelLabel.innerHTML = mode === 'prepare'
+                ? '<i class="fa-solid fa-clipboard-list"></i>&nbsp; Plan / prompt'
+                : '<i class="fa-solid fa-microphone-lines"></i>&nbsp; Ask a question';
         }
-        statusEl.textContent = msg;
-        badgeEl.textContent  = 'OFF';
-        alert(msg);
-        return;
+        if (!topicInput) return;
+        if (mode === 'live') topicInput.placeholder = PLACEHOLDER_LIVE;
+        else topicInput.placeholder = PLACEHOLDERS_PREPARE[focus] || PLACEHOLDERS_PREPARE.revision;
     }
-
-    try {
-        if (monitorAudioCtx.state === 'suspended') {
-            await Promise.race([
-                monitorAudioCtx.resume(),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('RESUME_TIMEOUT')), 3000))
-            ]);
-        }
-        monitorAnalyser = monitorAudioCtx.createAnalyser();
-        monitorAnalyser.fftSize = 256;
-        monitorAnalyser.smoothingTimeConstant = 0.7;
-        const source = monitorAudioCtx.createMediaStreamSource(monitorStream);
-        source.connect(monitorAnalyser);
-    } catch (e) {
-        console.warn('[monitor] AudioContext/analyser error', e);
-        statusEl.textContent = e && e.message === 'RESUME_TIMEOUT'
-            ? 'Audio took too long to start. Click Start Monitor again.'
-            : 'Could not start audio. Try refreshing and allow mic again.';
-        badgeEl.textContent = 'OFF';
-        if (monitorStream) monitorStream.getTracks().forEach(function(t) { t.stop(); });
-        return;
-    }
-
-    monitorActive     = true;
-    monitorNoiseStart = null;
-    monitorQuietStart = null;
-    monitorWasNoisy   = false;
-
-    const panelEl  = document.getElementById('monitorPanel');
-    const badge2   = document.getElementById('monitorBadge');
-    const btnEl    = document.getElementById('monitorToggleBtn');
-    const iconEl   = document.getElementById('monitorToggleIcon');
-    const dbEl     = document.getElementById('monitorDbLevel');
-
-    if (panelEl) panelEl.style.display = 'block';
-    if (badge2) {
-        badge2.textContent = 'ON';
-        badge2.className   = 'monitor-badge badge-on';
-    }
-    if (btnEl) {
-        btnEl.innerHTML = '<i class="fa-solid fa-stop"></i> Stop Monitor';
-        btnEl.className = 'monitor-toggle-btn btn-stop';
-    }
-    if (iconEl) iconEl.className = 'fa-solid fa-stop';
-    statusEl.textContent = 'Listening to classroom…';
-    if (dbEl) dbEl.textContent = '0 dB';
-
-    readMonitor();
-}
-
-function stopMonitor() {
-    monitorActive = false;
-    if (monitorAnimFrame) cancelAnimationFrame(monitorAnimFrame);
-    if (monitorStream)    monitorStream.getTracks().forEach(t => t.stop());
-    if (monitorAudioCtx)  monitorAudioCtx.close();
-    window.speechSynthesis.cancel();
-
-    document.getElementById('monitorFill').style.width       = '0%';
-    document.getElementById('monitorFill').className         = 'monitor-meter-fill';
-    document.getElementById('monitorBadge').textContent      = 'OFF';
-    document.getElementById('monitorBadge').className        = 'monitor-badge';
-    document.getElementById('monitorToggleBtn').innerHTML    = '<i class="fa-solid fa-play"></i> Start Monitor';
-    document.getElementById('monitorToggleBtn').className    = 'monitor-toggle-btn';
-    document.getElementById('monitorEmoji').textContent      = '👂';
-    document.getElementById('monitorStatusText').textContent = 'Monitor stopped.';
-    document.getElementById('monitorDbLevel').textContent    = '— dB';
-}
-
-function readMonitor() {
-    if (!monitorActive) return;
-    const dataArray = new Uint8Array(monitorAnalyser.frequencyBinCount);
-    monitorAnalyser.getByteFrequencyData(dataArray);
-
-    // RMS → approximate dB
-    const rms = Math.sqrt(dataArray.reduce((s, v) => s + v * v, 0) / dataArray.length);
-    const db  = rms > 0 ? (20 * Math.log10(rms / 128) + 60) : 0;  // normalize to ~0–100 range
-    const dbClamped = Math.max(0, Math.min(100, db));
-
-    updateMeterUI(dbClamped);
-    evaluateNoise(dbClamped);
-
-    monitorAnimFrame = requestAnimationFrame(readMonitor);
-}
-
-function updateMeterUI(db) {
-    const fill = document.getElementById('monitorFill');
-    if (fill) fill.style.width = db + '%';
-    const thresh = THRESHOLDS[currentSensitivity];
-    if (fill) {
-        if      (db > thresh.noisy) fill.className = 'monitor-meter-fill fill-red';
-        else if (db > thresh.loud)  fill.className = 'monitor-meter-fill fill-yellow';
-        else                        fill.className = 'monitor-meter-fill fill-green';
-    }
-    const dbEl = document.getElementById('monitorDbLevel');
-    if (dbEl) dbEl.textContent = Math.round(db) + ' dB';
-}
-
-function evaluateNoise(db) {
-    const thresh = THRESHOLDS[currentSensitivity];
-    const now    = Date.now();
-    // Short timings for testing: warning after 1.5s loud, praise after 2.5s quiet, 6s between any message
-    const NOISE_SUSTAIN_MS  = 1500;   // noisy for 1.5s before warning
-    const PRAISE_SUSTAIN_MS = 2500;   // quiet for 2.5s before praise
-    const WARNING_COOLDOWN  = 6000;   // min 6s between warnings
-    const PRAISE_COOLDOWN   = 6000;   // min 6s between praise
-    const ANY_SPEECH_COOLDOWN = 6000; // min 6s between any spoken message
-
-    if (db > thresh.noisy) {
-        // NOISY
-        monitorQuietStart = null;
-        if (!monitorNoiseStart) monitorNoiseStart = now;
-
-        setStatus('🔴', 'Class is too noisy!', false);
-
-        if ((now - monitorNoiseStart) >= NOISE_SUSTAIN_MS &&
-            (now - monitorLastWarning) >= WARNING_COOLDOWN &&
-            (now - monitorLastSpoken) >= ANY_SPEECH_COOLDOWN) {
-            monitorLastWarning = now;
-            monitorLastSpoken  = now;
-            monitorWasNoisy    = true;
-            var noisyPhrase = NOISY_PHRASES[noisyPhraseIdx++ % NOISY_PHRASES.length];
-            speak(noisyPhrase.text, noisyPhrase.lang, 0.85, 0.9);
-        }
-
-    } else if (db > thresh.loud) {
-        // GETTING LOUD
-        monitorNoiseStart = null;
-        monitorQuietStart = null;
-        setStatus('🟡', 'Getting a bit loud...', false);
-
-    } else {
-        // QUIET / NORMAL
-        monitorNoiseStart = null;
-        if (!monitorQuietStart) monitorQuietStart = now;
-        setStatus('🟢', 'Class is calm. Good work!', true);
-
-        if (monitorWasNoisy &&
-            (now - monitorQuietStart) >= PRAISE_SUSTAIN_MS &&
-            (now - monitorLastPraise) >= PRAISE_COOLDOWN &&
-            (now - monitorLastSpoken) >= ANY_SPEECH_COOLDOWN) {
-            monitorLastPraise = now;
-            monitorLastSpoken = now;
-            monitorWasNoisy   = false;
-            var praisePhrase = PRAISE_PHRASES[praisePhraseIdx++ % PRAISE_PHRASES.length];
-            speak(praisePhrase.text, praisePhrase.lang, 0.88, 1.1);
-        }
-    }
-}
-
-function setStatus(emoji, text, calm) {
-    document.getElementById('monitorEmoji').textContent      = emoji;
-    document.getElementById('monitorStatusText').textContent = text;
-    const card = document.getElementById('monitorStatusCard');
-    card.className = 'monitor-status-card ' + (calm ? 'status-calm' : 'status-noisy');
-}
-
-function speak(text, lang, rate, pitch) {
-    if (!text || !('speechSynthesis' in window)) return;
-    monitorSpeaking = false; // allow this speak to run
-    window.speechSynthesis.cancel();
-    var u = new SpeechSynthesisUtterance(text);
-    u.lang = lang || 'en-IN';
-    u.rate = rate || 0.9;
-    u.pitch = pitch || 1;
-    var voices = window.speechSynthesis.getVoices();
-    var want = (lang || '').substring(0, 2);
-    for (var i = 0; i < voices.length; i++) {
-        if (voices[i].lang.indexOf(want) !== -1) { u.voice = voices[i]; break; }
-    }
-    if (!u.voice && want === 'hi') {
-        for (var j = 0; j < voices.length; j++) {
-            if (voices[j].lang.indexOf('en') !== -1) { u.voice = voices[j]; break; }
-        }
-    }
-    u.onstart = function() { monitorSpeaking = true; };
-    u.onend = u.onerror = function() { monitorSpeaking = false; };
-    if (window.speechSynthesis.paused) window.speechSynthesis.resume();
-    window.speechSynthesis.speak(u);
-}
+    apply();
+    window.addEventListener('storage', function (e) {
+        if (e.key === K_MODE || e.key === K_FOCUS) apply();
+    });
+})();
 
 function submitPromptBehindScenes(prompt, displayText) {
     var input = document.getElementById('topicInput');
@@ -554,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var titleEl = spans[1];
     var txt = (titleEl.textContent || '').trim();
     var looksLikePrompt =
-        txt.startsWith('Explain this MCQ') ||
+        txt.startsWith('Explain this') ||
         txt.indexOf('Return ONLY in this JSON format') >= 0 ||
         txt.indexOf('"key_point"') >= 0;
     if (looksLikePrompt) {

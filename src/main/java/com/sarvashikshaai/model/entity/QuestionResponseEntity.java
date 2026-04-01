@@ -19,7 +19,10 @@ import java.time.Instant;
 @Entity
 @Table(
         name = "question_responses",
-        uniqueConstraints = @UniqueConstraint(name = "uq_question_responses_question", columnNames = "question_id")
+        uniqueConstraints = @UniqueConstraint(
+                name = "uq_question_responses_question_student",
+                columnNames = {"question_id", "student_id"}
+        )
 )
 @Getter
 @Setter

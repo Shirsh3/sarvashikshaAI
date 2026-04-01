@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance wireframe (reference) | Sarvashiksha</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --admin-bg: #f8fafc;
+            --sidebar-dark: #0f172a;
+            --primary-indigo: #6366f1;
+            --success-green: #10b981;
+            --danger-red: #f87171;
+            --warning-orange: #f59e0b;
+            --card-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        body { font-family: 'Quicksand', sans-serif; margin: 0; background: var(--admin-bg); display: flex; height: 100vh; overflow: hidden; }
+
+        .sidebar { width: 260px; background: var(--sidebar-dark); color: white; padding: 2rem 1rem; display: flex; flex-direction: column; }
+        .logo { font-size: 1.5rem; font-weight: 700; margin-bottom: 3rem; color: var(--primary-indigo); text-align: center; }
+        .nav-item { padding: 12px 20px; color: #94a3b8; text-decoration: none; border-radius: 12px; margin-bottom: 8px; font-weight: 600; cursor: pointer; }
+        .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+
+        .content { flex: 1; padding: 2rem; overflow-y: auto; position: relative; }
+        .header { margin-bottom: 2rem; }
+        .header h2 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 1.5rem; }
+        .header p { color: #64748b; font-size: 0.9rem; margin-top: 5px; }
+
+        .controls-row { display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .date-input, .btn-action { padding: 10px 20px; border-radius: 12px; border: 1px solid #e2e8f0; background: white; font-weight: 700; font-family: inherit; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .btn-view { background: #f97316; color: white; border: none; }
+        .btn-roll-call { background: var(--primary-indigo); color: white; border: none; padding: 12px 30px; font-size: 1.1rem; margin: 0 auto 2rem; display: flex; }
+
+        .stats-pills { display: flex; gap: 1rem; margin-bottom: 2rem; }
+        .pill { padding: 8px 20px; border-radius: 20px; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; }
+        .pill.present { background: #dcfce7; color: #166534; }
+        .pill.absent { background: #fee2e2; color: #991b1b; }
+        .pill.unmarked { background: #f1f5f9; color: #475569; }
+
+        .student-card { background: white; border-radius: 20px; padding: 1rem 1.5rem; box-shadow: var(--card-shadow); display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; border: 1px solid #f1f5f9; }
+        .student-info { display: flex; align-items: center; gap: 15px; }
+        .avatar { width: 45px; height: 45px; border-radius: 50%; background: var(--primary-indigo); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+        .student-name { font-weight: 700; color: #1e293b; }
+        .student-grade { font-size: 0.8rem; color: #94a3b8; margin-top: 2px; }
+
+        .btn-status { padding: 10px 20px; border-radius: 12px; border: 1px solid #e2e8f0; font-weight: 700; cursor: pointer; background: white; transition: 0.2s; }
+        .btn-present:hover, .btn-present.active { background: #dcfce7; color: #10b981; border-color: #10b981; }
+        .btn-absent:hover, .btn-absent.active { background: #fee2e2; color: #ef4444; border-color: #ef4444; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.9); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: #1e293b; color: white; width: 400px; padding: 2.5rem; border-radius: 30px; text-align: center; }
+        .modal-step { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2rem; }
+        .modal-avatar { width: 100px; height: 100px; border-radius: 50%; background: var(--primary-indigo); margin: 0 auto 1.5rem; font-size: 2.5rem; display: flex; align-items: center; justify-content: center; }
+        .modal-name { font-size: 2rem; font-weight: 700; margin-bottom: 2rem; }
+        .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
+        .modal-btn { padding: 20px; border-radius: 20px; border: none; color: white; font-weight: 700; font-size: 1.1rem; cursor: pointer; }
+        .modal-present { background: var(--success-green); box-shadow: 0 10px 15px rgba(16, 185, 129, 0.2); }
+        .modal-absent { background: #ef4444; box-shadow: 0 10px 15px rgba(239, 68, 68, 0.2); }
+        .modal-footer { display: flex; justify-content: space-between; color: #94a3b8; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="logo">🏫 Teacher Suite</div>
+    <a class="nav-item">📊 Dashboard</a>
+    <a class="nav-item active">📅 Attendance</a>
+    <a class="nav-item">📚 Learning Bank</a>
+    <div style="flex-grow: 1;"></div>
+    <a class="nav-item" style="color: #fb7185;">🔴 Logout</a>
+</aside>
+
+<main class="content">
+    <div class="header">
+        <h2>✔️ Attendance</h2>
+        <p>Mark individually or use Roll Call mode — names are read aloud one by one.</p>
+    </div>
+
+    <div class="controls-row">
+        <input type="date" class="date-input" value="2026-03-28">
+        <button class="btn-action btn-view" type="button">📅 View</button>
+        <button class="btn-action" type="button">📥 Export CSV</button>
+    </div>
+
+    <button class="btn-action btn-roll-call" type="button" onclick="openRollCall()">📢 Start Roll Call</button>
+
+    <div class="stats-pills">
+        <div class="pill present">✔️ 0 Present</div>
+        <div class="pill absent">✖️ 0 Absent</div>
+        <div class="pill unmarked">⚪ 3 Unmarked</div>
+    </div>
+
+    <div class="student-card">
+        <div class="student-info">
+            <div class="avatar">B</div>
+            <div>
+                <div class="student-name">B</div>
+                <div class="student-grade">Grade: 1</div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-status btn-present" type="button">✔️ Present</button>
+            <button class="btn-status btn-absent" type="button">✖️ Absent</button>
+        </div>
+    </div>
+
+    <div class="student-card">
+        <div class="student-info">
+            <div class="avatar" style="background: #8b5cf6;">C</div>
+            <div>
+                <div class="student-name">C</div>
+                <div class="student-grade">Grade: 1</div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-status btn-present" type="button">✔️ Present</button>
+            <button class="btn-status btn-absent" type="button">✖️ Absent</button>
+        </div>
+    </div>
+
+    <div class="student-card">
+        <div class="student-info">
+            <div class="avatar" style="background: #ec4899;">A</div>
+            <div>
+                <div class="student-name">A</div>
+                <div class="student-grade">Grade: 1</div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-status btn-present" type="button">✔️ Present</button>
+            <button class="btn-status btn-absent" type="button">✖️ Absent</button>
+        </div>
+    </div>
+</main>
+
+<div class="modal-overlay" id="rollCallModal">
+    <div class="modal-content">
+        <div class="modal-step">Student 1 of 3</div>
+        <div class="modal-avatar">B</div>
+        <div class="modal-name">B</div>
+        <div style="color: #6366f1; margin-bottom: 2rem;">● ● ● Tap Present or Absent</div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-present" type="button">✔️<br>Present</button>
+            <button class="modal-btn modal-absent" type="button">✖️<br>Absent</button>
+        </div>
+        <div class="modal-footer">
+            <span style="cursor: pointer;">⏭️ Skip</span>
+            <span style="cursor: pointer;" onclick="closeRollCall()">⏹️ End Roll Call</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openRollCall() {
+        document.getElementById('rollCallModal').style.display = 'flex';
+    }
+    function closeRollCall() {
+        document.getElementById('rollCallModal').style.display = 'none';
+    }
+</script>
+
+</body>
+</html>

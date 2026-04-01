@@ -96,6 +96,10 @@ public class ReadingEvaluationService {
      * if they already pasted a full passage, returns it cleaned lightly.
      */
     public GeneratedReadingPassage generateReadingPassage(String teacherInput) {
+        return generateReadingPassage(teacherInput, null);
+    }
+
+    public GeneratedReadingPassage generateReadingPassage(String teacherInput, String grade) {
         if (teacherInput == null || teacherInput.isBlank()) {
             return new GeneratedReadingPassage("Reading passage", "");
         }
@@ -115,7 +119,10 @@ public class ReadingEvaluationService {
             );
         }
 
-        String prompt = """
+        String gradeLine = (grade == null || grade.isBlank())
+                ? "Not specified — infer age-appropriate reading level from the teacher request."
+                : grade.trim();
+        String promptHead = """
             You help Indian school teachers prepare reading practice for students aged 8-16.
 
             """ + EDUCATIONAL_ONLY_READING + """
@@ -126,12 +133,16 @@ public class ReadingEvaluationService {
             (1) Instructions such as "Generate a passage on Ram Dhari" or "Write 150 words about photosynthesis in Hindi"
             (2) Already a full passage copied from a textbook for students to read
 
+            Target grade for reading level (vocabulary + sentence length MUST match this band):
+            %s
+
             Teacher input (verbatim):
 
-            """ + trimmed + """
+            """.formatted(gradeLine);
+        String promptTail = """
 
             Your task:
-            - If the input is mainly a request to create or generate reading material: write an original, factual, age-appropriate passage (about 120-220 words unless they specify length). Use English unless they clearly ask for Hindi (Devanagari script).
+            - If the input is mainly a request to create or generate reading material: write an original, factual passage (about 120-220 words unless they specify length) whose difficulty clearly matches the target grade — do NOT use the same complexity for every grade. Use English unless they clearly ask for Hindi (Devanagari script).
             - If the request is allowed but superficial (gossip, ratings, comparisons of looks): write a passage that follows the TRANSFORMATION strategy above inside the passage body (still JSON title + passage).
             - If the input is already a student passage: keep the meaning; fix only obvious spelling or punctuation. Do not replace the whole text with a different topic.
             - If pasted or requested content is unsafe or not suitable for school, output JSON with a short safe educational passage instead (title "Practice passage"); do not reproduce harmful text.
@@ -139,6 +150,7 @@ public class ReadingEvaluationService {
             Respond ONLY with valid JSON (no markdown, no code fences):
             {"title":"Short descriptive title","passage":"Full passage text; you may use newline characters inside the string for paragraphs"}
             """;
+        String prompt = promptHead + trimmed + promptTail;
 
         try {
             String raw = openAIClient.generateCompletion(prompt);
@@ -158,6 +170,9 @@ public class ReadingEvaluationService {
         }
     }
 
+    /** Max characters of original passage sent to the model (book excerpts can be very long). */
+    private static final int MAX_ORIGINAL_TEXT_IN_PROMPT = 10_000;
+
     public ReadingFeedback evaluateReading(ReadingRequest req) {
         int origWords   = countWords(req.originalText());
         int spokenWords = countWords(req.spokenText());
@@ -174,7 +189,22 @@ public class ReadingEvaluationService {
             ? ""
             : "Per-segment practice log from the app:\n%s\n".formatted(req.practiceSessionSummary());
 
-        String prompt = """
+        boolean oralOnlyNoPassage = req.originalText() == null || req.originalText().isBlank();
+
+        String prompt;
+        if (oralOnlyNoPassage) {
+            prompt = buildOralOnlyEvaluationPrompt(req, attemptsBlock, wpmLine, rehearsedLine, summaryLine);
+        } else {
+            String fullOriginal = req.originalText();
+            boolean originalTruncated = fullOriginal.length() > MAX_ORIGINAL_TEXT_IN_PROMPT;
+            String originalForPrompt = originalTruncated
+                ? truncate(fullOriginal, MAX_ORIGINAL_TEXT_IN_PROMPT)
+                : fullOriginal;
+            String truncationNote = originalTruncated
+                ? "\nNote: The passage was long; only the first part is shown above. Compare the student's speech to this excerpt; word-count fields in the app use the full passage length.\n"
+                : "";
+
+            prompt = """
             You are a warm, encouraging reading coach for school students aged 8-16 in India.
 
             """ + EDUCATIONAL_ONLY_FEEDBACK + """
@@ -185,9 +215,11 @@ public class ReadingEvaluationService {
             Original article text: "%s"
             Final combined transcript of what the student read aloud (use this as the main basis for accuracy): "%s"
 
-            %s%s%s%s
+            %s%s%s%s%s
 
             The student may have recorded in several short segments (re-tries). Use the final combined transcript for matching the passage; use the segment log only to infer hesitation, pace changes, and words they practised again.
+
+            Language rules: If the original passage OR the spoken transcript is primarily Hindi (Devanagari), then difficultWords and goodWords MUST be comma-separated words/phrases in Devanagari; punctuationCoach and paceCoach MUST be 1-2 short sentences in simple Hindi (Devanagari). If primarily English, use English for those four fields.
 
             Carefully compare the original text with what the student said, then respond ONLY with this JSON \
             (no markdown, no extra text outside the JSON). Do not use or request any student or personal names.
@@ -204,25 +236,28 @@ public class ReadingEvaluationService {
               "englishFeedback":     "<Same content as hindiFeedback but in English. Do not use any personal name.>",
               "comprehensionQuestion": "<One simple question in Hindi about the article content to check understanding>",
               "improvementTip":      "<One short, specific, actionable tip in English for next practice session>",
-              "punctuationCoach":    "<1-2 sentences in simple English on commas, full stops, and pauses — relate to how they read THIS passage>",
-              "paceCoach":           "<1-2 sentences in simple English on reading speed — reference the client's WPM hint or segment log if useful>",
+              "punctuationCoach":    "<1-2 sentences on commas, full stops, pauses — Hindi if passage Hindi, else English>",
+              "paceCoach":           "<1-2 sentences on reading speed — Hindi if passage Hindi, else English>",
               "repeatedWordsCoach":  "<If rehearsed-word hints were given, 1-3 short friendly tips on pronouncing those words; otherwise a brief encouragement>"
             }
             """.formatted(
                 escapePrompt(req.articleTitle()),
-                escapePrompt(req.originalText()),
+                escapePrompt(originalForPrompt),
                 escapePrompt(req.spokenText()),
                 wpmLine,
                 rehearsedLine,
                 summaryLine,
+                truncationNote,
                 attemptsBlock
             );
+        }
 
         try {
             String raw = openAIClient.generateCompletion(prompt);
             raw = raw.replaceAll("^```(?:json)?\\s*", "").replaceAll("\\s*```$", "").trim();
             JsonNode n = mapper.readTree(raw);
-            int accuracyPct = n.path("accuracyPercent").asInt(computeSimpleAccuracy(req.originalText(), req.spokenText()));
+            int accuracyPct = n.path("accuracyPercent").asInt(
+                oralOnlyNoPassage ? 0 : computeSimpleAccuracy(req.originalText(), req.spokenText()));
             return new ReadingFeedback(
                 n.path("fluencyScore").asInt(5),
                 n.path("pronunciationScore").asInt(5),
@@ -287,6 +322,72 @@ public class ReadingEvaluationService {
             return t;
         }
         return t.substring(0, max) + "…";
+    }
+
+    /**
+     * Student reads from a physical book with no pasted reference — only the speech transcript is available.
+     */
+    private String buildOralOnlyEvaluationPrompt(
+            ReadingRequest req,
+            String attemptsBlock,
+            String wpmLine,
+            String rehearsedLine,
+            String summaryLine) {
+        String spoken = req.spokenText() == null ? "" : req.spokenText();
+        String spokenForPrompt = spoken.length() > MAX_ORIGINAL_TEXT_IN_PROMPT
+            ? truncate(spoken, MAX_ORIGINAL_TEXT_IN_PROMPT)
+            : spoken;
+        String title = req.articleTitle() != null && !req.articleTitle().isBlank()
+            ? req.articleTitle().trim()
+            : "Reading aloud";
+
+        return """
+            You are a warm, encouraging reading coach for school students aged 8-16 in India.
+
+            """ + EDUCATIONAL_ONLY_FEEDBACK + """
+
+            """ + EducationalRedirectionPolicy.READING_FEEDBACK_REDIRECT + """
+
+            Context: The student read aloud from their own book. There is NO separate reference passage — only what the microphone captured is below.
+
+            Session label: "%s"
+
+            Full transcript of what was recognised from the student's speech (this is the ONLY text to judge):
+            "%s"
+
+            %s%s%s%s
+
+            Do NOT claim they missed words compared to a hidden passage — there is none. Judge oral reading quality: fluency, clarity, pace, confidence, and how intelligible the transcript is.
+            If the transcript is very short or empty, give gentle encouragement to read a bit longer next time and keep scores low but kind.
+
+            Language rules: If the transcript is primarily Hindi (Devanagari), difficultWords and goodWords MUST be in Devanagari; punctuationCoach and paceCoach MUST be in simple Hindi. If primarily English, use English for those four fields.
+
+            Respond ONLY with valid JSON (no markdown, no extra text). Do not use or request any student or personal names.
+            {
+              "fluencyScore":        <integer 1-10, smoothness and flow of reading>,
+              "pronunciationScore":  <integer 1-10, clarity of words as heard in the transcript>,
+              "paceScore":           <integer 1-10, 10=good pace for age, low=too fast or too slow>,
+              "accuracyScore":       <integer 1-10, how clear and complete the oral reading sounds (not vs a fixed text)>,
+              "confidenceScore":     <integer 1-10, confidence from pacing and hesitation>,
+              "accuracyPercent":     <integer 0-100, overall intelligibility / quality of the reading as a whole>,
+              "difficultWords":      "<up to 5 words that sound unclear or hesitant in the transcript, empty if none>",
+              "goodWords":           "<up to 5 words read clearly, empty if none>",
+              "hindiFeedback":       "<2-3 warm sentences in Hindi: strength, improvement, encouragement. No names.>",
+              "englishFeedback":     "<Same as hindiFeedback in English>",
+              "comprehensionQuestion": "<One simple Hindi question about a fact or idea that appears IN the transcript (if too short, ask them to read a full sentence next time)>",
+              "improvementTip":      "<One actionable English tip for next time>",
+              "punctuationCoach":    "<1-2 sentences on pausing at punctuation — Hindi if transcript Hindi, else English>",
+              "paceCoach":           "<1-2 sentences on speed — Hindi if transcript Hindi, else English>",
+              "repeatedWordsCoach":  "<Brief note on words practised again, or encouragement>"
+            }
+            """.formatted(
+                escapePrompt(title),
+                escapePrompt(spokenForPrompt),
+                wpmLine,
+                rehearsedLine,
+                summaryLine,
+                attemptsBlock
+            );
     }
 
     private static int countWords(String text) {

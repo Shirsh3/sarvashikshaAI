@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  Prepare class session UI (teacher dashboard). Saves to localStorage: sarva.classSessionMode, sarva.prepareFocus
+  Usage: th:replace="~{fragments/class-mode-panel :: panel}"
+-->
+<th:block th:fragment="panel">
+<style>
+    .dash-class-mode {
+        margin-bottom: 1.5rem;
+    }
+    .dash-class-mode-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 18px 20px 20px;
+        box-shadow: var(--shadow-sm);
+    }
+    .dash-class-mode-toggle-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px 18px;
+        justify-content: space-between;
+    }
+    .dash-class-mode-heading {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+    }
+    .dash-class-mode-heading i { color: var(--primary); font-size: 1rem; }
+    .dash-class-mode-segment {
+        display: inline-flex;
+        padding: 4px;
+        border-radius: 14px;
+        background: var(--surface-elevated);
+        border: 1px solid var(--border);
+        gap: 4px;
+    }
+    .dash-class-mode-seg-btn {
+        border: none;
+        background: transparent;
+        color: var(--text-main);
+        font-family: inherit;
+        font-size: 0.9rem;
+        font-weight: 700;
+        padding: 10px 18px;
+        border-radius: 11px;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    }
+    .dash-class-mode-seg-btn:hover:not(.is-active) { background: rgba(255,255,255,0.85); }
+    .dash-class-mode-seg-btn.is-active {
+        background: var(--primary);
+        color: #fff;
+        box-shadow: 0 2px 10px rgba(59, 130, 246, 0.35);
+    }
+    .dash-prepare-focus-panel { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+    .dash-prepare-focus-panel[hidden] { display: none !important; }
+    .dash-prepare-focus-intro {
+        font-size: 0.84rem;
+        color: var(--text-muted);
+        margin: 0 0 12px;
+        line-height: 1.5;
+    }
+    .dash-prepare-focus-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .dash-prepare-chip {
+        border: 2px solid var(--border);
+        background: var(--surface);
+        color: var(--text-main);
+        font-family: inherit;
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 8px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        transition: border-color 0.2s, background 0.2s, color 0.2s;
+    }
+    .dash-prepare-chip:hover:not(.is-active) {
+        border-color: #cbd5e1;
+        background: var(--surface-elevated);
+    }
+    .dash-prepare-chip.is-active {
+        border-color: var(--secondary);
+        background: rgba(99, 102, 241, 0.1);
+        color: #4338ca;
+    }
+    @media (max-width: 600px) {
+        .dash-class-mode-seg-btn { padding: 9px 14px; font-size: 0.85rem; }
+    }
+</style>
+<div class="dash-class-mode" role="region" aria-label="Class mode">
+    <div class="dash-class-mode-card">
+        <div class="dash-class-mode-toggle-row">
+            <span class="dash-class-mode-heading">
+                <i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i>
+                Today’s class
+            </span>
+            <div class="dash-class-mode-segment" role="tablist">
+                <button type="button" class="dash-class-mode-seg-btn is-active" id="dashClassModeLive"
+                        data-mode="live" role="tab" aria-selected="true">Live class</button>
+                <button type="button" class="dash-class-mode-seg-btn" id="dashClassModePrepare"
+                        data-mode="prepare" role="tab" aria-selected="false">Prepare class</button>
+            </div>
+        </div>
+        <div class="dash-prepare-focus-panel" id="dashPrepareFocusPanel" hidden>
+            <p class="dash-prepare-focus-intro">
+                Pick what you’re working on — it helps when you tap <strong>Explain answer</strong> on a quiz.
+            </p>
+            <div class="dash-prepare-focus-chips" role="group" aria-label="Prepare class focus">
+                <button type="button" class="dash-prepare-chip is-active" data-focus="revision">Revision</button>
+                <button type="button" class="dash-prepare-chip" data-focus="new_topic">New topic</button>
+                <button type="button" class="dash-prepare-chip" data-focus="doubt_clearing">Doubt clearing</button>
+                <button type="button" class="dash-prepare-chip" data-focus="quiz_review">Quiz review</button>
+                <button type="button" class="dash-prepare-chip" data-focus="reading_literacy">Reading &amp; literacy</button>
+                <button type="button" class="dash-prepare-chip" data-focus="homework_help">Homework help</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+(function () {
+    var K_MODE = 'sarva.classSessionMode';
+    var K_FOCUS = 'sarva.prepareFocus';
+    var panel = document.getElementById('dashPrepareFocusPanel');
+    var segBtns = document.querySelectorAll('.dash-class-mode-seg-btn');
+    var chips = document.querySelectorAll('.dash-prepare-chip');
+
+    function setMode(mode) {
+        var isPrepare = mode === 'prepare';
+        try { localStorage.setItem(K_MODE, mode); } catch (e) {}
+        if (panel) panel.hidden = !isPrepare;
+        segBtns.forEach(function (btn) {
+            var on = btn.getAttribute('data-mode') === mode;
+            btn.classList.toggle('is-active', on);
+            btn.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+    }
+    function setFocus(focus) {
+        try { localStorage.setItem(K_FOCUS, focus); } catch (e) {}
+        chips.forEach(function (c) {
+            c.classList.toggle('is-active', c.getAttribute('data-focus') === focus);
+        });
+    }
+    function load() {
+        var mode = 'live';
+        var focus = 'revision';
+        try {
+            mode = localStorage.getItem(K_MODE) || 'live';
+            focus = localStorage.getItem(K_FOCUS) || 'revision';
+        } catch (e) {}
+        setMode(mode);
+        setFocus(focus);
+    }
+    segBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () { setMode(btn.getAttribute('data-mode') || 'live'); });
+    });
+    chips.forEach(function (chip) {
+        chip.addEventListener('click', function () { setFocus(chip.getAttribute('data-focus') || 'revision'); });
+    });
+    load();
+})();
+</script>
+</th:block>
+</body>
+</html>

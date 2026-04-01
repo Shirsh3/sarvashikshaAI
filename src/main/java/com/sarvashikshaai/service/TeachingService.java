@@ -9,8 +9,13 @@ import com.sarvashikshaai.ai.WikipediaClient;
 import com.sarvashikshaai.ai.YouTubeClient;
 import com.sarvashikshaai.model.TeachingRequest;
 import com.sarvashikshaai.model.TeachingResponse;
+import com.sarvashikshaai.model.entity.QuizExplanationCacheEntity;
+import com.sarvashikshaai.repository.QuizExplanationCacheRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.time.Instant;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -21,17 +26,20 @@ public class TeachingService {
     private final YouTubeClient youTubeClient;
     private final WikipediaClient wikipediaClient;
     private final ObjectMapper objectMapper;
+    private final QuizExplanationCacheRepository quizExplainCacheRepo;
 
     public TeachingService(PromptBuilder promptBuilder,
                            OpenAIClient openAIClient,
                            YouTubeClient youTubeClient,
                            WikipediaClient wikipediaClient,
-                           ObjectMapper objectMapper) {
+                           ObjectMapper objectMapper,
+                           QuizExplanationCacheRepository quizExplainCacheRepo) {
         this.promptBuilder = promptBuilder;
         this.openAIClient = openAIClient;
         this.youTubeClient = youTubeClient;
         this.wikipediaClient = wikipediaClient;
         this.objectMapper = objectMapper;
+        this.quizExplainCacheRepo = quizExplainCacheRepo;
     }
 
     public TeachingResponse generateExplanation(TeachingRequest request) {
@@ -40,6 +48,25 @@ public class TeachingService {
                     "Please enter a school-related question.",
                     null, null, null, null, null, true);
         }
+        String mode = request.getClassSessionMode() == null ? "" : request.getClassSessionMode().trim().toLowerCase();
+        Long qid = request.getSourceQuestionId();
+        if ("quiz".equals(mode) && qid != null) {
+            Optional<QuizExplanationCacheEntity> cached = quizExplainCacheRepo.findByQuestionId(qid);
+            if (cached.isPresent()) {
+                QuizExplanationCacheEntity c = cached.get();
+                return new TeachingResponse(
+                        c.getExplanation(),
+                        c.getExplanationSection(),
+                        c.getExampleSection(),
+                        c.getKeyPointSection(),
+                        c.getVideoId(),
+                        c.getWikiGifUrl(),
+                        false
+                );
+            }
+        }
+
+        long t0 = System.currentTimeMillis();
         OpenAIClient.QueryCategory category = openAIClient.classifyUserQuery(request.getTopic());
         if (category != OpenAIClient.QueryCategory.LEARNING) {
             return new TeachingResponse(
@@ -53,7 +80,15 @@ public class TeachingService {
         }
 
         String prompt = promptBuilder.buildUnifiedTeachingPrompt(request);
-        String llmRaw = openAIClient.generateTeachingCompletion(prompt);
+        String llmRaw;
+        try {
+            llmRaw = openAIClient.generateTeachingCompletion(prompt);
+        } finally {
+            long dt = System.currentTimeMillis() - t0;
+            if (dt > 8000) {
+                log.warn("AI explain slow: {} ms (mode={})", dt, request.getClassSessionMode());
+            }
+        }
 
         try {
             JsonNode n = objectMapper.readTree(stripCodeFence(llmRaw));
@@ -77,11 +112,18 @@ public class TeachingService {
 
             String displayRaw = buildDisplayRaw(explanationSection, exampleSection, keyPointSection);
 
-            String videoId = youTubeClient.fetchVideoId(ytQuery);
-            String wikiTopic = request.getTopic().trim();
-            String wikiGifUrl = (videoId == null) ? wikipediaClient.fetchAnimatedGif(wikiTopic) : null;
+            String videoId = null;
+            String wikiGifUrl = null;
+            // Only fetch YouTube when explicitly requested (click-to-load flow).
+            if (request.isIncludeVideo()) {
+                videoId = youTubeClient.fetchVideoId(ytQuery);
+            }
+            if (!"quiz".equals(mode)) {
+                String wikiTopic = request.getTopic().trim();
+                wikiGifUrl = (videoId == null) ? wikipediaClient.fetchAnimatedGif(wikiTopic) : null;
+            }
 
-            return new TeachingResponse(
+            TeachingResponse resp = new TeachingResponse(
                     displayRaw.isBlank() ? llmRaw : displayRaw,
                     nullIfEmpty(explanationSection),
                     nullIfEmpty(exampleSection),
@@ -89,6 +131,28 @@ public class TeachingService {
                     videoId,
                     wikiGifUrl,
                     false);
+
+            // Save quiz explanation cache (only if successful and a questionId is provided).
+            if ("quiz".equals(mode) && qid != null) {
+                try {
+                    QuizExplanationCacheEntity e = quizExplainCacheRepo.findByQuestionId(qid)
+                            .orElseGet(QuizExplanationCacheEntity::new);
+                    if (e.getCreatedAt() == null) e.setCreatedAt(Instant.now());
+                    e.setUpdatedAt(Instant.now());
+                    e.setQuestionId(qid);
+                    e.setExplanation(resp.getExplanation());
+                    e.setExplanationSection(resp.getExplanationSection());
+                    e.setExampleSection(resp.getExampleSection());
+                    e.setKeyPointSection(resp.getKeyPointSection());
+                    e.setVideoId(resp.getVideoId());
+                    e.setWikiGifUrl(resp.getWikiGifUrl());
+                    quizExplainCacheRepo.save(e);
+                } catch (Exception ex) {
+                    log.warn("Quiz explain cache save failed for question {}: {}", qid, ex.getMessage());
+                }
+            }
+
+            return resp;
         } catch (Exception e) {
             log.warn("Unified teaching JSON parse failed: {}", e.getMessage());
             return new TeachingResponse(

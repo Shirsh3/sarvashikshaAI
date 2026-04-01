@@ -7,619 +7,617 @@
     <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
     <link rel="stylesheet" th:href="@{/css/app.css}"/>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
     <style>
-        body { }
-
-        .att-header { max-width: 860px; margin: 0 auto; padding: 24px 24px 8px; color: var(--text); }
-        .att-header h2 { font-size: 1.3rem; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
-        .att-header p { color: var(--muted); font-size: 0.88rem; }
-
-        /* ── Controls bar ── */
-        .att-controls {
-            max-width: 860px; margin: 0 auto;
-            padding: 10px 24px 16px;
-            display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
+        .att-wrap { max-width: 980px; margin: 0 auto; padding: 16px 20px 30px; }
+        .att-top { display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:10px; }
+        .att-top h2 { margin:0; font-size:1.3rem; }
+        .att-controls { display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px; }
+        .att-input { padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface); font-size: 1rem; }
+        .att-btn { padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-weight:700; }
+        .att-btn.primary { background: var(--primary); color:#fff; border-color: var(--primary); }
+        .att-btn.present { background:#10b981;color:#fff;border-color:#10b981; }
+        .att-btn.absent { background:#ef4444;color:#fff;border-color:#ef4444; }
+        .att-lock { margin:8px 0 12px;padding:10px;border:1px solid #fecaca;background:#fff1f2;color:#9f1239;border-radius:10px;font-weight:700; }
+        .att-mode-row { display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 12px; }
+        .att-list { border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+        .att-row { display:grid; grid-template-columns: 1fr auto auto auto; gap:8px; align-items:center; padding:7px 10px; border-top:1px solid var(--border); }
+        .att-row:first-child { border-top:none; }
+        .att-row.marked-present { background:#ecfdf5; }
+        .att-row.marked-absent { background:#fef2f2; }
+        .att-name { font-weight:700; font-size:0.9rem; }
+        .att-sub { color:var(--muted); font-size:0.78rem; }
+        .att-search { width: 260px; }
+        .rollcall-overlay { position:fixed; inset:0; background:rgba(15,23,42,0.42); display:none; align-items:center; justify-content:center; z-index:3000; padding:16px; }
+        .rollcall-card { width:min(620px, 96vw); background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px; }
+        .rollcall-title { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px; }
+        .rollcall-title h3 { margin:0; font-size:1.05rem; }
+        .rollcall-meta { color:var(--muted); margin-bottom:12px; text-align:center; }
+        .rollcall-name { font-size:1.8rem; font-weight:800; text-align:center; margin:8px 0 4px; }
+        .rollcall-sub { text-align:center; color:var(--muted); margin-bottom:14px; }
+        .rollcall-actions { display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-bottom: 0; }
+        #rollSummary.rollcall-complete-msg {
+            margin-top: 18px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
         }
-        .date-input {
-            padding: 9px 14px; border-radius: 10px;
-            border: 1px solid var(--surface2);
-            background: var(--surface); color: var(--text); font-size: 0.9rem;
-        }
-        .go-btn { padding: 9px 18px; border-radius: 10px; border: none; background: var(--primary); color: white; font-size: 0.88rem; font-weight: 600; cursor: pointer; }
-        .go-btn:hover { background: var(--accent2); }
-        .export-btn {
-            margin-left: auto; display: inline-flex; align-items: center; gap: 7px;
-            padding: 9px 16px; border-radius: 10px; border: none;
-            background: var(--surface2); color: var(--muted);
-            font-size: 0.85rem; font-weight: 600; cursor: pointer; text-decoration: none;
-        }
-        .export-btn:hover { background: var(--surface2); color: var(--text); }
-
-        /* ── Roll Call button ── */
-        .rollcall-bar {
-            max-width: 860px; margin: 0 auto;
-            padding: 0 24px 14px;
-        }
-        .btn-rollcall {
-            display: inline-flex; align-items: center; gap: 9px;
-            padding: 11px 24px; border-radius: 50px; border: none;
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            color: white; font-size: 0.9rem; font-weight: 700;
-            cursor: pointer; transition: all 0.2s;
-            box-shadow: 0 4px 15px rgba(99,102,241,0.35);
-        }
-        .btn-rollcall:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(99,102,241,0.45); }
-        .btn-rollcall.active { background: linear-gradient(135deg, #ef4444, #f97316); box-shadow: 0 4px 15px rgba(239,68,68,0.35); }
-
-        /* ── Roll Call overlay ── */
-        .rollcall-overlay {
-            display: none; position: fixed; inset: 0; z-index: 100;
-            background: rgba(0,0,0,0.85); backdrop-filter: blur(6px);
-            align-items: center; justify-content: center;
-        }
-        .rollcall-overlay.visible { display: flex; }
-
-        .rollcall-card {
-            background: #1e293b; border-radius: 24px;
-            padding: 40px 32px; text-align: center;
-            width: min(94vw, 440px);
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 24px 60px rgba(0,0,0,0.6);
-            animation: slideUp 0.3s ease;
-        }
-        @keyframes slideUp { from { transform: translateY(30px); opacity:0 } to { transform: translateY(0); opacity:1 } }
-
-        .rc-progress {
-            font-size: 0.78rem; color: #64748b; text-transform: uppercase;
-            letter-spacing: 0.1em; font-weight: 700; margin-bottom: 16px;
-        }
-        .rc-avatar {
-            width: 88px; height: 88px; border-radius: 50%;
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 2.4rem; font-weight: 900; color: white;
-            margin: 0 auto 20px; animation: bounceIn 0.4s ease;
-        }
-        @keyframes bounceIn { 0%{transform:scale(0.7)} 70%{transform:scale(1.1)} 100%{transform:scale(1)} }
-
-        .rc-name {
-            font-size: 1.8rem; font-weight: 900; color: #f1f5f9;
-            margin-bottom: 6px; line-height: 1.2;
-        }
-        .rc-grade { font-size: 0.85rem; color: #64748b; margin-bottom: 28px; }
-
-        .rc-speaking {
-            display: flex; align-items: center; justify-content: center; gap: 6px;
-            font-size: 0.82rem; color: #818cf8; margin-bottom: 24px; min-height: 24px;
-        }
-        .rc-speaking .dot {
-            width: 7px; height: 7px; border-radius: 50%; background: #818cf8;
-            animation: blink 1.2s infinite;
-        }
-        .rc-speaking .dot:nth-child(2) { animation-delay: 0.2s; }
-        .rc-speaking .dot:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes blink { 0%,100%{opacity:0.2} 50%{opacity:1} }
-
-        .rc-voice-hint {
-            font-size: 0.8rem; color: #64748b; margin-top: -12px; margin-bottom: 20px;
-        }
-        .rc-voice-hint i { margin-right: 6px; color: #818cf8; }
-
-        .rc-actions { display: flex; gap: 16px; justify-content: center; }
-        .rc-btn-present, .rc-btn-absent {
-            flex: 1; max-width: 160px;
-            padding: 16px 12px; border-radius: 16px; border: none;
-            font-size: 1rem; font-weight: 800; cursor: pointer;
-            display: flex; flex-direction: column; align-items: center; gap: 6px;
-            transition: transform 0.15s, box-shadow 0.15s;
-        }
-        .rc-btn-present { background: #10b981; color: white; box-shadow: 0 4px 14px rgba(16,185,129,0.4); }
-        .rc-btn-absent  { background: #ef4444; color: white; box-shadow: 0 4px 14px rgba(239,68,68,0.4); }
-        .rc-btn-present:hover { transform: scale(1.04); }
-        .rc-btn-absent:hover  { transform: scale(1.04); }
-        .rc-btn-present i, .rc-btn-absent i { font-size: 1.6rem; }
-
-        .rc-footer {
-            margin-top: 24px; display: flex; justify-content: space-between; align-items: center;
-        }
-        .rc-skip {
-            background: none; border: none; color: #475569;
-            font-size: 0.82rem; cursor: pointer; padding: 6px 10px;
-        }
-        .rc-skip:hover { color: #94a3b8; }
-        .rc-stop {
-            background: none; border: 1px solid rgba(255,255,255,0.1);
-            color: #94a3b8; font-size: 0.8rem; cursor: pointer;
-            padding: 7px 14px; border-radius: 8px;
-        }
-        .rc-stop:hover { border-color: rgba(255,255,255,0.25); color: #f1f5f9; }
-
-        /* ── Done card ── */
-        .rc-done { display: none; }
-        .rc-done-icon { font-size: 3rem; margin-bottom: 12px; }
-        .rc-done h3 { font-size: 1.4rem; font-weight: 800; margin-bottom: 6px; }
-        .rc-done p { color: #94a3b8; font-size: 0.9rem; }
-        .rc-done-close {
-            margin-top: 24px; padding: 12px 28px; border-radius: 12px;
-            background: #3b82f6; color: white; font-weight: 700;
-            font-size: 0.9rem; border: none; cursor: pointer;
-        }
-
-        /* ── Summary stats ── */
-        .att-stats { max-width: 860px; margin: 0 auto; padding: 0 24px 16px; display: flex; gap: 12px; flex-wrap: wrap; }
-        .stat-pill { padding: 8px 18px; border-radius: 50px; font-size: 0.83rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-        .stat-present  { background: #d1fae5; color: #065f46; }
-        .stat-absent   { background: #fee2e2; color: #991b1b; }
-        .stat-unmarked { background: var(--surface2); color: var(--muted); }
-
-        /* ── Student rows ── */
-        .att-list { max-width: 860px; margin: 0 auto; padding: 0 24px 40px; color: var(--text); }
-        .att-empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 0.95rem; }
-        .att-empty i { font-size: 2.5rem; display: block; margin-bottom: 14px; opacity: 0.4; }
-
-        .student-row {
-            display: flex; align-items: center;
-            padding: 14px 18px; border-radius: 12px; margin-bottom: 8px;
+        .voice-status { text-align:center; color:var(--muted); margin:6px 0 10px; font-size:0.86rem; min-height: 20px; }
+        .att-list-footer { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 10px; border-top:1px solid var(--border); background:var(--surface); }
+        .att-page-meta { color:var(--muted); font-size:0.82rem; }
+        .att-status { font-size:0.82rem; font-weight:700; padding:6px 10px; border-radius:999px; border:1px solid var(--border); }
+        .att-status.present { color:#065f46; background:#d1fae5; border-color:#a7f3d0; }
+        .att-status.absent { color:#991b1b; background:#fee2e2; border-color:#fecaca; }
+        .att-status.pending { color:var(--muted); background:var(--surface); }
+        .att-btn.start { padding:12px 22px; font-size:1rem; border-radius:12px; }
+        .att-start-empty {
+            margin: 8px 0 12px;
+            padding: 18px 14px;
+            border: 1px dashed var(--border);
+            border-radius: 12px;
             background: var(--surface);
-            border: 1px solid var(--surface2);
-            gap: 12px; transition: border-color 0.2s; color: var(--text);
-        }
-        .student-row.marked-present { border-color: rgba(16,185,129,0.4); background: rgba(16,185,129,0.05); }
-        .student-row.marked-absent  { border-color: rgba(239,68,68,0.35); background: rgba(239,68,68,0.04); }
-        .student-row.rc-current     { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,0.25); }
-
-        .student-avatar {
-            width: 42px; height: 42px; border-radius: 50%;
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1rem; font-weight: 700; color: white; flex-shrink: 0;
-        }
-        .student-name  { flex: 1; font-size: 0.95rem; font-weight: 600; color: var(--text); }
-        .student-grade { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
-
-        .att-btns { display: flex; gap: 8px; }
-        .btn-present, .btn-absent {
-            padding: 8px 16px; border-radius: 8px; border: none;
-            font-size: 0.82rem; font-weight: 600; cursor: pointer;
-            display: flex; align-items: center; gap: 5px; transition: all 0.15s;
-        }
-        .btn-present { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
-        .btn-present:hover, .btn-present.active { background: #10b981; color: white; border-color: transparent; }
-        .btn-absent  { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.22); }
-        .btn-absent:hover, .btn-absent.active   { background: #ef4444; color: white; border-color: transparent; }
-
-        @media(max-width:600px) {
-            .student-row { flex-wrap: wrap; }
-            .att-btns { width: 100%; }
-            .btn-present, .btn-absent { flex: 1; justify-content: center; }
-            .rollcall-card { padding: 32px 20px; }
-            .rc-name { font-size: 1.5rem; }
+            text-align: center;
+            color: var(--muted);
         }
     </style>
 </head>
-<body>
+<body class="app-layout">
 <div th:replace="~{fragments/loader :: loader}"></div>
-<div th:replace="~{fragments/tabs :: tabBar('attendance')}"></div>
+<div th:replace="~{fragments/shell-teacher :: sidebar('attendance')}"></div>
+<main class="layout-main">
+<div class="att-wrap">
+    <div class="att-top">
+        <h2><i class="fa-solid fa-clipboard-check"></i> Attendance</h2>
+    </div>
+    <form class="att-controls" th:action="@{/attendance}" method="get" id="attendanceFilterForm">
+        <input class="att-input" type="date" name="date" id="dateInput" th:value="${currentDate}" th:max="${today}"/>
+        <select class="att-input" name="grade" id="gradeInput">
+            <option value="" th:selected="${gradeFilter == null or gradeFilter == ''}">All Grades</option>
+            <option th:each="g : ${gradeOptions}" th:value="${g.code}" th:text="${g.label}" th:selected="${gradeFilter == g.code}">Grade</option>
+        </select>
+        <a class="att-btn" th:href="@{/attendance/export(from=${currentDate.minusMonths(1)},to=${currentDate})}">Export CSV</a>
+    </form>
 
-<div class="att-header">
-    <h2><i class="fa-solid fa-clipboard-check"></i> Attendance</h2>
-    <p>Mark individually or use Roll Call mode — names are read aloud one by one.</p>
-</div>
-
-<!-- Date picker + export -->
-<form class="att-controls" th:action="@{/attendance}" method="get">
-    <input type="date" class="date-input" name="date" id="dateInput"
-           th:value="${currentDate}" th:max="${today}"/>
-    <button type="submit" class="go-btn">
-        <i class="fa-solid fa-calendar-check"></i> View
-    </button>
-    <a class="export-btn"
-       th:href="@{/attendance/export(from=${currentDate.minusMonths(1)},to=${currentDate})}">
-        <i class="fa-solid fa-download"></i> Export CSV
-    </a>
-</form>
-
-<!-- Roll Call button -->
-<div class="rollcall-bar" th:if="${!students.isEmpty()}">
-    <button class="btn-rollcall" id="startRollCallBtn" onclick="startRollCall()">
-        <i class="fa-solid fa-bullhorn"></i> Start Roll Call
-    </button>
-</div>
-
-<!-- Summary pills -->
-<div class="att-stats" th:if="${!students.isEmpty()}">
-    <span class="stat-pill stat-present">
-        <i class="fa-solid fa-circle-check"></i>
-        <span th:text="${presentCount}"></span> Present
-    </span>
-    <span class="stat-pill stat-absent">
-        <i class="fa-solid fa-circle-xmark"></i>
-        <span th:text="${absentCount}"></span> Absent
-    </span>
-    <span class="stat-pill stat-unmarked" th:if="${unmarkedCount > 0}">
-        <i class="fa-regular fa-circle"></i>
-        <span th:text="${unmarkedCount}"></span> Unmarked
-    </span>
-</div>
-
-<!-- Student list -->
-<div class="att-list">
-    <div th:if="${students.isEmpty()}" class="att-empty">
-        <i class="fa-solid fa-user-group"></i>
-        No students found. Please sync your Google Sheet in <a href="/teacher/setup" style="color:#6366f1;">Teacher Setup</a>.
+    <div class="att-start-empty" id="attendanceStartState" th:if="${!students.isEmpty()}">
+        <div style="margin-bottom:10px;">Click here to start attendance</div>
+        <button class="att-btn primary start" id="startRollCallCtaBtn" type="button" onclick="startRollCall()">Start Roll Call</button>
     </div>
 
-    <div th:each="student : ${students}"
-         class="student-row"
-         th:id="'row-' + ${student.name}"
-         th:classappend="${markedMap.containsKey(student.name) ? (markedMap.get(student.name) ? ' marked-present' : ' marked-absent') : ''}">
-
-        <div class="student-avatar"
-             th:text="${#strings.toUpperCase(#strings.substring(student.name, 0, 1))}"></div>
-
-        <div style="flex:1;">
-            <div class="student-name" th:text="${student.name}"></div>
-            <div class="student-grade" th:if="${student.grade != null and !student.grade.isBlank()}"
-                 th:text="'Grade: ' + ${student.grade}"></div>
-        </div>
-
-        <div class="att-btns">
-            <button class="btn-present"
-                    th:id="'btn-present-' + ${student.name}"
-                    th:classappend="${markedMap.containsKey(student.name) and markedMap.get(student.name)} ? ' active' : ''"
-                    th:attr="data-name=${student.name}"
-                    onclick="markAttendance(this, true)">
-                <i class="fa-solid fa-check"></i> Present
-            </button>
-            <button class="btn-absent"
-                    th:id="'btn-absent-' + ${student.name}"
-                    th:classappend="${markedMap.containsKey(student.name) and !markedMap.get(student.name)} ? ' active' : ''"
-                    th:attr="data-name=${student.name}"
-                    onclick="markAttendance(this, false)">
-                <i class="fa-solid fa-xmark"></i> Absent
-            </button>
+    <div class="att-mode-row" th:if="${!students.isEmpty()}">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="att-btn" id="toggleListBtn" type="button" style="display:none;" onclick="toggleListView()">Show List</button>
         </div>
     </div>
-</div>
 
-<!-- ═══ Roll Call Overlay ════════════════════════════════════════════════════ -->
-<div class="rollcall-overlay" id="rollcallOverlay">
+    <div class="att-list" id="listPanel" style="display:none;" th:if="${!students.isEmpty()}">
+        <div class="att-row"
+             th:each="student : ${students}"
+             th:id="'row-' + ${student.name}"
+             th:attr="data-name=${student.name},data-grade=${student.grade},data-roll=${student.code}"
+             th:classappend="${markedMap.containsKey(student.name) ? (markedMap.get(student.name) ? ' marked-present' : ' marked-absent') : ''}">
+            <div>
+                <div class="att-name" th:text="${student.name}">Name</div>
+                <div class="att-sub">
+                    <span th:text="'Grade ' + ${student.grade}">Grade</span>
+                    <span th:if="${student.code != null and !#strings.isEmpty(student.code)}" th:text="' • Roll ' + ${student.code}"> • Roll</span>
+                </div>
+            </div>
+            <span class="att-status"
+                  th:classappend="${markedMap.containsKey(student.name) ? (markedMap.get(student.name) ? ' present' : ' absent') : ' pending'}"
+                  th:text="${markedMap.containsKey(student.name) ? (markedMap.get(student.name) ? 'Present' : 'Absent') : 'Not marked'}">Status</span>
+            <button class="att-btn present" type="button" th:id="'btn-present-' + ${student.name}" th:attr="data-name=${student.name}" onclick="markList(this, true)">Update: Present</button>
+            <button class="att-btn absent" type="button" th:id="'btn-absent-' + ${student.name}" th:attr="data-name=${student.name}" onclick="markList(this, false)">Update: Absent</button>
+        </div>
+        <div class="att-list-footer">
+            <div class="att-page-meta" id="pageMeta">Showing 0-0 of 0</div>
+            <div style="display:flex;gap:8px;">
+                <button class="att-btn" type="button" id="prevPageBtn" onclick="prevPage()">Previous</button>
+                <button class="att-btn" type="button" id="nextPageBtn" onclick="nextPage()">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${students.isEmpty()}" style="padding:32px 14px;color:var(--muted);text-align:center;border:1px solid var(--border);border-radius:12px;background:var(--surface);">
+        <div style="font-weight:700;color:var(--text);margin-bottom:6px;">No students available</div>
+        <div>Nothing to mark for this date.</div>
+    </div>
+</div>
+<div class="rollcall-overlay" id="rollCallModal" th:if="${!students.isEmpty()}">
     <div class="rollcall-card">
-
-        <!-- Normal view -->
-        <div id="rcMain">
-            <div class="rc-progress" id="rcProgress">Student 1 of 10</div>
-
-            <div class="rc-avatar" id="rcAvatar">A</div>
-            <div class="rc-name"   id="rcName">Loading...</div>
-            <div class="rc-grade"  id="rcGrade"></div>
-
-            <div class="rc-speaking" id="rcSpeaking">
-                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-                <span id="rcSpeakLabel">Reading name aloud...</span>
-            </div>
-            <div class="rc-voice-hint" id="rcVoiceHint" style="display:none;">
-                <i class="fa-solid fa-microphone"></i> Say &quot;Present&quot; or &quot;Absent&quot; — or tap below
-            </div>
-
-            <div class="rc-actions">
-                <button class="rc-btn-present" onclick="rcMark(true)">
-                    <i class="fa-solid fa-check"></i>
-                    Present
-                </button>
-                <button class="rc-btn-absent" onclick="rcMark(false)">
-                    <i class="fa-solid fa-xmark"></i>
-                    Absent
-                </button>
-            </div>
-
-            <div class="rc-footer">
-                <button class="rc-skip" onclick="rcSkip()">
-                    <i class="fa-solid fa-forward-step"></i> Skip
-                </button>
-                <button class="rc-stop" onclick="stopRollCall()">
-                    <i class="fa-solid fa-stop"></i> End Roll Call
-                </button>
-            </div>
+        <div class="rollcall-title">
+            <h3>Roll Call</h3>
+            <button class="att-btn" type="button" onclick="closeRollCall()">Close</button>
         </div>
-
-        <!-- Done view -->
-        <div class="rc-done" id="rcDone">
-            <div class="rc-done-icon">🎉</div>
-            <h3>Roll Call Complete!</h3>
-            <p id="rcDoneSummary">All students marked.</p>
-            <button class="rc-done-close" onclick="closeRollCall()">Done</button>
+        <div id="rollProgress" class="rollcall-meta">0 / 0 students marked</div>
+        <div id="rollName" class="rollcall-name">-</div>
+        <div id="rollMeta" class="rollcall-sub">-</div>
+        <div id="voiceStatus" class="voice-status">Reading name aloud...</div>
+        <div class="rollcall-actions">
+            <button class="att-btn present" type="button" onclick="markCurrent(true)">Present</button>
+            <button class="att-btn absent" type="button" onclick="markCurrent(false)">Absent</button>
+            <button class="att-btn" type="button" onclick="prevStudent()">Previous</button>
+            <button class="att-btn" type="button" onclick="nextStudent()">Next</button>
+            <button class="att-btn" type="button" onclick="skipStudent()">Skip</button>
         </div>
+        <div class="rollcall-meta rollcall-complete-msg" id="rollSummary" style="display:none;font-weight:700;">Attendance Complete</div>
+        <p id="rollCompleteHint" class="rollcall-meta" style="display:none;font-weight:500;font-size:0.88rem;margin-top:10px;">Tap <strong>Close</strong> when you are finished.</p>
     </div>
 </div>
+</main>
+<div th:replace="~{fragments/monitor-panel :: active}"></div>
+<script th:src="@{/js/monitor.js}"></script>
+<script th:inline="javascript">
+const attendanceLocked = /*[[${attendanceLocked}]]*/ false;
+const currentDateStr = document.getElementById('dateInput') ? document.getElementById('dateInput').value : new Date().toISOString().slice(0, 10);
+const currentGradeFilter = document.getElementById('gradeInput') ? document.getElementById('gradeInput').value : '';
+const rows = Array.from(document.querySelectorAll('.att-row'));
+let filteredRows = rows.slice();
+let currentIndex = 0;
+let currentPage = 1;
+const pageSize = 20;
+const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rollCallRecognition = null;
+let rollCallOpen = false;
+let awaitingVoiceMark = false;
+let promptRepeatTimer = null;
+let rollCallCompleteAnnounced = false;
 
-<script>
-const currentDateStr = document.getElementById('dateInput')
-    ? document.getElementById('dateInput').value
-    : new Date().toISOString().slice(0,10);
+function updateRollCallCta() {
+    const startBtn = document.getElementById('startRollCallCtaBtn');
+    const startState = document.getElementById('attendanceStartState');
+    if (!startBtn || !startState) return;
 
-// ── Build student list from the DOM (order matches server render) ──────────
-function getStudentRows() {
-    return Array.from(document.querySelectorAll('.student-row')).map(row => ({
-        name:  row.querySelector('.student-name')?.textContent.trim() || '',
-        grade: row.querySelector('.student-grade')?.textContent.replace('Grade: ','').trim() || '',
-        id:    row.id.replace('row-', '')
-    }));
+    const total = filteredRows.length;
+    const marked = countMarkedInFilter();
+    const done = total > 0 && marked >= total;
+
+    if (done) {
+        startBtn.textContent = 'Update Attendance';
+        startState.style.display = 'none';
+        return;
+    }
+
+    startBtn.textContent = marked > 0 ? 'Continue Roll Call' : 'Start Roll Call';
+    // Only show this CTA when roll-call popup is not open and list is not being shown
+    const modal = document.getElementById('rollCallModal');
+    const list = document.getElementById('listPanel');
+    const modalOpen = modal && getComputedStyle(modal).display !== 'none';
+    const listOpen = list && getComputedStyle(list).display !== 'none';
+    startState.style.display = (!modalOpen && !listOpen) ? '' : 'none';
 }
 
-// ── Roll Call state ────────────────────────────────────────────────────────
-let rcStudents   = [];
-let rcIndex      = 0;
-let rcSpeaking   = false;
-let rcCanMark    = false; // only allow marking after name is spoken
-let rcRecognition = null; // speech recognition for "present" / "absent"
-let rcMarkedByVoice = false; // avoid double-mark from voice + button
-
-function startRollCall() {
-    rcStudents = getStudentRows();
-    if (rcStudents.length === 0) return;
-    rcIndex  = 0;
-    document.getElementById('rollcallOverlay').classList.add('visible');
-    document.getElementById('rcDone').style.display    = 'none';
-    document.getElementById('rcMain').style.display    = 'block';
-    document.getElementById('startRollCallBtn').classList.add('active');
-    document.getElementById('startRollCallBtn').innerHTML = '<i class="fa-solid fa-bullhorn"></i> Roll Call Active';
-    showStudent(rcIndex);
+function setVoiceStatus(text) {
+    const node = document.getElementById('voiceStatus');
+    if (node) node.textContent = text;
 }
 
-function showStudent(idx) {
-    if (idx >= rcStudents.length) { showDone(); return; }
-
-    const s = rcStudents[idx];
-    rcCanMark = false;
-
-    // Highlight row in background list
-    document.querySelectorAll('.student-row').forEach(r => r.classList.remove('rc-current'));
-    const row = document.getElementById('row-' + s.id);
-    if (row) { row.classList.add('rc-current'); row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
-
-    // Update card
-    document.getElementById('rcProgress').textContent = `Student ${idx + 1} of ${rcStudents.length}`;
-    document.getElementById('rcAvatar').textContent   = s.name.charAt(0).toUpperCase();
-    document.getElementById('rcName').textContent     = s.name;
-    document.getElementById('rcGrade').textContent    = s.grade ? 'Grade ' + s.grade : '';
-    document.getElementById('rcSpeaking').style.display = 'flex';
-    document.getElementById('rcSpeakLabel').textContent = 'Reading name aloud...';
-
-    // Re-trigger avatar animation
-    const av = document.getElementById('rcAvatar');
-    av.style.animation = 'none';
-    setTimeout(() => av.style.animation = '', 10);
-
-    // Speak the name
-    speakName(s.name);
+function clearPromptTimer() {
+    if (promptRepeatTimer) {
+        clearTimeout(promptRepeatTimer);
+        promptRepeatTimer = null;
+    }
 }
 
-function speakName(name) {
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(name);
-    utter.lang  = 'en-IN';
-    utter.rate  = 0.85;
-    utter.pitch = 1.05;
-
-    utter.onstart = () => { rcSpeaking = true; };
-    utter.onend   = () => {
-        rcSpeaking = false;
-        rcCanMark  = true;
-        rcMarkedByVoice = false;
-        document.getElementById('rcSpeakLabel').textContent = 'Tap Present or Absent';
-        const hint = document.getElementById('rcVoiceHint');
-        if (hint) hint.style.display = 'block';
-        startRcVoiceListen();
-    };
-    utter.onerror = () => {
-        rcSpeaking = false;
-        rcCanMark  = true;
-        rcMarkedByVoice = false;
-        document.getElementById('rcSpeakLabel').textContent = 'Tap Present or Absent';
-        const hint = document.getElementById('rcVoiceHint');
-        if (hint) hint.style.display = 'block';
-        startRcVoiceListen();
-    };
-
-    setTimeout(() => window.speechSynthesis.speak(utter), 120);
+function countMarkedInFilter() {
+    let marked = 0;
+    filteredRows.forEach(function (r) {
+        if (r.classList.contains('marked-present') || r.classList.contains('marked-absent')) marked++;
+    });
+    return marked;
 }
 
-function startRcVoiceListen() {
-    if (!rcCanMark || rcIndex >= rcStudents.length) return;
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+function isRollCallAllMarked() {
+    const total = filteredRows.length;
+    return total > 0 && countMarkedInFilter() >= total;
+}
 
-    stopRcVoiceListen();
-    rcRecognition = new SpeechRecognition();
-    rcRecognition.continuous = true;
-    rcRecognition.interimResults = true;  // get partial results so we can respond in one attempt
-    rcRecognition.lang = 'en-IN';
-    rcRecognition.maxAlternatives = 1;
+function initRollCallVoice() {
+    if (!SpeechRecognitionAPI || rollCallRecognition) return;
+    rollCallRecognition = new SpeechRecognitionAPI();
+    rollCallRecognition.continuous = true;
+    rollCallRecognition.interimResults = false;
+    rollCallRecognition.lang = 'en-IN';
 
-    function checkTranscript(transcript, isFinal) {
-        if (!transcript) return null;
-        const t = transcript.trim().toLowerCase();
-        if (isFinal) {
-            if (/\b(present|here|yes|yep|haan|हाजिर|हाँ|ji)\b/i.test(t) && !/\babsent\b/i.test(t)) return true;
-            if (/\b(absent|no|nahi|na|नहीं)\b/i.test(t)) return false;
-            return null;
+    rollCallRecognition.onresult = function (event) {
+        const result = event.results[event.results.length - 1];
+        if (!result || !result[0]) return;
+        const cmd = String(result[0].transcript || '').toLowerCase().trim();
+        if (!cmd) return;
+
+        if (cmd.includes('present') || cmd.includes('yes') || cmd.includes('here') || cmd.includes('haan')) {
+            window.__monitorSuppressUntil = Date.now() + 2200;
+            markCurrent(true);
+            setVoiceStatus('Heard: present');
+            return;
         }
-        // Interim: only accept short, clear single-word style so we respond in one call
-        if (t.length > 30) return null;
-        if (/\b(present|here|yes|yep|haan|हाजिर|हाँ)\b/i.test(t) && !/\babsent\b/i.test(t)) return true;
-        if (/\b(absent|no|nahi|नहीं)\b/i.test(t)) return false;
-        return null;
-    }
-
-    rcRecognition.onresult = function(event) {
-        if (rcMarkedByVoice) return;
-        for (let i = 0; i < event.results.length; i++) {
-            const result = event.results[i];
-            const transcript = (result[0] && result[0].transcript) ? result[0].transcript : '';
-            const isFinal = result.isFinal;
-            const action = checkTranscript(transcript, isFinal);
-            if (action === true) {
-                rcMarkedByVoice = true;
-                stopRcVoiceListen();
-                rcMark(true);
-                return;
-            }
-            if (action === false) {
-                rcMarkedByVoice = true;
-                stopRcVoiceListen();
-                rcMark(false);
-                return;
-            }
+        if (cmd.includes('absent') || cmd.includes('no') || cmd.includes('nahi')) {
+            window.__monitorSuppressUntil = Date.now() + 2200;
+            markCurrent(false);
+            setVoiceStatus('Heard: absent');
+            return;
         }
-    };
-    rcRecognition.onerror = function(e) {
-        if (e.error !== 'no-speech' && e.error !== 'aborted') console.warn('[rollcall] speech error', e.error);
-    };
-    rcRecognition.onend = function() {
-        if (rcCanMark && !rcMarkedByVoice && rcRecognition) {
-            setTimeout(function() { startRcVoiceListen(); }, 80);  // small delay to avoid rapid restart loops
+        if (cmd.includes('next')) {
+            nextStudent();
+            setVoiceStatus('Heard: next');
+            return;
         }
+        if (cmd.includes('previous') || cmd.includes('back')) {
+            prevStudent();
+            setVoiceStatus('Heard: previous');
+            return;
+        }
+        if (cmd.includes('skip')) {
+            skipStudent();
+            setVoiceStatus('Heard: skip');
+            return;
+        }
+        if (cmd.includes('close') || cmd.includes('stop')) {
+            closeRollCall();
+            setVoiceStatus('Heard: close');
+            return;
+        }
+        setVoiceStatus('Heard: ' + cmd + ' (say present/absent/next/previous/skip/close)');
     };
-    try {
-        rcRecognition.start();
-    } catch (err) { console.warn('[rollcall] recognition start failed', err); }
-}
 
-function stopRcVoiceListen() {
-    if (rcRecognition) {
-        try { rcRecognition.stop(); } catch (e) {}
-        rcRecognition = null;
-    }
-    const hint = document.getElementById('rcVoiceHint');
-    if (hint) hint.style.display = 'none';
-}
-
-function rcMark(present) {
-    if (rcIndex >= rcStudents.length) return;
-    stopRcVoiceListen();
-    const s = rcStudents[rcIndex];
-
-    // Save to DB
-    markAttendanceSilent(s.name, present);
-
-    // Update the row in the background list
-    const row = document.getElementById('row-' + s.id);
-    if (row) {
-        row.classList.remove('rc-current', 'marked-present', 'marked-absent');
-        row.classList.add(present ? 'marked-present' : 'marked-absent');
-        const bp = document.getElementById('btn-present-' + s.id);
-        const ba = document.getElementById('btn-absent-' + s.id);
-        if (bp) { bp.classList.toggle('active', present); }
-        if (ba) { ba.classList.toggle('active', !present); }
-    }
-
-    // Visual flash
-    const label = document.getElementById('rcSpeakLabel');
-    label.textContent = present ? '✓ Marked Present' : '✗ Marked Absent';
-    document.getElementById('rcSpeaking').style.display = 'flex';
-
-    // Voice note: "Priya — Present" / "Rahul — Absent"
-    const confirmText = s.name + (present ? ', Present.' : ', Absent.');
-    const utter = new SpeechSynthesisUtterance(confirmText);
-    utter.lang  = 'en-IN';
-    utter.rate  = 0.92;
-    utter.pitch = present ? 1.1 : 0.9;   // slightly higher pitch for present, lower for absent
-    utter.onend = utter.onerror = () => {
-        rcIndex++;
-        showStudent(rcIndex);
-        updateSummary();
+    rollCallRecognition.onerror = function () {
+        if (!rollCallOpen || !awaitingVoiceMark) return;
+        setVoiceStatus('Listening again...');
     };
-    window.speechSynthesis.cancel();
-    setTimeout(() => window.speechSynthesis.speak(utter), 60);
+
+    rollCallRecognition.onend = function () {
+        if (!rollCallOpen || !awaitingVoiceMark) return;
+        try { rollCallRecognition.start(); } catch (e) { /* ignore restart races */ }
+    };
 }
 
-function rcSkip() {
-    window.speechSynthesis.cancel();
-    stopRcVoiceListen();
-    if (rcIndex < rcStudents.length) {
-        document.getElementById('row-' + rcStudents[rcIndex].id)?.classList.remove('rc-current');
+function speakCurrentPrompt() {
+    if (!rollCallOpen || !filteredRows.length) return;
+    if (window.monitorIsPriorityActive && window.monitorIsPriorityActive()) {
+        clearPromptTimer();
+        promptRepeatTimer = setTimeout(function () {
+            speakCurrentPrompt();
+        }, 900);
+        return;
     }
-    rcIndex++;
-    showStudent(rcIndex);
-}
+    if (isRollCallAllMarked()) {
+        clearPromptTimer();
+        awaitingVoiceMark = false;
+        window.speechSynthesis.cancel();
+        return;
+    }
+    const row = filteredRows[currentIndex];
+    if (!row) return;
+    const name = row.getAttribute('data-name') || 'Student';
 
-function showDone() {
     window.speechSynthesis.cancel();
-    stopRcVoiceListen();
-    document.querySelectorAll('.student-row').forEach(r => r.classList.remove('rc-current'));
-    document.getElementById('rcMain').style.display = 'none';
-    document.getElementById('rcDone').style.display = 'block';
-
-    const present  = document.querySelectorAll('.marked-present').length;
-    const absent   = document.querySelectorAll('.marked-absent').length;
-    document.getElementById('rcDoneSummary').textContent =
-        `${present} present · ${absent} absent · ${rcStudents.length - present - absent} unmarked`;
-
-    // Speak summary
-    const utter = new SpeechSynthesisUtterance(`Roll call complete. ${present} present, ${absent} absent.`);
-    utter.lang = 'en-IN'; utter.rate = 0.9;
-    setTimeout(() => window.speechSynthesis.speak(utter), 200);
-}
-
-function stopRollCall() {
-    window.speechSynthesis.cancel();
-    stopRcVoiceListen();
-    document.querySelectorAll('.student-row').forEach(r => r.classList.remove('rc-current'));
-    closeRollCall();
-}
-
-function closeRollCall() {
-    document.getElementById('rollcallOverlay').classList.remove('visible');
-    document.getElementById('startRollCallBtn').classList.remove('active');
-    document.getElementById('startRollCallBtn').innerHTML = '<i class="fa-solid fa-bullhorn"></i> Start Roll Call';
-    updateSummary();
-}
-
-// ── Regular (non-roll-call) attendance marking ─────────────────────────────
-function markAttendance(btn, present) {
-    const name = btn.dataset.name;
-    markAttendanceSilent(name, present);
-
-    const row      = document.getElementById('row-' + name);
-    const btnP     = document.getElementById('btn-present-' + name);
-    const btnA     = document.getElementById('btn-absent-' + name);
-    row.classList.remove('marked-present', 'marked-absent');
-    row.classList.add(present ? 'marked-present' : 'marked-absent');
-    btnP.classList.toggle('active', present);
-    btnA.classList.toggle('active', !present);
-    updateSummary();
+    const utter = new SpeechSynthesisUtterance(name + '. Present or absent?');
+    utter.lang = 'en-IN';
+    utter.rate = 0.9;
+    utter.pitch = 1.0;
+    utter.onend = function () {
+        if (!rollCallOpen || !awaitingVoiceMark) return;
+        if (isRollCallAllMarked()) return;
+        clearPromptTimer();
+        promptRepeatTimer = setTimeout(function () {
+            speakCurrentPrompt();
+        }, 1800);
+    };
+    utter.onerror = function () {
+        if (!rollCallOpen || !awaitingVoiceMark) return;
+        if (isRollCallAllMarked()) return;
+        clearPromptTimer();
+        promptRepeatTimer = setTimeout(function () {
+            speakCurrentPrompt();
+        }, 1800);
+    };
+    setVoiceStatus('Listening for present or absent');
+    try { window.speechSynthesis.speak(utter); } catch (e) { /* ignore */ }
 }
 
 function markAttendanceSilent(name, present) {
-    fetch('/attendance/mark', {
+    return fetch('/attendance/mark', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentName: name, date: currentDateStr, present })
-    })
-    .then(r => r.json())
-    .then(d => { if (d.status !== 'ok') console.error('Mark failed', d); })
-    .catch(err => console.error('Network error', err));
+        body: JSON.stringify({ studentName: name, date: currentDateStr, present, grade: currentGradeFilter })
+    }).then(r => r.json()).catch(() => ({ status: 'err' }));
 }
 
-function updateSummary() {
-    const present  = document.querySelectorAll('.marked-present').length;
-    const absent   = document.querySelectorAll('.marked-absent').length;
-    const total    = document.querySelectorAll('.student-row').length;
-    const unmarked = total - present - absent;
-
-    const pills = document.querySelectorAll('.stat-pill span');
-    if (pills[0]) pills[0].textContent = present;
-    if (pills[1]) pills[1].textContent = absent;
-    if (pills[2]) pills[2].textContent = unmarked;
-
-    const unmarkedPill = document.querySelector('.stat-unmarked');
-    if (unmarkedPill) unmarkedPill.style.display = unmarked > 0 ? '' : 'none';
+function handleLockedState() {
+    closeRollCall();
 }
 
-// Prime voice list on load
-window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
-window.speechSynthesis.getVoices();
+function setRowVisual(row, present) {
+    row.classList.remove('marked-present', 'marked-absent');
+    row.classList.add(present ? 'marked-present' : 'marked-absent');
+    var status = row.querySelector('.att-status');
+    if (status) {
+        status.classList.remove('present', 'absent', 'pending');
+        status.classList.add(present ? 'present' : 'absent');
+        status.textContent = present ? 'Present' : 'Absent';
+    }
+}
+
+function markList(btn, present) {
+    const name = btn.getAttribute('data-name');
+    const row = document.getElementById('row-' + name);
+    if (!row) return;
+    setRowVisual(row, present);
+    markAttendanceSilent(name, present).then(function (d) {
+        refreshProgress();
+    });
+}
+
+function resetRollCallCompleteUi() {
+    var actions = document.querySelector('.rollcall-actions');
+    if (actions) actions.style.display = '';
+    var hint = document.getElementById('rollCompleteHint');
+    if (hint) hint.style.display = 'none';
+    rollCallCompleteAnnounced = false;
+}
+
+function celebrateAttendanceComplete() {
+    var emojis = ['🎉', '👏', '✨', '🎊'];
+    for (var i = 0; i < 22; i++) {
+        var span = document.createElement('span');
+        span.textContent = emojis[i % emojis.length];
+        span.style.position = 'fixed';
+        span.style.left = (8 + Math.random() * 84) + 'vw';
+        span.style.top = '-20px';
+        span.style.zIndex = '9999';
+        span.style.pointerEvents = 'none';
+        span.style.fontSize = (14 + Math.random() * 14) + 'px';
+        span.style.transition = 'transform 1.8s ease-out, opacity 1.8s ease-out';
+        document.body.appendChild(span);
+        setTimeout((function (el) {
+            return function () {
+                el.style.transform = 'translateY(' + (65 + Math.random() * 20) + 'vh)';
+                el.style.opacity = '0';
+            };
+        })(span), 30 + i * 28);
+        setTimeout((function (el) { return function () { el.remove(); }; })(span), 2200);
+    }
+}
+
+function speakAttendanceCompleteOnce() {
+    if (rollCallCompleteAnnounced) return;
+    rollCallCompleteAnnounced = true;
+    if (window.monitorIsPriorityActive && window.monitorIsPriorityActive()) {
+        setTimeout(function () {
+            // try again when monitor finishes
+            rollCallCompleteAnnounced = false;
+            speakAttendanceCompleteOnce();
+        }, 900);
+        return;
+    }
+    try {
+        window.speechSynthesis.cancel();
+        var u = new SpeechSynthesisUtterance('Attendance complete');
+        u.lang = 'en-IN';
+        u.rate = 0.95;
+        window.speechSynthesis.speak(u);
+    } catch (e) { /* ignore */ }
+    celebrateAttendanceComplete();
+}
+
+function applyRollCallCompleteUi() {
+    clearPromptTimer();
+    awaitingVoiceMark = false;
+    window.speechSynthesis.cancel();
+    if (rollCallRecognition) {
+        try { rollCallRecognition.stop(); } catch (e) { /* ignore */ }
+    }
+    setVoiceStatus('Attendance Complete. Close when you are ready.');
+    speakAttendanceCompleteOnce();
+    var actions = document.querySelector('.rollcall-actions');
+    if (actions) actions.style.display = 'none';
+    var hint = document.getElementById('rollCompleteHint');
+    if (hint) hint.style.display = '';
+}
+
+function refreshProgress() {
+    const total = filteredRows.length;
+    let marked = 0;
+    filteredRows.forEach(function (r) {
+        if (r.classList.contains('marked-present') || r.classList.contains('marked-absent')) marked++;
+    });
+    const p = document.getElementById('rollProgress');
+    if (p) p.textContent = marked + ' / ' + total + ' students marked';
+    const done = marked >= total && total > 0;
+    const s = document.getElementById('rollSummary');
+    if (s) s.style.display = done ? '' : 'none';
+    updateRollCallCta();
+    if (done) {
+        const list = document.getElementById('listPanel');
+        if (list) list.style.display = '';
+        const toggleBtn = document.getElementById('toggleListBtn');
+        if (toggleBtn) toggleBtn.textContent = 'Hide List';
+        if (rollCallOpen) {
+            applyRollCallCompleteUi();
+        } else {
+            clearPromptTimer();
+            awaitingVoiceMark = false;
+            window.speechSynthesis.cancel();
+            if (rollCallRecognition) {
+                try { rollCallRecognition.stop(); } catch (e) { /* ignore */ }
+            }
+        }
+    } else {
+        if (rollCallOpen) {
+            resetRollCallCompleteUi();
+        }
+    }
+}
+
+function showCurrent() {
+    if (!filteredRows.length) {
+        const nameNode = document.getElementById('rollName');
+        const metaNode = document.getElementById('rollMeta');
+        if (nameNode) nameNode.textContent = '-';
+        if (metaNode) metaNode.textContent = 'No students to mark';
+        setVoiceStatus('No students to mark');
+        refreshProgress();
+        return;
+    }
+    if (currentIndex < 0) currentIndex = 0;
+    if (currentIndex >= filteredRows.length) currentIndex = filteredRows.length - 1;
+    const row = filteredRows[currentIndex];
+    const name = row.getAttribute('data-name') || '-';
+    const grade = row.getAttribute('data-grade') || '-';
+    const roll = row.getAttribute('data-roll') || '';
+    const meta = 'Grade ' + grade + (roll ? ' • Roll ' + roll : '');
+    document.getElementById('rollName').textContent = name;
+    document.getElementById('rollMeta').textContent = meta;
+    refreshProgress();
+
+    if (rollCallOpen) {
+        awaitingVoiceMark = true;
+        initRollCallVoice();
+        if (rollCallRecognition) {
+            try { rollCallRecognition.start(); } catch (e) { /* ignore */ }
+        }
+        speakCurrentPrompt();
+    }
+}
+
+function markCurrent(present) {
+    if (!filteredRows.length) return;
+    window.__monitorSuppressUntil = Date.now() + 1800;
+    awaitingVoiceMark = false;
+    clearPromptTimer();
+    window.speechSynthesis.cancel();
+    if (rollCallRecognition) {
+        try { rollCallRecognition.stop(); } catch (e) { /* ignore */ }
+    }
+    const row = filteredRows[currentIndex];
+    const name = row.getAttribute('data-name');
+    setRowVisual(row, present);
+    markAttendanceSilent(name, present).then(function (d) {
+        currentIndex++;
+        if (currentIndex >= filteredRows.length) {
+            refreshProgress();
+            return;
+        }
+        showCurrent();
+    });
+}
+
+function nextStudent() { currentIndex++; showCurrent(); }
+function prevStudent() { currentIndex--; showCurrent(); }
+function skipStudent() { nextStudent(); }
+function startRollCall() {
+    const modal = document.getElementById('rollCallModal');
+    const list = document.getElementById('listPanel');
+    if (list) list.style.display = 'none';
+    if (modal) modal.style.display = 'flex';
+    rollCallOpen = true;
+    awaitingVoiceMark = true;
+    resetRollCallCompleteUi();
+    var sum = document.getElementById('rollSummary');
+    if (sum) {
+        var total = filteredRows.length;
+        var mk = 0;
+        filteredRows.forEach(function (r) {
+            if (r.classList.contains('marked-present') || r.classList.contains('marked-absent')) mk++;
+        });
+        sum.style.display = (mk >= total && total > 0) ? '' : 'none';
+    }
+    const toggleBtn = document.getElementById('toggleListBtn');
+    if (toggleBtn) {
+        toggleBtn.style.display = '';
+        toggleBtn.textContent = 'Show List';
+    }
+    const startState = document.getElementById('attendanceStartState');
+    if (startState) startState.style.display = 'none';
+    showCurrent();
+}
+function closeRollCall() {
+    const modal = document.getElementById('rollCallModal');
+    if (modal) modal.style.display = 'none';
+    rollCallOpen = false;
+    awaitingVoiceMark = false;
+    clearPromptTimer();
+    window.speechSynthesis.cancel();
+    if (rollCallRecognition) {
+        try { rollCallRecognition.stop(); } catch (e) { /* ignore */ }
+    }
+    resetRollCallCompleteUi();
+    updateRollCallCta();
+}
+function toggleListView() {
+    const list = document.getElementById('listPanel');
+    if (!list) return;
+    const modal = document.getElementById('rollCallModal');
+    const openList = list.style.display === 'none';
+    list.style.display = openList ? '' : 'none';
+    if (modal) modal.style.display = 'none';
+    rollCallOpen = false;
+    awaitingVoiceMark = false;
+    clearPromptTimer();
+    window.speechSynthesis.cancel();
+    if (rollCallRecognition) {
+        try { rollCallRecognition.stop(); } catch (e) { /* ignore */ }
+    }
+    if (openList) {
+        currentPage = 1;
+        renderPage();
+    }
+    updateRollCallCta();
+    document.getElementById('toggleListBtn').textContent = openList ? 'Hide List' : 'Show List';
+}
+
+function applyFilters() {
+    filteredRows = rows.slice();
+    currentIndex = 0;
+    currentPage = 1;
+    showCurrent();
+    renderPage();
+}
+
+function renderPage() {
+    const total = filteredRows.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    rows.forEach(function (row) { row.style.display = 'none'; });
+
+    const startIdx = (currentPage - 1) * pageSize;
+    const endIdx = startIdx + pageSize;
+    filteredRows.forEach(function (row, idx) {
+        if (idx >= startIdx && idx < endIdx) row.style.display = '';
+    });
+
+    const from = total === 0 ? 0 : startIdx + 1;
+    const to = Math.min(endIdx, total);
+    const meta = document.getElementById('pageMeta');
+    if (meta) meta.textContent = 'Showing ' + from + '-' + to + ' of ' + total;
+
+    const prev = document.getElementById('prevPageBtn');
+    const next = document.getElementById('nextPageBtn');
+    if (prev) prev.disabled = currentPage <= 1;
+    if (next) next.disabled = currentPage >= totalPages;
+}
+
+function nextPage() {
+    currentPage++;
+    renderPage();
+}
+
+function prevPage() {
+    currentPage--;
+    renderPage();
+}
+
+var attendanceFilterForm = document.getElementById('attendanceFilterForm');
+var dateEl = document.getElementById('dateInput');
+var gradeEl = document.getElementById('gradeInput');
+function submitFiltersNow() {
+    if (attendanceFilterForm) attendanceFilterForm.submit();
+}
+if (dateEl) dateEl.addEventListener('change', submitFiltersNow);
+if (gradeEl) gradeEl.addEventListener('change', submitFiltersNow);
+showCurrent();
+renderPage();
+updateRollCallCta();
 </script>
 </body>
 </html>

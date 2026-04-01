@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ChatGPT-style responsive sidebar</title>
+  <style>
+    :root {
+      --sidebar-w: 250px;
+      --border: #e5e5e5;
+      --bg-sidebar: #f9f9f9;
+      --bg-main: #fff;
+      --backdrop: rgba(15, 15, 20, 0.45);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      color: #111;
+      background: var(--bg-main);
+    }
+
+    /* Shell: flex row — sidebar + main share the row on desktop */
+    .app-shell {
+      display: flex;
+      min-height: 100vh;
+      width: 100%;
+    }
+
+    .sidebar {
+      flex: 0 0 var(--sidebar-w);
+      width: var(--sidebar-w);
+      min-width: 0;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.28s ease;
+    }
+
+    .sidebar-inner {
+      padding: 1rem;
+      flex: 1;
+      overflow: auto;
+    }
+
+    .main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-main);
+    }
+
+    .main-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .main-body {
+      flex: 1;
+      padding: 1rem;
+      overflow: auto;
+    }
+
+    .menu-toggle {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 1.25rem;
+      line-height: 1;
+    }
+
+    .menu-toggle:hover {
+      background: #f5f5f5;
+    }
+
+    .backdrop {
+      display: none;
+    }
+
+    /* —— Mobile: sidebar closed by default, overlay + backdrop —— */
+    @media (max-width: 767px) {
+      .menu-toggle {
+        display: inline-flex;
+      }
+
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        z-index: 200;
+        flex: none;
+        transform: translateX(-100%);
+        box-shadow: none;
+      }
+
+      .sidebar.is-open {
+        transform: translateX(0);
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12);
+      }
+
+      .backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 150;
+        background: var(--backdrop);
+        border: none;
+        padding: 0;
+        margin: 0;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.28s ease;
+      }
+
+      .backdrop.is-visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      /* Main stays full width; nothing sits under the (off-canvas) sidebar */
+      .main {
+        width: 100%;
+      }
+    }
+
+    /* —— Desktop: sidebar always visible, no overlay —— */
+    @media (min-width: 768px) {
+      .sidebar {
+        transform: none !important;
+      }
+
+      .backdrop {
+        display: none !important;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .sidebar,
+      .backdrop {
+        transition-duration: 0.01ms;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside
+      class="sidebar"
+      id="sidebar"
+      aria-label="Sidebar navigation"
+    >
+      <div class="sidebar-inner">
+        <p style="margin:0 0 0.75rem;font-weight:600;">Sidebar</p>
+        <p style="margin:0;color:#555;font-size:0.9rem;">
+          Fixed width. On small screens this panel slides in from the left; on desktop it stays open and the main area shrinks beside it.
+        </p>
+      </div>
+    </aside>
+
+    <button
+      type="button"
+      class="backdrop"
+      id="backdrop"
+      tabindex="-1"
+      aria-hidden="true"
+    ></button>
+
+    <main class="main" id="main">
+      <header class="main-header">
+        <button
+          type="button"
+          class="menu-toggle"
+          id="menuToggle"
+          aria-expanded="false"
+          aria-controls="sidebar"
+        >
+          ☰
+        </button>
+        <h1 style="margin:0;font-size:1.1rem;font-weight:600;">Main content</h1>
+      </header>
+      <div class="main-body">
+        <p style="margin-top:0;">
+          Resize the window: below 768px the sidebar starts closed; use the hamburger to open it.
+          At 768px and up the sidebar stays visible and this column uses the remaining width (<code>flex: 1; min-width: 0</code>).
+        </p>
+        <p>Press <kbd>Esc</kbd> to close the sidebar on mobile.</p>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      const mq = window.matchMedia('(min-width: 768px)');
+      const sidebar = document.getElementById('sidebar');
+      const backdrop = document.getElementById('backdrop');
+      const toggle = document.getElementById('menuToggle');
+
+      function isDesktop() {
+        return mq.matches;
+      }
+
+      function setOpen(open) {
+        if (isDesktop()) {
+          sidebar.classList.remove('is-open');
+          backdrop.classList.remove('is-visible');
+          toggle.setAttribute('aria-expanded', 'true');
+          return;
+        }
+        sidebar.classList.toggle('is-open', open);
+        backdrop.classList.toggle('is-visible', open);
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (open) {
+          backdrop.setAttribute('aria-hidden', 'false');
+        } else {
+          backdrop.setAttribute('aria-hidden', 'true');
+        }
+      }
+
+      function toggleSidebar() {
+        if (isDesktop()) return;
+        setOpen(!sidebar.classList.contains('is-open'));
+      }
+
+      toggle.addEventListener('click', toggleSidebar);
+
+      backdrop.addEventListener('click', function () {
+        setOpen(false);
+      });
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') setOpen(false);
+      });
+
+      mq.addEventListener('change', function () {
+        if (isDesktop()) {
+          sidebar.classList.remove('is-open');
+          backdrop.classList.remove('is-visible');
+          toggle.setAttribute('aria-expanded', 'true');
+        } else {
+          setOpen(false);
+        }
+      });
+
+      // Initial state: mobile = closed, desktop = "open" (visible in flow)
+      if (isDesktop()) {
+        toggle.setAttribute('aria-expanded', 'true');
+      } else {
+        setOpen(false);
+      }
+    })();
+  </script>
+</body>
+</html>

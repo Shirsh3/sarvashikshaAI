@@ -6,285 +6,388 @@
     <title>Teacher Setup — SarvashikshaAI</title>
     <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
-    <link rel="stylesheet" th:href="@{/css/app.css}"/>
-    <style>
-        body { background: var(--bg); color: var(--text); }
-        .teacher-subbar {
-            background: var(--dark); color: white;
-            padding: 8px 24px;
-            display: flex; justify-content: flex-end; align-items: center; gap: 16px;
-            font-size: 0.85rem;
-        }
-        .signout-link { color: #99f6e4; text-decoration: none; }
-        .signout-link:hover { text-decoration: underline; }
-        main { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
-        .layout {
-            display: grid;
-            grid-template-columns: 230px minmax(0, 1fr);
-            gap: 16px;
-            align-items: flex-start;
-        }
-        .side-tabs {
-            background: white;
-            border-radius: 16px;
-            padding: 16px 12px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-        }
-        .side-tab-title {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #0f766e;
-            margin-bottom: 8px;
-        }
-        .side-tab-button {
-            width: 100%;
-            text-align: left;
-            border: none;
-            background: transparent;
-            padding: 8px 10px;
-            border-radius: 10px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: #0f172a;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-        }
-        .side-tab-button i {
-            width: 18px;
-            text-align: center;
-            color: #0f766e;
-        }
-        .side-tab-button:hover {
-            background: #ecfeff;
-        }
-        .side-tab-button.active {
-            background: #0f766e;
-            color: white;
-        }
-        .side-tab-button.active i {
-            color: #a7f3d0;
-        }
-
-        .card {
-            background: white; border-radius: 16px;
-            padding: 24px; margin-bottom: 20px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.07);
-        }
-        .card h2 { font-size: 1.05rem; color: #0f766e; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
-        .card p { font-size: 0.88rem; color: var(--muted); margin-bottom: 16px; }
-        .btn { padding: 10px 20px; border: none; border-radius: 10px; font-size: 0.9rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
-        .btn-go { background: #10b981; color: white; font-size: 1rem; padding: 12px 28px; text-decoration: none; }
-        .btn-go:hover { background: #059669; color: white; }
-        .student-preview { overflow-x: auto; margin-top: 12px; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        th { background: #f0fdf4; color: #0f766e; padding: 8px 12px; text-align: left; border-bottom: 2px solid #d1fae5; }
-        td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; color: #334155; }
-        tr:last-child td { border-bottom: none; }
-        tr:hover td { background: #f8fafc; }
-        .badge { background: #d1fae5; color: #065f46; border-radius: 20px; padding: 2px 10px; font-size: 0.78rem; font-weight: 600; }
-        .go-section { text-align: center; padding: 8px 0; }
-
-        .tab-panel {
-            display: none;
-        }
-        .tab-panel.active {
-            display: block;
-        }
-    </style>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
 </head>
-<body>
+<body class="app-layout setup-page-flat">
 <div th:replace="~{fragments/loader :: loader}"></div>
-<div th:replace="~{fragments/tabs :: tabBar('teacher')}"></div>
+<div th:replace="~{fragments/shell-teacher :: sidebar('teacher')}"></div>
 
-<div class="teacher-subbar">
-    <span th:if="${teacherName}"><i class="fa-solid fa-circle-user"></i>&nbsp;<span th:text="${teacherName}"></span></span>
-    <a href="/logout" class="signout-link"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</a>
-</div>
+<main class="layout-main">
+    <div class="setup-stage">
+        <header class="setup-topbar">
+            <div>
+                <h1 class="setup-title">Setup</h1>
+                <p class="setup-tagline">Manage backoffice records and assembly videos.</p>
+            </div>
+            <div class="setup-account">
+                <span th:if="${teacherName}"><i class="fa-solid fa-circle-user"></i>&nbsp;<span th:text="${teacherName}"></span></span>
+            </div>
+        </header>
 
-<main>
-    <div class="layout">
-        <aside class="side-tabs">
-            <div class="side-tab-title">Setup</div>
-            <button type="button" class="side-tab-button active" data-target="students-panel">
-                <i class="fa-solid fa-users"></i>
-                <span>Students</span>
-            </button>
-            <button type="button" class="side-tab-button" data-target="assembly-panel">
-                <i class="fa-solid fa-music"></i>
-                <span>Assembly videos</span>
-            </button>
-        </aside>
+        <nav class="setup-pill-nav" aria-label="Setup sections">
+            <button type="button" class="setup-pill active" data-view="students">👥 Backoffice</button>
+            <button type="button" class="setup-pill" data-view="assembly">🎬 Assembly media</button>
+        </nav>
 
-        <section>
-    <div class="card tab-panel active" id="students-panel">
-        <h2><i class="fa-solid fa-users"></i> Students</h2>
-        <p>Manage your students directly in the app. Add, update, or remove students below.</p>
-        <p th:if="${errorMessage}" style="color:#b91c1c;font-size:0.85rem;margin-bottom:8px;">
-            <i class="fa-solid fa-circle-exclamation"></i>
-            <span th:text="${errorMessage}"></span>
-        </p>
-        <p th:if="${students != null and !#lists.isEmpty(students)}">
-            <span class="badge" th:text="${students.size()} + ' students'"></span>
-        </p>
-
-        <form th:action="@{/teacher/students/save}" method="post" th:object="${studentForm}" style="margin-top: 12px; margin-bottom: 16px;">
-            <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:8px;">
-                <div>
-                    <label style="font-size:0.8rem;color:var(--muted);">Name</label>
-                    <input type="text" th:field="*{name}" placeholder="Student name" required
-                           style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.85rem;">
+        <!-- Students -->
+        <section id="setup-view-students" class="setup-view active">
+            <div class="setup-section" id="studentFormTop">
+                <div class="toolbar">
+                    <h2 class="toolbar-heading">Backoffice</h2>
+                    <div class="search-container">
+                        <span class="search-icon" aria-hidden="true">🔍</span>
+                        <input type="search" class="search-input" id="studentFilter" placeholder="Search by name or code…" autocomplete="off"/>
+                    </div>
+                    <span class="badge-pill" th:if="${students != null and !#lists.isEmpty(students)}"
+                          th:text="${students.size()} + ' students'">0 students</span>
+                    <button type="button" class="btn-add" onclick="document.getElementById('studentNameInput')?.focus(); document.getElementById('studentFormTop')?.scrollIntoView({behavior:'smooth'});">
+                        + Add student
+                    </button>
                 </div>
-                <div>
-                    <label style="font-size:0.8rem;color:var(--muted);">Student Code</label>
-                    <input type="text" th:field="*{code}" placeholder="e.g. S001"
-                           style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.85rem;">
-                </div>
-                <div>
-                    <label style="font-size:0.8rem;color:var(--muted);">Grade</label>
-                    <input type="text" th:field="*{grade}" placeholder="e.g. 6A"
-                           style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.85rem;">
-                </div>
-                <div style="display:flex;align-items:flex-end;gap:6px;">
-                    <input type="checkbox" th:field="*{active}" style="width:auto;margin-right:6px;">
-                    <label style="font-size:0.85rem;">Active</label>
+
+                <p class="setup-lead">Add, update, or remove learners. Codes are used for quiz and attendance.</p>
+
+                <p th:if="${infoMessage}" style="color:#0f766e;font-size:0.85rem;margin-bottom:10px;">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span th:text="${infoMessage}"></span>
+                </p>
+
+                <p th:if="${errorMessage}" style="color:#b91c1c;font-size:0.85rem;margin-bottom:10px;">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span th:text="${errorMessage}"></span>
+                </p>
+
+                <form th:action="@{/teacher/students/save}" method="post" th:object="${studentForm}" class="setup-student-form" style="margin-bottom:18px;">
+                    <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <div class="setup-form-grid setup-form-grid--4">
+                        <div>
+                            <label style="font-size:0.78rem;font-weight:700;color:var(--muted);">Name</label>
+                            <input id="studentNameInput" type="text" th:field="*{name}" placeholder="Student name" required
+                                   style="width:100%;padding:9px 11px;border-radius:10px;border:2px solid var(--surface2);font-size:0.86rem;box-sizing:border-box;background:var(--surface);color:var(--text);">
+                        </div>
+                        <div>
+                            <label style="font-size:0.78rem;font-weight:700;color:var(--muted);">Student code</label>
+                            <input type="text" th:field="*{code}" placeholder="e.g. S001"
+                                   style="width:100%;padding:9px 11px;border-radius:10px;border:2px solid var(--surface2);font-size:0.86rem;box-sizing:border-box;background:var(--surface);color:var(--text);">
+                        </div>
+                        <div>
+                            <label style="font-size:0.78rem;font-weight:700;color:var(--muted);">Grade</label>
+                            <select th:field="*{grade}" required
+                                    style="width:100%;padding:9px 11px;border-radius:10px;border:2px solid var(--surface2);font-size:0.86rem;box-sizing:border-box;background:var(--surface);color:var(--text);">
+                                <option value="">Select grade</option>
+                                <option th:each="g : ${gradeOptions}" th:value="${g.code}" th:text="${g.label}">Grade</option>
+                            </select>
+                        </div>
+                        <div style="display:flex;align-items:flex-end;gap:8px;padding-bottom:2px;">
+                            <input type="checkbox" th:field="*{active}" id="activeChk" style="width:auto;">
+                            <label for="activeChk" style="font-size:0.86rem;font-weight:600;">Active</label>
+                        </div>
+                    </div>
+                    <div class="setup-form-grid setup-form-grid--3">
+                        <div>
+                            <label style="font-size:0.78rem;font-weight:700;color:var(--muted);">Strength</label>
+                            <input type="text" th:field="*{strength}" placeholder="e.g. Reading"
+                                   style="width:100%;padding:9px 11px;border-radius:10px;border:2px solid var(--surface2);font-size:0.86rem;box-sizing:border-box;background:var(--surface);color:var(--text);">
+                        </div>
+                        <div>
+                            <label style="font-size:0.78rem;font-weight:700;color:var(--muted);">Areas of Improvements</label>
+                            <input type="text" th:field="*{weakness}" placeholder="e.g. Writing"
+                                   style="width:100%;padding:9px 11px;border-radius:10px;border:2px solid var(--surface2);font-size:0.86rem;box-sizing:border-box;background:var(--surface);color:var(--text);">
+                        </div>
+                        <div>
+                            <label style="font-size:0.78rem;font-weight:700;color:var(--muted);">Notes</label>
+                            <input type="text" th:field="*{notes}" placeholder="Any notes"
+                                   style="width:100%;padding:9px 11px;border-radius:10px;border:2px solid var(--surface2);font-size:0.86rem;box-sizing:border-box;background:var(--surface);color:var(--text);">
+                        </div>
+                    </div>
+                    <input type="hidden" th:field="*{originalName}"/>
+                    <button type="submit" class="btn-add" style="box-shadow:none;">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span th:text="${editing} != null ? 'Update student' : 'Save student'">Save student</span>
+                    </button>
+                </form>
+
+                <div class="student-preview table-scroll" th:if="${students != null and !#lists.isEmpty(students)}">
+                    <table class="setup-table" id="studentTable">
+                        <thead>
+                        <tr>
+                            <th class="col-num">#</th>
+                            <th>Name</th>
+                            <th>Code</th>
+                            <th>Grade</th>
+                            <th>Strength</th>
+                            <th>Areas of Improvements</th>
+                            <th>Notes</th>
+                            <th class="col-updated">Updated</th>
+                            <th class="col-active">Active</th>
+                            <th class="col-actions">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="s, stat : ${students}">
+                            <td th:text="${stat.count}"></td>
+                            <td><strong th:text="${s.name}"></strong></td>
+                            <td th:text="${s.code}"></td>
+                            <td th:text="${s.grade}"></td>
+                            <td th:text="${s.strength}"></td>
+                            <td th:text="${s.weakness}"></td>
+                            <td class="setup-td-notes" th:text="${s.notes}"></td>
+                            <td class="col-updated">
+                                <span th:if="${s.updatedAt != null}" th:text="${#temporals.format(s.updatedAt, 'dd MMM yyyy, HH:mm')}">—</span>
+                                <span th:if="${s.updatedAt == null}">—</span>
+                            </td>
+                            <td><span th:text="${s.active} ? 'Yes' : 'No'"></span></td>
+                            <td class="col-actions">
+                                <form th:action="@{/teacher/setup}" method="get" style="display:inline;">
+                                    <input type="hidden" name="edit" th:value="${s.name}"/>
+                                    <button type="submit" class="action-icon edit-btn"><i class="fa-solid fa-pen"></i> Edit</button>
+                                </form>
+                                <form th:action="@{/teacher/students/delete}" method="post" style="display:inline;">
+                                    <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                    <input type="hidden" name="name" th:value="${s.name}"/>
+                                    <button type="submit" class="action-icon del-btn"><i class="fa-solid fa-trash"></i> Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:8px;">
-                <div>
-                    <label style="font-size:0.8rem;color:var(--muted);">Strength</label>
-                    <input type="text" th:field="*{strength}" placeholder="e.g. Reading, Maths"
-                           style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.85rem;">
-                </div>
-                <div>
-                    <label style="font-size:0.8rem;color:var(--muted);">Weakness</label>
-                    <input type="text" th:field="*{weakness}" placeholder="e.g. Writing"
-                           style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.85rem;">
-                </div>
-                <div>
-                    <label style="font-size:0.8rem;color:var(--muted);">Notes</label>
-                    <input type="text" th:field="*{notes}" placeholder="Any notes"
-                           style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.85rem;">
-                </div>
-            </div>
-            <input type="hidden" th:field="*{originalName}"/>
-            <button type="submit" class="btn" style="background:#0f766e;color:white;">
-                <i class="fa-solid fa-plus"></i>
-                <span th:text="${editing} != null ? 'Update student' : 'Save student'">Save student</span>
-            </button>
-        </form>
+        </section>
 
-        <div class="student-preview" th:if="${students != null and !#lists.isEmpty(students)}">
-            <table>
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Name</th>
-                        <th>Code</th>
-                        <th>Grade</th>
-                        <th>Strength</th>
-                        <th>Weakness</th>
-                        <th>Notes</th>
-                        <th>Last updated</th>
-                        <th>Active</th>
-                        <th style="width:130px;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:each="s, stat : ${students}">
-                        <td th:text="${stat.count}"></td>
-                        <td><strong th:text="${s.name}"></strong></td>
-                        <td th:text="${s.code}"></td>
-                        <td th:text="${s.grade}"></td>
-                        <td th:text="${s.strength}"></td>
-                        <td th:text="${s.weakness}"></td>
-                        <td th:text="${s.notes}"></td>
-                        <td th:text="${s.updatedAt} ?: '—'"></td>
-                        <td>
-                            <span th:text="${s.active} ? 'Yes' : 'No'"></span>
-                        </td>
-                        <td>
-                            <form th:action="@{/teacher/setup}" method="get" style="display:inline;margin-right:4px;">
-                                <input type="hidden" name="edit" th:value="${s.name}"/>
-                                <button type="submit" class="btn" style="background:#e0f2fe;color:#0369a1;padding:6px 10px;font-size:0.78rem;">
-                                    <i class="fa-solid fa-pen"></i> Edit
-                                </button>
-                            </form>
-                            <form th:action="@{/teacher/students/delete}" method="post" style="display:inline;">
-                                <input type="hidden" name="name" th:value="${s.name}"/>
-                                <button type="submit" class="btn" style="background:#fee2e2;color:#b91c1c;padding:6px 10px;font-size:0.78rem;">
-                                    <i class="fa-solid fa-trash"></i> Remove
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+        <!-- Assembly -->
+        <section id="setup-view-assembly" class="setup-view">
+            <div class="setup-section" id="assembly-section">
+                <p th:if="${assemblySaved}" class="setup-flash-success" role="status">
+                    <i class="fa-solid fa-circle-check"></i> Assembly links saved. They appear on the <a th:href="@{/assembly}">Assembly</a> page.
+                </p>
+                <h2 style="margin-top:0;"><i class="fa-solid fa-music"></i> Assembly media</h2>
+                <p class="setup-lead">Configure YouTube links for National Anthem, Morning Prayer, Pledge, and Hindi Prayer (shown on the Assembly page).</p>
+
+                <form th:action="@{/teacher/assembly/save}" method="post" id="assemblySaveForm">
+                    <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <div class="media-grid">
+                        <div class="video-config-item">
+                            <label><i class="fa-solid fa-flag"></i> National Anthem</label>
+                            <input type="text" name="anthemUrl" id="anthemUrl" class="yt-input" th:value="${assemblyConfig?.anthemUrl}"
+                                   placeholder="https://www.youtube.com/watch?v=…" autocomplete="off"/>
+                            <div class="yt-preview-host" data-yt-for="anthemUrl" aria-label="National Anthem preview"></div>
+                        </div>
+                        <div class="video-config-item">
+                            <label><i class="fa-solid fa-hands-praying"></i> Morning Prayer</label>
+                            <input type="text" name="prayerUrl" id="prayerUrl" class="yt-input" th:value="${assemblyConfig?.prayerUrl}"
+                                   placeholder="https://www.youtube.com/watch?v=…" autocomplete="off"/>
+                            <div class="yt-preview-host" data-yt-for="prayerUrl" aria-label="Morning Prayer preview"></div>
+                        </div>
+                        <div class="video-config-item">
+                            <label><i class="fa-solid fa-handshake"></i> Pledge</label>
+                            <input type="text" name="pledgeUrl" id="pledgeUrl" class="yt-input" th:value="${assemblyConfig?.pledgeUrl}"
+                                   placeholder="https://www.youtube.com/watch?v=…" autocomplete="off"/>
+                            <div class="yt-preview-host" data-yt-for="pledgeUrl" aria-label="Pledge preview"></div>
+                        </div>
+                        <div class="video-config-item">
+                            <label><i class="fa-solid fa-om"></i> Hindi Prayer</label>
+                            <input type="text" name="hindiPrayerUrl" id="hindiPrayerUrl" class="yt-input" th:value="${assemblyConfig?.hindiPrayerUrl}"
+                                   placeholder="https://www.youtube.com/watch?v=…" autocomplete="off"/>
+                            <div class="yt-preview-host" data-yt-for="hindiPrayerUrl" aria-label="Hindi Prayer preview"></div>
+                        </div>
+                    </div>
+
+                    <div class="bank-section" style="margin-top:20px;padding:14px 16px;">
+                        <h3 style="margin:0 0 6px;font-size:1.05rem;">Playback order</h3>
+                        <p class="setup-lead" style="margin-bottom:12px;">Order used on the Assembly page when you press <strong>Start Assembly</strong>. Use ↑ ↓ to reorder.</p>
+                        <div id="assemblyOrderRows" style="display:flex;flex-direction:column;gap:8px;"></div>
+                        <input type="hidden" name="slotOrder" id="assemblySlotOrder" th:value="${assemblySlotOrderCsv}"/>
+                    </div>
+
+                    <div class="assembly-save-actions" style="display:flex;justify-content:center;margin-top:22px;">
+                        <button type="submit" class="btn-add" style="width:100%;max-width:420px;">
+                            <i class="fa-solid fa-floppy-disk"></i> Save assembly links
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <div class="setup-section setup-go-card">
+            <h2 style="margin-top:0;"><i class="fa-solid fa-house"></i> Teaching home</h2>
+            <p class="setup-lead" style="margin-bottom:16px;">Return to your dashboard for quizzes, reading, assembly, and attendance.</p>
+            <a th:href="@{/teacher/dashboard}" class="btn-go-wide"><i class="fa-solid fa-gauge-high"></i> Go to dashboard</a>
         </div>
     </div>
-
-    <div class="card tab-panel" id="assembly-panel">
-        <h2><i class="fa-solid fa-music"></i> Assembly videos</h2>
-        <p>Configure the YouTube links for National Anthem, Morning Prayer, Pledge, and Hindi Prayer.</p>
-        <form th:action="@{/teacher/assembly/save}" method="post" style="display:grid;gap:8px;max-width:700px;">
-            <div>
-                <label style="font-size:0.8rem;color:var(--muted);">National Anthem URL</label>
-                <input type="text" name="anthemUrl" th:value="${assemblyConfig?.anthemUrl}"
-                       placeholder="https://www.youtube.com/watch?v=..."
-                       style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.85rem;">
-            </div>
-            <div>
-                <label style="font-size:0.8rem;color:var(--muted);">Morning Prayer URL</label>
-                <input type="text" name="prayerUrl" th:value="${assemblyConfig?.prayerUrl}"
-                       placeholder="https://www.youtube.com/watch?v=..."
-                       style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.85rem;">
-            </div>
-            <div>
-                <label style="font-size:0.8rem;color:var(--muted);">Pledge URL</label>
-                <input type="text" name="pledgeUrl" th:value="${assemblyConfig?.pledgeUrl}"
-                       placeholder="https://www.youtube.com/watch?v=..."
-                       style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.85rem;">
-            </div>
-            <div>
-                <label style="font-size:0.8rem;color:var(--muted);">Hindi Prayer URL</label>
-                <input type="text" name="hindiPrayerUrl" th:value="${assemblyConfig?.hindiPrayerUrl}"
-                       placeholder="https://www.youtube.com/watch?v=..."
-                       style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.85rem;">
-            </div>
-            <button type="submit" class="btn" style="background:#0f766e;color:white;align-self:flex-start;">
-                <i class="fa-solid fa-floppy-disk"></i> Save assembly links
-            </button>
-        </form>
-    </div>
-
-    <div class="card go-section">
-        <h2 style="justify-content:center;"><i class="fa-solid fa-door-open"></i> Start the Classroom</h2>
-        <p style="text-align:center; margin-bottom:20px;">Open the main app on the classroom device.</p>
-        <a href="/" class="btn btn-go"><i class="fa-solid fa-chalkboard"></i> Go to Classroom App →</a>
-    </div>
-        </section>
-    </div>
+</main>
 
 <script>
-    (function() {
-        const buttons = document.querySelectorAll('.side-tab-button');
-        const panels = document.querySelectorAll('.tab-panel');
-        buttons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const targetId = btn.getAttribute('data-target');
-                buttons.forEach(b => b.classList.remove('active'));
-                panels.forEach(p => p.classList.remove('active'));
-                btn.classList.add('active');
-                const panel = document.getElementById(targetId);
-                if (panel) {
-                    panel.classList.add('active');
-                }
+(function() {
+    function showSetupView(view) {
+        document.querySelectorAll('.setup-pill').forEach(function(b) {
+            b.classList.toggle('active', b.getAttribute('data-view') === view);
+        });
+        document.querySelectorAll('.setup-view').forEach(function(v) { v.classList.remove('active'); });
+        var panel = document.getElementById('setup-view-' + view);
+        if (panel) panel.classList.add('active');
+    }
+
+    document.querySelectorAll('.setup-pill').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            showSetupView(btn.getAttribute('data-view'));
+        });
+    });
+
+    var setupParams = new URLSearchParams(window.location.search);
+    if (setupParams.get('view') === 'assembly' || window.location.hash === '#assembly') {
+        showSetupView('assembly');
+        if (setupParams.get('view') === 'assembly') {
+            setupParams.delete('view');
+            var clean = window.location.pathname + (setupParams.toString() ? '?' + setupParams.toString() : '');
+            window.history.replaceState({}, '', clean);
+        }
+    }
+
+    function youtubeIdFromUrl(url) {
+        if (!url || typeof url !== 'string') return null;
+        var u = url.trim();
+        var m = u.match(/(?:youtube\.com\/(?:watch\?[^#]*v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+        return m ? m[1] : null;
+    }
+
+    function renderYtPreview(host, input) {
+        var id = youtubeIdFromUrl(input.value);
+        host.innerHTML = '';
+        if (!id) {
+            var ph = document.createElement('div');
+            ph.className = 'yt-preview-placeholder';
+            ph.textContent = 'Paste a valid YouTube URL above to preview.';
+            host.appendChild(ph);
+            return;
+        }
+        var iframe = document.createElement('iframe');
+        iframe.className = 'yt-preview-iframe';
+        iframe.setAttribute('loading', 'lazy');
+        iframe.setAttribute('title', host.getAttribute('aria-label') || 'YouTube preview');
+        iframe.setAttribute('allowfullscreen', '');
+        iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+        iframe.src = 'https://www.youtube.com/embed/' + id;
+        host.appendChild(iframe);
+    }
+
+    document.querySelectorAll('.yt-preview-host').forEach(function(host) {
+        var forId = host.getAttribute('data-yt-for');
+        var input = forId ? document.getElementById(forId) : null;
+        if (!input) return;
+        var run = function() { renderYtPreview(host, input); };
+        input.addEventListener('input', run);
+        input.addEventListener('blur', run);
+        run();
+    });
+
+    (function assemblySlotOrderEditor() {
+        var KEYS = ['anthem', 'pledge', 'prayer', 'hindi'];
+        var LABELS = {
+            anthem: 'National Anthem',
+            pledge: 'Pledge',
+            prayer: 'Morning Prayer',
+            hindi: 'Hindi Prayer'
+        };
+        var host = document.getElementById('assemblyOrderRows');
+        var hidden = document.getElementById('assemblySlotOrder');
+        var form = document.getElementById('assemblySaveForm');
+        if (!host || !hidden) return;
+
+        function ensureOrder(arr) {
+            var out = [];
+            (arr || []).forEach(function (k) {
+                k = String(k || '').trim().toLowerCase();
+                if (KEYS.indexOf(k) >= 0 && out.indexOf(k) < 0) out.push(k);
+            });
+            KEYS.forEach(function (k) {
+                if (out.indexOf(k) < 0) out.push(k);
+            });
+            return out;
+        }
+
+        function parseHidden() {
+            return ensureOrder((hidden.value || '').split(','));
+        }
+
+        function render() {
+            var order = parseHidden();
+            hidden.value = order.join(',');
+            host.innerHTML = '';
+            order.forEach(function (key, idx) {
+                var row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.alignItems = 'center';
+                row.style.justifyContent = 'space-between';
+                row.style.gap = '10px';
+                row.style.padding = '10px 12px';
+                row.style.border = '1px solid var(--border)';
+                row.style.borderRadius = '12px';
+                row.style.background = 'var(--surface)';
+                var left = document.createElement('div');
+                left.style.fontWeight = '800';
+                left.style.color = 'var(--text)';
+                left.textContent = (idx + 1) + '. ' + (LABELS[key] || key);
+                var right = document.createElement('div');
+                right.style.display = 'flex';
+                right.style.gap = '8px';
+                var up = document.createElement('button');
+                up.type = 'button';
+                up.textContent = '↑';
+                up.className = 'btn-add';
+                up.style.padding = '6px 12px';
+                up.style.borderRadius = '10px';
+                up.disabled = idx === 0;
+                up.addEventListener('click', function () {
+                    var o = parseHidden();
+                    var t = o[idx - 1];
+                    o[idx - 1] = o[idx];
+                    o[idx] = t;
+                    hidden.value = o.join(',');
+                    render();
+                });
+                var down = document.createElement('button');
+                down.type = 'button';
+                down.textContent = '↓';
+                down.className = 'btn-add';
+                down.style.padding = '6px 12px';
+                down.style.borderRadius = '10px';
+                down.disabled = idx === order.length - 1;
+                down.addEventListener('click', function () {
+                    var o = parseHidden();
+                    var t = o[idx + 1];
+                    o[idx + 1] = o[idx];
+                    o[idx] = t;
+                    hidden.value = o.join(',');
+                    render();
+                });
+                right.appendChild(up);
+                right.appendChild(down);
+                row.appendChild(left);
+                row.appendChild(right);
+                host.appendChild(row);
+            });
+        }
+
+        render();
+        if (form) {
+            form.addEventListener('submit', function () {
+                hidden.value = parseHidden().join(',');
+            });
+        }
+    })();
+
+    var filterEl = document.getElementById('studentFilter');
+    if (filterEl) {
+        filterEl.addEventListener('input', function() {
+            var q = (filterEl.value || '').toLowerCase().trim();
+            document.querySelectorAll('#studentTable tbody tr').forEach(function(tr) {
+                if (!q) { tr.style.display = ''; return; }
+                tr.style.display = tr.textContent.toLowerCase().indexOf(q) >= 0 ? '' : 'none';
             });
         });
-    })();
+    }
+})();
 </script>
-
-</main>
 </body>
 </html>

@@ -55,7 +55,16 @@
         micStatus.textContent = 'Tap the mic and ask your question';
         micStatus.className   = 'mic-status';
 
-        if (topicInput.value.trim().length > 0) submitForm();
+        if (topicInput.value.trim().length > 0) {
+            if (typeof window.isQuizExplainAiAllowed === 'function' && !window.isQuizExplainAiAllowed()) {
+                if (micStatus) {
+                    micStatus.textContent = 'Enable AI explanations first (button above the explain panel).';
+                    micStatus.className = 'mic-status';
+                }
+                return;
+            }
+            submitForm();
+        }
     };
 
     recognition.onerror = () => {
@@ -68,11 +77,24 @@
     };
 
     micBtn.addEventListener('click', () => {
+        if (typeof window.isQuizExplainAiAllowed === 'function' && !window.isQuizExplainAiAllowed()) {
+            if (micStatus) {
+                micStatus.textContent = 'Enable AI explanations first (button above the explain panel).';
+                micStatus.className = 'mic-status';
+            }
+            return;
+        }
         if (isListening) {
             recognition.stop();
         } else {
             topicInput.value = '';
             recognition.start();
         }
+    });
+
+    window.addEventListener('beforeunload', function (e) {
+        if (!isListening) return;
+        e.preventDefault();
+        e.returnValue = '';
     });
 }());

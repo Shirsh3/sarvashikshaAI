@@ -3,15 +3,15 @@
 <body>
 
 <!--
-  Shared tab bar fragment.
+  Shared tab bar fragment (classic top nav). Teacher-suite pages may use shell-teacher sidebar instead.
   Usage: th:replace="~{fragments/tabs :: tabBar('classroom')}"
-  activePage values: 'assembly' | 'classroom' | 'reading' | 'attendance' | 'teacher'
+  activePage values: 'assembly' | 'classroom' | 'reading' | 'quiz' | 'leaderboard' | 'attendance' | 'teacher'
 -->
 <div th:fragment="tabBar(activePage)">
     <div class="top-nav">
         <a href="/" class="top-nav-brand" style="text-decoration:none; color:inherit;">
             <i class="fa-solid fa-chalkboard-user"></i>
-            <span>SarvashikshaAI</span>
+            <span>SarvaSikshaAI</span>
         </a>
         <nav class="tab-bar">
         <a href="/assembly"
@@ -37,6 +37,12 @@
            th:classappend="${activePage == 'quiz'} ? ' tab-active'">
             <i class="fa-solid fa-circle-question"></i>
             <span>Quiz</span>
+        </a>
+        <a href="/leaderboard"
+           class="tab-item"
+           th:classappend="${activePage == 'leaderboard'} ? ' tab-active'">
+            <i class="fa-solid fa-trophy"></i>
+            <span>Leaderboard</span>
         </a>
         <a href="/attendance"
            class="tab-item"

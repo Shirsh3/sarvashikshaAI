@@ -15,6 +15,7 @@ import com.sarvashikshaai.repository.QuizRepository;
 import com.sarvashikshaai.repository.StudentEntityRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +29,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Slf4j
 public class QuizService {
+
+    @Value("${openai.quiz.cover-image.enabled:false}")
+    private boolean quizCoverImageEnabled;
 
     private final QuizRepository       quizRepo;
     private final QuizQuestionRepository questionRepo;
@@ -73,20 +77,51 @@ public class QuizService {
                 cleanDescription,
                 count
         ));
-        saveQuestions(quiz.getId(), questions);
+        if (quizCoverImageEnabled) {
+            openAIClient.generateQuizCoverImageUrl(cleanTopic, cleanGrade).ifPresent(url -> {
+                quiz.setCoverImageUrl(url);
+                quizRepo.save(quiz);
+            });
+        }
+        String quizCover = quiz.getCoverImageUrl();
+        saveQuestions(quiz.getId(), questions, quizCover);
         return quiz;
     }
 
     public List<QuestionData> getQuestionsByQuiz(Long quizId) {
+        String quizCover = quizRepo.findById(quizId)
+                .map(QuizEntity::getCoverImageUrl)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .orElse(null);
         return questionRepo.findByQuizIdOrderByQuestionOrderAsc(quizId).stream()
                 .map(q -> new QuestionData(
                         q.getId(),
                         q.getQuestionType(),
                         q.getQuestionText(),
                         buildOptions(q),
-                        q.getCorrectAnswer()
+                        q.getCorrectAnswer(),
+                        resolveWatermarkForDisplay(q, quizCover)
                 ))
                 .toList();
+    }
+
+    /** Stable Picsum image per quiz+order; used when DB has no URL yet. */
+    private static String buildPicsumWatermarkUrl(long quizId, int questionOrder) {
+        String seed = "qz" + quizId + "n" + questionOrder;
+        return "https://picsum.photos/seed/" + seed + "/1600/900";
+    }
+
+    /** Quiz-level OpenAI cover wins for every question when set. */
+    private static String resolveWatermarkForDisplay(QuizQuestionEntity q, String quizCoverUrl) {
+        if (quizCoverUrl != null && !quizCoverUrl.isBlank()) {
+            return quizCoverUrl.trim();
+        }
+        String u = q.getWatermarkImageUrl();
+        if (u != null && !u.isBlank()) {
+            return u.trim();
+        }
+        return buildPicsumWatermarkUrl(q.getQuizId(), q.getQuestionOrder());
     }
 
     // ── AI question generation ────────────────────────────────────────────────
@@ -107,15 +142,31 @@ public class QuizService {
 
     private String difficultyInstruction(String difficulty) {
         if (difficulty == null || difficulty.isBlank() || "AUTO".equalsIgnoreCase(difficulty)) {
-            return "AUTO (adapt to detected grade/content; keep school-appropriate progression).";
+            return "AUTO: infer difficulty from the target grade — do NOT use a generic one-size-fits-all level.";
         }
         if ("EASY".equalsIgnoreCase(difficulty)) {
-            return "EASY: direct recall/basic understanding; simple wording; minimal multi-step reasoning.";
+            return "EASY: one-step recall; short sentences; familiar vocabulary only; no multi-hop reasoning.";
         }
         if ("HARD".equalsIgnoreCase(difficulty)) {
-            return "HARD: higher-order application/reasoning; avoid trivia; still age-appropriate.";
+            return "HARD: multi-step reasoning, compare/contrast, or apply concept to a new situation; still one clear path to the answer.";
         }
-        return "MEDIUM: balanced conceptual and application-level questions.";
+        return "MEDIUM: mix recall with short application; one or two reasoning steps max.";
+    }
+
+    /** Stronger calibration so questions do not all read like the same band. */
+    private static String gradeBandInstruction(String grade) {
+        if (grade == null || grade.isBlank()) {
+            return """
+                    Target grade: NOT specified — infer from topic/context if possible; otherwise use mid-primary (short words, concrete examples).
+                    Do NOT default to generic “middle school” difficulty for every question.
+                    """;
+        }
+        String g = grade.trim();
+        return """
+                Target grade (MANDATORY — vocabulary, sentence length, and concept depth MUST match this band):
+                Grade %s — lower grades: shorter questions, simpler words, concrete examples; upper grades (9–12): allow tighter reasoning, technical terms where taught, multi-part stems only if appropriate for this grade.
+                Every question must sound like it was written FOR this grade, not a generic quiz reused for all ages.
+                """.formatted(g);
     }
 
     /**
@@ -123,26 +174,28 @@ public class QuizService {
      * Returns a JSON string ready to store in questionsJson.
      */
     public String generateQuestionsJson(String topic, String supportingContext, int count, String questionTypes, String languagePreference) {
-        return generateQuestionsJson(topic, supportingContext, count, questionTypes, languagePreference, "AUTO");
+        return generateQuestionsJson(topic, supportingContext, count, questionTypes, languagePreference, "AUTO", "");
     }
 
     public String generateQuestionsJson(String topic, String supportingContext, int count, String questionTypes, String languagePreference, String difficulty) {
+        return generateQuestionsJson(topic, supportingContext, count, questionTypes, languagePreference, difficulty, "");
+    }
+
+    public String generateQuestionsJson(String topic, String supportingContext, int count, String questionTypes, String languagePreference, String difficulty, String grade) {
         if (topic == null || topic.isBlank()) {
             return "[]";
         }
         String classifyInput = (topic == null ? "" : topic) + "\n" + (supportingContext == null ? "" : supportingContext);
-        if (openAIClient.classifyUserQuery(classifyInput) != OpenAIClient.QueryCategory.LEARNING) {
-            return "[]";
-        }
         if (StrictEducationalGuard.isBlocked(topic)) {
             return "[]";
         }
         if (StrictEducationalGuard.isBlocked(supportingContext)) {
             return "[]";
         }
+        String gradeParam = grade == null ? "" : grade.trim();
         int safeCount = Math.max(1, Math.min(count, 15));
         if (safeCount <= 10) {
-            return generateQuestionsJsonSingle(topic, supportingContext, safeCount, questionTypes, languagePreference, difficulty);
+            return generateQuestionsJsonSingle(topic, supportingContext, safeCount, questionTypes, languagePreference, difficulty, gradeParam);
         }
         // Large counts hallucinate more often in one-shot generation; generate in bounded batches.
         int remaining = safeCount;
@@ -151,7 +204,7 @@ public class QuizService {
         try {
             while (remaining > 0) {
                 int current = Math.min(batchSize, remaining);
-                String batchRaw = generateQuestionsJsonSingle(topic, supportingContext, current, questionTypes, languagePreference, difficulty);
+                String batchRaw = generateQuestionsJsonSingle(topic, supportingContext, current, questionTypes, languagePreference, difficulty, gradeParam);
                 JsonNode arr = mapper.readTree(batchRaw);
                 if (arr != null && arr.isArray()) {
                     for (JsonNode n : arr) merged.add(n);
@@ -168,10 +221,11 @@ public class QuizService {
         }
     }
 
-    private String generateQuestionsJsonSingle(String topic, String supportingContext, int count, String questionTypes, String languagePreference, String difficulty) {
+    private String generateQuestionsJsonSingle(String topic, String supportingContext, int count, String questionTypes, String languagePreference, String difficulty, String grade) {
         String typeInstruction = buildTypeInstruction(questionTypes.trim(), count);
         String languageRule = languageInstruction(languagePreference, false);
         String difficultyRule = difficultyInstruction(difficulty);
+        String gradeRule = gradeBandInstruction(grade);
         String cleanTopic = topic == null ? "" : topic.trim();
         String cleanContext = supportingContext == null ? "" : supportingContext.trim();
         String contextForPrompt = cleanContext.length() > 6000 ? cleanContext.substring(0, 6000) : cleanContext;
@@ -185,6 +239,8 @@ public class QuizService {
             Canonical quiz topic (MANDATORY scope): "%s"
 
             Supporting classroom context (optional, for factual grounding only):
+            %s
+
             %s
 
             Generate exactly %d quiz questions ONLY about the canonical quiz topic.
@@ -206,9 +262,8 @@ public class QuizService {
             - Be STRICTLY grounded in the canonical topic and supporting context. Do not invent names, years, numbers, or facts not present or commonly taught basics.
             - If supporting context is limited, ask easier concept/comprehension questions within the same canonical topic.
             - Language: %s
-            - Difficulty: %s
-            - Level: suitable for school students aged 8-16
-            """.formatted(cleanTopic, contextForPrompt, count, typeInstruction, languageRule, difficultyRule);
+            - Difficulty setting: %s
+            """.formatted(cleanTopic, contextForPrompt, gradeRule, count, typeInstruction, languageRule, difficultyRule);
 
         try {
             String raw = openAIClient.generateQuizCompletion(prompt);
@@ -236,9 +291,6 @@ public class QuizService {
 
     public GeneratedImageQuiz generateQuestionsFromImage(String topic, String grade, String description, int count, String questionTypes, String languagePreference, String difficulty, String imageDataUri) {
         String combinedHints = (topic == null ? "" : topic) + " " + (description == null ? "" : description);
-        if (openAIClient.classifyUserQuery(combinedHints) != OpenAIClient.QueryCategory.LEARNING) {
-            return new GeneratedImageQuiz("", "", "", "[]", StrictEducationalGuard.refusalMessage());
-        }
         if (StrictEducationalGuard.isBlocked(combinedHints)) {
             return new GeneratedImageQuiz("", "", "", "[]", StrictEducationalGuard.refusalMessage());
         }
@@ -246,6 +298,8 @@ public class QuizService {
         String typeInstruction = buildTypeInstruction(questionTypes.trim(), safeCount);
         String languageRule = languageInstruction(languagePreference, true);
         String difficultyRule = difficultyInstruction(difficulty);
+        String gradeHint = grade == null ? "" : grade.trim();
+        String gradeRule = gradeBandInstruction(gradeHint);
         String prompt = """
             You are an experienced school teacher in India.
 
@@ -261,6 +315,8 @@ public class QuizService {
 
             Infer topic, grade, and short description from the screenshot if teacher hints are empty.
             Then generate exactly %d quiz questions.
+
+            %s
 
             CRITICAL - QUESTION TYPES (you must follow this exactly):
             %s
@@ -295,13 +351,13 @@ public class QuizService {
             - TF: answer must be exactly "True" or "False"
             - MCQ: exactly 4 options, answer must match one option exactly
             - Language: %s
-            - Difficulty: %s
-            - Level: suitable for school students aged 8-16
+            - Difficulty setting: %s
             """.formatted(
                 topic == null ? "" : topic.trim(),
-                grade == null ? "" : grade.trim(),
+                gradeHint,
                 description == null ? "" : description.trim(),
                 safeCount,
+                gradeRule,
                 typeInstruction,
                 languageRule,
                 difficultyRule
@@ -487,7 +543,7 @@ public class QuizService {
             String explanation
     ) {}
 
-    public record QuestionData(Long id, String type, String text, List<String> options, String answer) {}
+    public record QuestionData(Long id, String type, String text, List<String> options, String answer, String watermarkUrl) {}
 
     private List<QuestionData> parseQuestions(String questionsJson) {
         List<QuestionData> out = new ArrayList<>();
@@ -505,7 +561,8 @@ public class QuizService {
                         options.add(o.asText("").trim());
                     }
                 }
-                out.add(new QuestionData(null, type, text, options, answer));
+                String wm = n.path("watermarkUrl").asText("").trim();
+                out.add(new QuestionData(null, type, text, options, answer, wm.isEmpty() ? null : wm));
             }
             return out;
         } catch (Exception e) {
@@ -513,14 +570,15 @@ public class QuizService {
         }
     }
 
-    private void saveQuestions(Long quizId, List<QuestionData> questions) {
+    private void saveQuestions(Long quizId, List<QuestionData> questions, String quizCoverUrl) {
         if (quizId == null) return;
         questionRepo.deleteByQuizId(quizId);
         int order = 0;
         for (QuestionData q : questions) {
+            int ord = order++;
             QuizQuestionEntity e = new QuizQuestionEntity();
             e.setQuizId(quizId);
-            e.setQuestionOrder(order++);
+            e.setQuestionOrder(ord);
             e.setQuestionType(q.type() == null ? "" : q.type().trim().toUpperCase(Locale.ROOT));
             e.setQuestionText(q.text() == null ? "" : q.text().trim());
             List<String> opts = q.options() == null ? List.of() : q.options();
@@ -530,6 +588,15 @@ public class QuizService {
             e.setOptionD(opts.size() > 3 ? opts.get(3) : null);
             e.setCorrectAnswer(q.answer() == null ? "" : q.answer().trim());
             e.setMarks(1);
+            String wm = q.watermarkUrl();
+            if (wm == null || wm.isBlank()) {
+                if (quizCoverUrl != null && !quizCoverUrl.isBlank()) {
+                    wm = quizCoverUrl.trim();
+                } else {
+                    wm = buildPicsumWatermarkUrl(quizId, ord);
+                }
+            }
+            e.setWatermarkImageUrl(wm.trim());
             questionRepo.save(e);
         }
     }
@@ -548,21 +615,20 @@ public class QuizService {
         if (student == null) throw new IllegalArgumentException("Student not found for id: " + studentId);
 
         try {
-            QuestionResponseEntity response = questionResponseRepo.findByQuestionId(questionId)
+            QuestionResponseEntity response = questionResponseRepo.findByQuestionIdAndStudentId(questionId, student.getCode())
                     .orElseGet(QuestionResponseEntity::new);
             response.setQuestionId(questionId);
             response.setStudentId(student.getCode());
-            // Re-assignment should clear any previous answer for this question.
+            // Re-assignment should clear any previous answer for this question for this student.
             response.setAnswer(null);
             response.setIsCorrect(null);
             response.setMarksAwarded(null);
             response.setAnsweredAt(null);
             return questionResponseRepo.save(response);
         } catch (DataIntegrityViolationException ex) {
-            // Handles concurrent insert race on UNIQUE(question_id): fallback to update existing row.
-            QuestionResponseEntity existing = questionResponseRepo.findByQuestionId(questionId)
+            // Handles concurrent insert race on UNIQUE(question_id, student_id): fallback to update existing row.
+            QuestionResponseEntity existing = questionResponseRepo.findByQuestionIdAndStudentId(questionId, student.getCode())
                     .orElseThrow(() -> new IllegalStateException("Could not assign student due to concurrent write."));
-            existing.setStudentId(student.getCode());
             existing.setAnswer(null);
             existing.setIsCorrect(null);
             existing.setMarksAwarded(null);
@@ -579,11 +645,8 @@ public class QuizService {
                 .orElseThrow(() -> new IllegalArgumentException("Quiz not found: " + question.getQuizId()));
         if (quiz.isLocked()) throw new IllegalStateException("Quiz is locked.");
 
-        QuestionResponseEntity response = questionResponseRepo.findByQuestionId(questionId)
-                .orElseThrow(() -> new IllegalArgumentException("Question is not assigned to any student."));
-        if (!response.getStudentId().equals(studentId)) {
-            throw new IllegalArgumentException("Question is assigned to a different student.");
-        }
+        QuestionResponseEntity response = questionResponseRepo.findByQuestionIdAndStudentId(questionId, studentId)
+                .orElseThrow(() -> new IllegalArgumentException("Question is not assigned to this student."));
 
         String normalizedAnswer = answer == null ? "" : answer.trim();
         String correct = question.getCorrectAnswer() == null ? "" : question.getCorrectAnswer().trim();

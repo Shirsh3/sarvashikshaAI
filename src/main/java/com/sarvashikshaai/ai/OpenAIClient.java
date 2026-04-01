@@ -4,16 +4,21 @@ import com.sarvashikshaai.model.dto.OpenAiChatRequest;
 import com.sarvashikshaai.model.dto.OpenAiChatResponse;
 import com.sarvashikshaai.model.dto.OpenAiMessage;
 import com.fasterxml.jackson.databind.JsonNode;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 @Component
+@Slf4j
 public class OpenAIClient {
 
     private static final double STRICT_TEMPERATURE = 0.3;
@@ -23,15 +28,21 @@ public class OpenAIClient {
     private final String teachingModel;
     private final String assemblyModel;
     private final String quizModel;
+    private final String quizCoverModel;
+    private final String quizCoverImageSize;
 
     public OpenAIClient(@Qualifier("openAiWebClient") WebClient webClient,
                         @Qualifier("openAiTeachingModel") String teachingModel,
                         @Qualifier("openAiAssemblyModel") String assemblyModel,
-                        @Qualifier("openAiQuizModel") String quizModel) {
+                        @Qualifier("openAiQuizModel") String quizModel,
+                        @Value("${openai.model.quiz-cover:dall-e-3}") String quizCoverModel,
+                        @Value("${openai.quiz.cover-image.size:1792x1024}") String quizCoverImageSize) {
         this.webClient = webClient;
         this.teachingModel = teachingModel;
         this.assemblyModel = assemblyModel;
         this.quizModel = quizModel;
+        this.quizCoverModel = quizCoverModel;
+        this.quizCoverImageSize = quizCoverImageSize;
     }
 
     public String generateTeachingCompletion(String prompt) {
@@ -63,6 +74,12 @@ public class OpenAIClient {
                 - OFF_TOPIC (not related to studies, casual, entertainment)
                 - UNSAFE (harmful, abusive, adult, illegal)
 
+                IMPORTANT:
+                - If the query is a school subject/topic/question, quiz, homework, exam, lesson, chapter, or any curriculum learning request,
+                  classify as LEARNING even if it is short, vague, or missing details.
+                - Treat names of topics (e.g. "photosynthesis", "fractions", "Mughal empire", "Miss World") as LEARNING.
+                - Only use OFF_TOPIC for clearly non-educational requests (jokes, flirting, movies unrelated to study, etc.).
+
                 Respond with ONLY one word: LEARNING or OFF_TOPIC or UNSAFE.
 
                 Query: "%s"
@@ -73,9 +90,9 @@ public class OpenAIClient {
             if (normalized.contains("UNSAFE")) return QueryCategory.UNSAFE;
             if (normalized.contains("OFF_TOPIC")) return QueryCategory.OFF_TOPIC;
             if (normalized.contains("LEARNING")) return QueryCategory.LEARNING;
-            return QueryCategory.OFF_TOPIC;
+            return QueryCategory.LEARNING;
         } catch (Exception ex) {
-            return QueryCategory.OFF_TOPIC;
+            return QueryCategory.LEARNING;
         }
     }
 
@@ -124,6 +141,52 @@ public class OpenAIClient {
     /** Backwards-compatible default: use teaching model. */
     public String generateCompletion(String prompt) {
         return generateTeachingCompletion(prompt);
+    }
+
+    /**
+     * OpenAI Images API — educational quiz cover. Empty if the API fails or returns no URL.
+     */
+    public Optional<String> generateQuizCoverImageUrl(String topic, String grade) {
+        String t = topic != null ? topic.trim() : "General";
+        String g = grade != null ? grade.trim() : "";
+        String prompt = """
+                Flat, friendly educational illustration for a school quiz cover — no text, no letters, no numbers in the image.
+                Topic hint: %s. Audience: Indian school students%s.
+                Bright, classroom-safe, abstract or symbolic only — no real people faces, no logos, no brand names.
+                """.formatted(
+                t.replace("\"", "'"),
+                g.isBlank() ? "" : (" — grade band: " + g));
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("model", quizCoverModel);
+        body.put("prompt", prompt.trim());
+        body.put("n", 1);
+        body.put("size", quizCoverImageSize);
+        body.put("response_format", "url");
+
+        try {
+            JsonNode response = webClient.post()
+                    .uri("/images/generations")
+                    .bodyValue(body)
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .onErrorResume(ex -> {
+                        log.warn("OpenAI images API error: {}", ex.getMessage());
+                        return Mono.empty();
+                    })
+                    .block();
+            if (response == null || !response.path("data").isArray() || response.path("data").isEmpty()) {
+                return Optional.empty();
+            }
+            String url = response.path("data").get(0).path("url").asText("");
+            if (url == null || url.isBlank()) {
+                return Optional.empty();
+            }
+            return Optional.of(url.trim());
+        } catch (Exception e) {
+            log.warn("Quiz cover image generation failed: {}", e.getMessage());
+            return Optional.empty();
+        }
     }
 
     private String generateWithModel(String prompt, String model) {

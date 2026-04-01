@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  Embedded explain panel — same IDs as index for app.js / mic.js / voice.js (one embed per page).
+  th:replace="~{fragments/classroom-embed :: embed}"
+-->
+<th:block th:fragment="embed">
+<div class="classroom-embed-shell">
+    <div class="layout classroom-embed-layout">
+        <div class="panel">
+            <div class="panel-label" id="classroomPanelLabel"><i class="fa-solid fa-microphone-lines"></i>&nbsp; Ask a question</div>
+            <div class="mic-area">
+                <button class="mic-btn" id="micBtn" type="button" title="Click to speak">
+                    <i class="fa-solid fa-microphone" id="micIcon"></i>
+                </button>
+                <div class="wave-bars" id="waveBars">
+                    <span></span><span></span><span></span><span></span><span></span>
+                </div>
+                <div class="mic-status" id="micStatus">Tap the mic and ask your question</div>
+            </div>
+            <p id="prepareGradeEmbedHint" class="prepare-grade-embed-hint" style="display:none;margin:0 0 10px;font-size:0.82rem;color:var(--text-muted);"></p>
+            <form id="explainForm" method="post" th:attr="action=@{/explain}">
+                <input type="hidden" name="classSessionMode" id="inputClassSessionMode" value="live"/>
+                <input type="hidden" name="prepareFocus" id="inputPrepareFocus" value="revision"/>
+                <input type="hidden" name="prepareGrade" id="inputPrepareGrade" value="" autocomplete="off"/>
+                <input type="hidden" name="sourceQuestionId" id="inputSourceQuestionId" value=""/>
+                <input type="hidden" name="includeVideo" id="inputIncludeVideo" value="false"/>
+                <textarea id="topicInput" name="topic" rows="5"
+                          placeholder="Your question will appear here — or type it directly..."></textarea>
+                <div class="send-row">
+                    <button class="send-btn" id="sendBtn" type="submit">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span id="sendLabel">Send</span>
+                        <div class="spinner" id="spinner"></div>
+                    </button>
+                </div>
+            </form>
+            <div class="followup-hint"></div>
+        </div>
+        <div class="panel">
+            <div class="thinking-dots" id="thinkingDots" style="display:none;">
+                <span></span><span></span><span></span>
+            </div>
+            <div class="placeholder" id="placeholder">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <p>Your answer will appear here.<br/>Speak or type a question on the left.</p>
+            </div>
+        </div>
+    </div>
+    <div id="ttsExplain" style="display:none"></div>
+    <div id="ttsExample" style="display:none"></div>
+    <div id="ttsKey" style="display:none"></div>
+    <div id="ttsRaw" style="display:none"></div>
+    <div id="hasVideo" style="display:none">false</div>
+    <div id="hasWikiGif" style="display:none">false</div>
+</div>
+</th:block>
+</body>
+</html>

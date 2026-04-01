@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>School Portal Login — SarvaSikshaAI</title>
+    <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+    <style>
+        body.login-body {
+            font-family: var(--font-kid);
+            background: #e0f2fe;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            transition: background 0.5s ease;
+        }
+        body.login-body.admin-bg { background: #eef2ff; }
+        .login-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+        }
+        .icon-header { font-size: 4rem; margin-bottom: 0.5rem; display: block; }
+        @keyframes icon-float-x {
+            0%   { transform: translateX(0); }
+            25%  { transform: translateX(-8px); }
+            50%  { transform: translateX(0); }
+            75%  { transform: translateX(8px); }
+            100% { transform: translateX(0); }
+        }
+        /* Gentle right-to-left-to-right float for the login icon */
+        #roleIcon.icon-header {
+            animation: icon-float-x 2.8s ease-in-out infinite;
+            will-change: transform;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #roleIcon.icon-header { animation: none; }
+        }
+        .login-card h2 { color: #1e293b; margin-top: 0; font-weight: 700; font-size: 1.8rem; }
+        .role-selector {
+            display: flex; gap: 8px; margin-bottom: 2rem; background: #f1f5f9;
+            padding: 6px; border-radius: 16px;
+        }
+        .role-btn {
+            flex: 1; padding: 14px; border: none; border-radius: 12px; cursor: pointer;
+            font-weight: 700; background: transparent; color: #64748b; font-size: 1rem; font-family: inherit;
+        }
+        .role-btn.active { background: white; color: var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .input-group { text-align: left; margin-bottom: 1.5rem; }
+        .input-group label { display: block; margin-bottom: 8px; color: #475569; font-weight: 600; font-size: 0.95rem; margin-left: 5px; }
+        .input-group input {
+            width: 100%; padding: 16px; border: 2px solid #f1f5f9; border-radius: 16px; box-sizing: border-box;
+            font-size: 1.1rem; background: #f8fafc; font-family: inherit;
+        }
+        .input-group input:focus { border-color: var(--primary); background: white; outline: none; box-shadow: 0 0 0 4px var(--primary-soft); }
+        .password-wrap { position: relative; }
+        .pw-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            color: #334155;
+            border-radius: 12px;
+            padding: 8px 10px;
+            cursor: pointer;
+            font-weight: 700;
+            font-family: inherit;
+        }
+        .pw-toggle:hover { border-color: var(--primary); color: var(--primary); }
+        .password-wrap input { padding-right: 78px; }
+        .login-submit {
+            width: 100%; padding: 18px; background: var(--primary); color: white; border: none;
+            border-radius: 16px; font-size: 1.2rem; font-weight: bold; cursor: pointer; font-family: inherit;
+            box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.35);
+        }
+        .login-submit:hover { transform: translateY(-2px); filter: brightness(1.05); }
+        .admin-theme .login-submit { background: var(--primary); box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.35); }
+        .admin-theme .input-group input:focus { border-color: var(--primary); }
+        .login-hint { font-size: 0.82rem; color: #64748b; margin-top: 1rem; line-height: 1.45; }
+    </style>
+</head>
+<body class="login-body" id="loginBody">
+
+<div th:replace="~{fragments/loader :: loader}"></div>
+
+<div class="login-card" id="loginCard">
+    <span class="icon-header" id="roleIcon">👨‍🏫</span>
+    <h2 id="portalTitle">Login</h2>
+
+    <form onsubmit="return handleLogin(event)">
+        <div class="input-group">
+            <label for="username">Username / ID</label>
+            <input type="text" id="username" name="username" placeholder="Enter your ID" autocomplete="username"/>
+        </div>
+        <div class="input-group">
+            <label for="password">Password</label>
+            <div class="password-wrap">
+                <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password"/>
+                <button type="button" class="pw-toggle" id="pwToggleBtn" aria-label="Show password" onclick="togglePasswordVis()">Show</button>
+            </div>
+        </div>
+        <button type="submit" class="login-submit" id="submitBtn">Continue</button>
+    </form>
+    <p class="login-hint">Enter your credentials.</p>
+    <p class="login-hint" id="loginError" style="display:none;color:#b91c1c;margin-top:0.75rem;"></p>
+</div>
+
+<script th:inline="javascript">
+    function togglePasswordVis() {
+        var input = document.getElementById('password');
+        var btn = document.getElementById('pwToggleBtn');
+        if (!input || !btn) return;
+        var show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        btn.textContent = show ? 'Hide' : 'Show';
+        btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+        try { input.focus(); } catch (e) {}
+    }
+    function handleLogin(e) {
+        e.preventDefault();
+
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        if (typeof window.showGlobalLoader === 'function') {
+            window.showGlobalLoader('Logging in…');
+        }
+
+        const errEl = document.getElementById('loginError');
+        if (errEl) errEl.style.display = 'none';
+
+        fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ username, password })
+        }).then(async (res) => {
+            if (!res.ok) {
+                const txt = await res.text().catch(() => '');
+                throw new Error(txt || 'Invalid username/password');
+            }
+            return res.json();
+        }).then((data) => {
+            const params = new URLSearchParams(window.location.search);
+            const next = params.get('redirect');
+            if (next && next.charAt(0) === '/' && next.charAt(1) !== '/') {
+                window.location.href = next;
+                return;
+            }
+            const role = data && data.role ? String(data.role).toUpperCase() : '';
+            if (role === 'SUPER_ADMIN') {
+                window.location.href = /*[[@{/superadmin}]]*/ '/superadmin';
+            } else if (role === 'ADMIN') {
+                window.location.href = /*[[@{/admin}]]*/ '/admin';
+            } else {
+                window.location.href = /*[[@{/teacher/dashboard}]]*/ '/teacher/dashboard';
+            }
+        }).catch((err) => {
+            if (errEl) {
+                errEl.textContent = err && err.message ? err.message : 'Login failed';
+                errEl.style.display = 'block';
+            }
+        }).finally(() => {
+            if (typeof window.hideGlobalLoader === 'function') {
+                window.hideGlobalLoader();
+            }
+        });
+
+        return false;
+    }
+</script>
+</body>
+</html>

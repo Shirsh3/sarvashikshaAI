@@ -46,6 +46,10 @@ public class QuizEntity {
     @Column(name = "is_locked", nullable = false)
     private boolean isLocked = false;
 
+    /** Optional OpenAI-generated decorative image URL; reused as watermark for all questions when set. */
+    @Column(name = "cover_image_url", length = 1024)
+    private String coverImageUrl;
+
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<QuizQuestionEntity> questions = new ArrayList<>();
 

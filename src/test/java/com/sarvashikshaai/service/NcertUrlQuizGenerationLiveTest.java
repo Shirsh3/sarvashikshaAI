@@ -37,7 +37,12 @@ class NcertUrlQuizGenerationLiveTest {
                 .as("Expected extracted content from NCERT URL")
                 .isNotBlank();
 
-        String questionsJson = quizService.generateQuestionsJson(extracted, 5, "MCQ", "AUTO");
+        String questionsJson = quizService.generateQuestionsJson(
+                "NCERT textbook passage",
+                extracted,
+                5,
+                "MCQ",
+                "AUTO");
         JsonNode arr = MAPPER.readTree(questionsJson);
         assertThat(arr.isArray()).isTrue();
         assertThat(arr.size()).isGreaterThan(0);

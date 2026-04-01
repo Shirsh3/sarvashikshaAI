@@ -3,6 +3,8 @@ package com.sarvashikshaai.controller;
 import com.sarvashikshaai.model.Student;
 import com.sarvashikshaai.model.entity.AttendanceRecord;
 import com.sarvashikshaai.repository.AttendanceRepository;
+import com.sarvashikshaai.repository.GradeRefRepository;
+import com.sarvashikshaai.repository.StudentEntityRepository;
 import com.sarvashikshaai.service.StudentListService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -28,18 +30,23 @@ public class AttendanceController {
 
     private final StudentListService      studentListService;
     private final AttendanceRepository    attendanceRepo;
+    private final StudentEntityRepository studentRepo;
+    private final GradeRefRepository      gradeRefRepository;
 
     // ── Page ─────────────────────────────────────────────────────────────────
 
     @GetMapping
     public String attendancePage(
             @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(value = "grade", required = false) String grade,
             Model model) {
 
         if (date == null) date = LocalDate.now();
 
-        List<Student> students = studentListService.getStudents();
-        LocalDate finalDate = date;
+        String gradeFilter = (grade != null && !grade.isBlank()) ? grade.trim() : null;
+        List<Student> students = studentListService.getStudents().stream()
+                .filter(s -> gradeFilter == null || gradeFilter.equals(s.getGrade()))
+                .toList();
         Map<String, Boolean> markedMap = attendanceRepo.findByDateOrderByStudentNameAsc(date)
                 .stream()
                 .collect(Collectors.toMap(AttendanceRecord::getStudentName, AttendanceRecord::isPresent));
@@ -48,12 +55,15 @@ public class AttendanceController {
         model.addAttribute("markedMap",   markedMap);
         model.addAttribute("currentDate", date);
         model.addAttribute("today",       LocalDate.now());
+        model.addAttribute("gradeFilter", gradeFilter == null ? "" : gradeFilter);
+        model.addAttribute("gradeOptions", gradeRefRepository.findAllByOrderBySortOrderAsc());
 
         long presentCount = markedMap.values().stream().filter(v -> v).count();
         long absentCount  = markedMap.values().stream().filter(v -> !v).count();
         model.addAttribute("presentCount", presentCount);
         model.addAttribute("absentCount",  absentCount);
         model.addAttribute("unmarkedCount", students.size() - markedMap.size());
+        model.addAttribute("attendanceLocked", false);
 
         return "attendance";
     }
@@ -114,5 +124,5 @@ public class AttendanceController {
         return value;
     }
 
-    public record MarkRequest(String studentName, LocalDate date, boolean present) {}
+    public record MarkRequest(String studentName, LocalDate date, boolean present, String grade) {}
 }

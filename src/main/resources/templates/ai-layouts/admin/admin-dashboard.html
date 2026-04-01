@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sarvashiksha Admin | Insights</title>
+    <!-- Typography aligned with app /templates (Quicksand 400 · 600 · 700) -->
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --admin-bg: #f8fafc;
+            --sidebar-dark: #0f172a;
+            --primary-indigo: #6366f1;
+            --success-green: #10b981;
+            --warning-orange: #f59e0b;
+            --card-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        body {
+            font-family: 'Quicksand', 'Segoe UI', sans-serif;
+            font-weight: 400;
+            margin: 0;
+            background: var(--admin-bg);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* --- Admin Sidebar --- */
+        .sidebar {
+            width: 260px;
+            background: var(--sidebar-dark);
+            color: white;
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo { font-size: 1.5rem; font-weight: 700; margin-bottom: 3rem; color: var(--primary-indigo); text-align: center; }
+        
+        .nav-item {
+            padding: 12px 20px;
+            color: #94a3b8;
+            text-decoration: none;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            transition: 0.3s;
+            font-weight: 600;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        /* --- Main Layout --- */
+        .content { flex: 1; padding: 2rem; overflow-y: auto; }
+
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        
+        /* --- Stats Row --- */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+            border-left: 5px solid var(--primary-indigo);
+        }
+
+        .stat-card h4 { margin: 0; color: #64748b; font-size: 0.9rem; }
+        .stat-card .value { font-size: 1.8rem; font-weight: 700; margin: 5px 0; color: #1e293b; }
+
+        /* --- Analytics Section --- */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 24px;
+            box-shadow: var(--card-shadow);
+        }
+
+        /* --- Learning Materials List --- */
+        .materials-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 24px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .material-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .file-info { display: flex; align-items: center; gap: 15px; }
+        .file-icon { font-size: 1.5rem; background: #eef2ff; padding: 10px; border-radius: 10px; }
+
+        .btn-upload {
+            background: var(--primary-indigo);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+    </style>
+</head>
+<body>
+
+<nav class="sidebar">
+    <div class="logo">🛡️ Admin Portal</div>
+    <a href="#" class="nav-item active">📊 Overview</a>
+    <a href="#" class="nav-item">📈 Student Analytics</a>
+    <a href="#" class="nav-item">📚 Learning Bank</a>
+    <a href="#" class="nav-item">⚙️ System Config</a>
+    <div style="flex-grow: 1;"></div>
+    <a href="#" class="nav-item" style="color: #fb7185;">🔴 Logout</a>
+</nav>
+
+<main class="content">
+    <div class="header">
+        <h2>School Overview Dashboard</h2>
+        <button class="btn-upload">+ Upload New Resource</button>
+    </div>
+
+    <div class="stats-row">
+        <div class="stat-card" style="border-color: #6366f1;">
+            <h4>Total Students</h4>
+            <div class="value">1,240</div>
+        </div>
+        <div class="stat-card" style="border-color: #10b981;">
+            <h4>Avg. Attendance</h4>
+            <div class="value">94.2%</div>
+        </div>
+        <div class="stat-card" style="border-color: #f59e0b;">
+            <h4>Quiz Completion</h4>
+            <div class="value">88%</div>
+        </div>
+        <div class="stat-card" style="border-color: #ec4899;">
+            <h4>Learning Hours</h4>
+            <div class="value">14.5k</div>
+        </div>
+    </div>
+
+    <div class="charts-grid">
+        <div class="chart-container">
+            <h3>Attendance Trends (Last 7 Days)</h3>
+            <canvas id="attendanceChart" height="100"></canvas>
+        </div>
+        <div class="chart-container">
+            <h3>Subject Proficiency</h3>
+            <canvas id="subjectChart"></canvas>
+        </div>
+    </div>
+
+    <div class="materials-section">
+        <h3>Recent Learning Materials</h3>
+        <div class="material-item">
+            <div class="file-info">
+                <span class="file-icon">🧪</span>
+                <div>
+                    <strong>Science_Grade5_Metals.pdf</strong>
+                    <div style="font-size: 0.8rem; color: #94a3b8;">Uploaded by Mr. Sharma • 2.4 MB</div>
+                </div>
+            </div>
+            <button style="color: var(--primary-indigo); background: none; border: none; font-weight: bold; cursor: pointer;">Edit</button>
+        </div>
+        <div class="material-item">
+            <div class="file-info">
+                <span class="file-icon">📐</span>
+                <div>
+                    <strong>Geometry_Shapes_Intro.mp4</strong>
+                    <div style="font-size: 0.8rem; color: #94a3b8;">Uploaded by Ms. Verma • 45 MB</div>
+                </div>
+            </div>
+            <button style="color: var(--primary-indigo); background: none; border: none; font-weight: bold; cursor: pointer;">Edit</button>
+        </div>
+    </div>
+</main>
+
+<script>
+    // Attendance Trend Chart
+    const ctxAttendance = document.getElementById('attendanceChart').getContext('2d');
+    new Chart(ctxAttendance, {
+        type: 'line',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                label: 'Attendance %',
+                data: [92, 95, 94, 91, 96, 85, 80],
+                borderColor: '#6366f1',
+                tension: 0.4,
+                fill: true,
+                backgroundColor: 'rgba(99, 102, 241, 0.1)'
+            }]
+        },
+        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: false } } }
+    });
+
+    // Subject Proficiency Chart
+    const ctxSubject = document.getElementById('subjectChart').getContext('2d');
+    new Chart(ctxSubject, {
+        type: 'doughnut',
+        data: {
+            labels: ['Science', 'Math', 'English', 'History'],
+            datasets: [{
+                data: [40, 30, 20, 10],
+                backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ec4899']
+            }]
+        },
+        options: { cutout: '70%', plugins: { legend: { position: 'bottom' } } }
+    });
+</script>
+
+</body>
+</html>

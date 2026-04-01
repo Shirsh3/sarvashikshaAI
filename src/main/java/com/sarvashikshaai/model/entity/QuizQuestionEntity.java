@@ -47,4 +47,8 @@ public class QuizQuestionEntity {
 
     @Column(name = "marks", nullable = false)
     private Integer marks = 1;
+
+    /** Optional CDN URL (e.g. Lorem Picsum) for a subtle background watermark on the take-quiz card. */
+    @Column(name = "watermark_image_url", length = 1024)
+    private String watermarkImageUrl;
 }

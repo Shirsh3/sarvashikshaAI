@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Admin — Backoffice</title>
+    <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body class="app-layout admin-console">
+<div th:replace="~{fragments/projector-toggle :: projectorToggle}"></div>
+<div th:replace="~{fragments/shell-admin :: sidebar('students')}"></div>
+<main class="layout-main">
+    <h2>Backoffice</h2>
+    <p class="layout-lead">Active learner records from the database. Full CRUD remains on <a th:href="@{/teacher/setup}">Teacher → Backoffice</a>.</p>
+    <div class="lb-table-wrap">
+        <table>
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>Code</th>
+                <th>Grade</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="s : ${students}">
+                <td th:text="${s.name}">—</td>
+                <td th:text="${s.code}">—</td>
+                <td th:text="${s.grade}">—</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

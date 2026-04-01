@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Dashboard — SarvaSikshaAI</title>
+    <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body class="app-layout">
+<div th:replace="~{fragments/loader :: loader}"></div>
+<div th:replace="~{fragments/shell-teacher :: sidebar('dashboard')}"></div>
+<main class="layout-main">
+    <div class="layout-header">
+        <div>
+            <h2>Dashboard</h2>
+        </div>
+    </div>
+    <div class="bank-section" style="margin:0 0 14px;">
+            <h3 style="margin-top:0;">Class overview</h3>
+            <form method="get" th:action="@{/teacher/dashboard}" id="dashFilterForm" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:10px 0;">
+                <select name="range" id="rangeInput" style="padding:8px 10px;border:1px solid var(--border);border-radius:10px;">
+                    <option value="yesterday" th:selected="${filterRange == 'yesterday'}">Yesterday</option>
+                    <option value="today" th:selected="${filterRange == 'today'}">Today</option>
+                    <option value="tomorrow" th:selected="${filterRange == 'tomorrow'}">Tomorrow</option>
+                    <option value="week" th:selected="${filterRange == 'week'}">Last 1 week</option>
+                    <option value="month" th:selected="${filterRange == 'month'}">Last 1 month</option>
+                    <option value="custom" th:selected="${filterRange == 'custom'}">Custom</option>
+                </select>
+                <input type="date" name="dateFrom" th:value="${filterDateFrom}" style="padding:8px 10px;border:1px solid var(--border);border-radius:10px;">
+                <input type="date" name="dateTo" th:value="${filterDateTo}" style="padding:8px 10px;border:1px solid var(--border);border-radius:10px;">
+                <select name="grade" style="padding:8px 10px;border:1px solid var(--border);border-radius:10px;">
+                    <option value="" th:selected="${filterGrade == null or filterGrade == ''}">All Grades</option>
+                    <option th:each="g : ${gradeOptions}" th:value="${g.code}" th:text="${g.label}" th:selected="${filterGrade == g.code}">Grade</option>
+                </select>
+                <button type="submit" class="btn-primary" style="border:none;padding:8px 12px;border-radius:10px;">Apply</button>
+            </form>
+            <div class="admin-stats-row" style="margin-top:10px;">
+                <div class="stat-card">
+                    <h4>Quiz accuracy</h4>
+                    <div class="stat-value" th:text="${quizAccuracy} + '%'">0%</div>
+                </div>
+                <div class="stat-card" style="border-left-color:var(--success);">
+                    <h4>Attendance</h4>
+                    <div class="stat-value" th:text="${attendancePct} + '%'">0%</div>
+                </div>
+                <div class="stat-card" style="border-left-color:var(--warning);">
+                    <h4>Points</h4>
+                    <div class="stat-value" th:text="${points}">0</div>
+                </div>
+                <div class="stat-card" style="border-left-color:var(--secondary);">
+                    <h4>Students present</h4>
+                    <div class="stat-value" th:text="${studentsPresentCount}">0</div>
+                </div>
+            </div>
+    </div>
+
+    <div class="admin-stats-row" style="flex-wrap:wrap;margin-bottom:12px;">
+        <a th:href="@{/teacher/learning}" class="stat-card" style="text-decoration:none;display:block;cursor:pointer;border-left-color:var(--primary);">
+            <h4>Learning</h4>
+            <p style="margin:0;color:var(--text-muted);font-size:0.9rem;">Read from book, read from passage, and quiz</p>
+        </a>
+        <a th:href="@{/assembly}" class="stat-card" id="dashLinkAssembly" th:attr="data-base=@{/assembly}" style="text-decoration:none;display:block;cursor:pointer;border-left-color:var(--success);">
+            <h4>Morning assembly</h4>
+            <p style="margin:0;color:var(--text-muted);font-size:0.9rem;">Thought of the day &amp; videos</p>
+        </a>
+        <a th:href="@{/attendance}" class="stat-card" id="dashLinkAttendance" th:attr="data-base=@{/attendance}" style="text-decoration:none;display:block;cursor:pointer;border-left-color:var(--warning);">
+            <h4>Attendance</h4>
+            <p style="margin:0;color:var(--text-muted);font-size:0.9rem;">Mark present / absent</p>
+        </a>
+        <a th:href="@{/leaderboard}" class="stat-card" id="dashLinkLeaderboard" th:attr="data-base=@{/leaderboard}" style="text-decoration:none;display:block;cursor:pointer;border-left-color:var(--secondary);">
+            <h4>Leaderboard</h4>
+            <p style="margin:0;color:var(--text-muted);font-size:0.9rem;">Student points &amp; ranks</p>
+        </a>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="bank-section" style="margin:0;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+                <h3 style="margin:0;">Last 5 quizzes</h3>
+                <a th:href="@{/quiz/teacher}" style="font-size:0.84rem;">View all</a>
+            </div>
+            <ul style="margin:10px 0 0;padding-left:18px;">
+                <li th:each="q : ${recentQuizzes}" th:text="${q.title}">Quiz</li>
+                <li th:if="${recentQuizzes == null or #lists.isEmpty(recentQuizzes)}" style="color:var(--text-muted);">No quiz yet.</li>
+            </ul>
+        </div>
+        <div class="bank-section" style="margin:0;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+                <h3 style="margin:0;">Last 5 reading sessions</h3>
+            </div>
+            <ul style="margin:10px 0 0;padding-left:18px;">
+                <li th:each="r : ${recentReadings}" th:text="${r.studentName + ' - ' + (r.articleTitle != null ? r.articleTitle : 'Reading')}">Session</li>
+                <li th:if="${recentReadings == null or #lists.isEmpty(recentReadings)}" style="color:var(--text-muted);">No reading session yet.</li>
+            </ul>
+        </div>
+    </div>
+
+</main>
+<script th:src="@{/js/learning-grade-context.js}"></script>
+<script>
+(function dashGradeQueryLinks() {
+    var K = 'sarva.prepareGrade';
+    function gradeQuery() {
+        try {
+            var v = localStorage.getItem(K);
+            return v != null && String(v).trim() !== '' ? ('?grade=' + encodeURIComponent(String(v).trim())) : '';
+        } catch (e) { return ''; }
+    }
+    function updateLinks() {
+        var q = gradeQuery();
+        ['dashLinkAssembly', 'dashLinkAttendance', 'dashLinkLeaderboard'].forEach(function (id) {
+            var el = document.getElementById(id);
+            var base = el && el.getAttribute('data-base');
+            if (el && base) el.setAttribute('href', base + q);
+        });
+    }
+    updateLinks();
+    window.addEventListener('storage', function (e) { if (e.key === K) updateLinks(); });
+})();
+</script>
+<script>
+(function dashboardRangeFilter() {
+    var rangeInput = document.getElementById('rangeInput');
+    if (!rangeInput) return;
+    var dateFrom = document.querySelector('input[name="dateFrom"]');
+    var dateTo = document.querySelector('input[name="dateTo"]');
+    var form = document.getElementById('dashFilterForm');
+
+    function iso(d) {
+        try { return d.toISOString().slice(0, 10); } catch (e) { return ''; }
+    }
+    function addDays(base, days) {
+        var d = new Date(base.getTime());
+        d.setDate(d.getDate() + days);
+        return d;
+    }
+    function sync() {
+        var custom = rangeInput.value === 'custom';
+        if (dateFrom) dateFrom.style.display = custom ? '' : 'none';
+        if (dateTo) dateTo.style.display = custom ? '' : 'none';
+    }
+    rangeInput.addEventListener('change', sync);
+    sync();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sarvashiksha Admin | Learning Bank</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --admin-bg: #f8fafc;
+            --sidebar-dark: #0f172a;
+            --primary-indigo: #6366f1;
+            --success-green: #10b981;
+            --warning-orange: #f59e0b;
+            --danger-red: #fb7185;
+            --card-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        body { font-family: 'Quicksand', sans-serif; margin: 0; background: var(--admin-bg); display: flex; height: 100vh; overflow: hidden; }
+
+        /* --- Sidebar --- */
+        .sidebar { width: 260px; background: var(--sidebar-dark); color: white; padding: 2rem 1rem; display: flex; flex-direction: column; }
+        .logo { font-size: 1.5rem; font-weight: 700; margin-bottom: 3rem; color: var(--primary-indigo); text-align: center; }
+        .nav-item { padding: 12px 20px; color: #94a3b8; text-decoration: none; border-radius: 12px; margin-bottom: 8px; transition: 0.3s; font-weight: 600; cursor: pointer; }
+        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+
+        /* --- Main Content --- */
+        .content { flex: 1; padding: 2rem; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        
+        /* --- Tabs --- */
+        .tab-container { display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+        .tab-link { padding: 10px 20px; cursor: pointer; font-weight: 700; color: #64748b; border-radius: 10px; }
+        .tab-link.active { background: var(--primary-indigo); color: white; }
+
+        /* --- Cards & Sections --- */
+        .bank-section { background: white; padding: 2rem; border-radius: 24px; box-shadow: var(--card-shadow); margin-bottom: 2rem; }
+        .quiz-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #f1f5f9; }
+        
+        /* --- Form Styles --- */
+        .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+        .input-group { display: flex; flex-direction: column; gap: 8px; position: relative; }
+        label { font-weight: 700; color: #1e293b; font-size: 0.85rem; }
+        input, select, textarea { padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; font-family: inherit; outline: none; }
+        
+        /* --- Special Features --- */
+        .speak-btn { position: absolute; right: 10px; bottom: 10px; background: #f1f5f9; border: none; padding: 8px; border-radius: 8px; cursor: pointer; font-size: 1.2rem; }
+        .speak-btn:hover { background: #e2e8f0; }
+
+        .upload-zone { border: 2px dashed #cbd5e1; padding: 30px; border-radius: 16px; text-align: center; color: #94a3b8; transition: 0.3s; cursor: pointer; margin-top: 1rem; }
+        .upload-zone.dragover { background: #eef2ff; border-color: var(--primary-indigo); color: var(--primary-indigo); }
+
+        /* --- Buttons --- */
+        .btn-primary { background: var(--primary-indigo); color: white; padding: 12px 24px; border-radius: 12px; border: none; cursor: pointer; font-weight: 700; }
+        .btn-action { background: none; border: none; font-weight: 700; cursor: pointer; margin-left: 10px; font-size: 0.9rem; }
+        .btn-delete { color: var(--danger-red); }
+
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<nav class="sidebar">
+    <div class="logo">🛡️ Admin Portal</div>
+    <a class="nav-item">📊 Overview</a>
+    <a class="nav-item">📈 Student Analytics</a>
+    <a class="nav-item active">📚 Learning Bank</a>
+    <a class="nav-item" style="color: var(--danger-red);">🔴 Logout</a>
+</nav>
+
+<main class="content">
+    <div class="header">
+        <h2>Learning Bank & Quiz Manager</h2>
+        <button class="btn-primary" onclick="switchTab('create')">+ Create New Quiz</button>
+    </div>
+
+    <div class="tab-container">
+        <div id="tab-saved" class="tab-link active" onclick="switchTab('saved')">Saved Quizzes</div>
+        <div id="tab-create" class="tab-link" onclick="switchTab('create')">AI Quiz Generator</div>
+        <div id="tab-custom" class="tab-link" onclick="switchTab('custom')">Manual MCQ Builder</div>
+    </div>
+
+    <section id="view-saved" class="bank-section">
+        <div class="quiz-item">
+            <div style="display:flex; align-items:center; gap:15px;">
+                <span style="font-size:1.5rem;">🧪</span>
+                <div>
+                    <strong>Science: Metals & Non-Metals</strong>
+                    <div style="font-size:0.8rem; color:#94a3b8;">Grade 5 • English • Medium Difficulty</div>
+                </div>
+            </div>
+            <div>
+                <button class="btn-action" style="color: var(--success-green);">Edit</button>
+                <button class="btn-action btn-delete">Delete</button>
+            </div>
+        </div>
+    </section>
+
+    <section id="view-create" class="bank-section hidden">
+        <h3>✨ AI Quiz Generator</h3>
+        <div class="form-grid">
+            <div class="input-group"><label>Topic Title</label><input type="text" placeholder="e.g. Photosynthesis"></div>
+            <div class="input-group">
+                <label>Language</label>
+                <select><option>English</option><option>Hindi</option><option>Regional</option></select>
+            </div>
+            <div class="input-group">
+                <label>Difficulty Level</label>
+                <select><option>Easy</option><option>Medium</option><option>Hard</option></select>
+            </div>
+            <div class="input-group"><label>Grade</label><select><option>Grade 4</option><option>Grade 5</option></select></div>
+            <div class="input-group"><label>Question Count</label><input type="number" value="10"></div>
+            <div class="input-group"><label>NCERT Reference Link</label><input type="url" placeholder="https://ncert.nic.in/..."></div>
+        </div>
+
+        <div class="input-group" style="margin-bottom: 1.5rem;">
+            <label>Detailed Description</label>
+            <textarea id="desc-box" rows="4" placeholder="Describe the syllabus points..."></textarea>
+            <button class="speak-btn" onclick="startDictation()" title="Speak Description">🎤</button>
+        </div>
+
+        <label>Upload Textbook Screenshot / PDF</label>
+        <div class="upload-zone" id="drop-zone">
+            Drag & Drop textbook pages here or <b>Click to Upload</b>
+            <input type="file" id="file-input" hidden multiple>
+        </div>
+
+        <div style="margin-top: 2rem;">
+            <button class="btn-primary" style="background: var(--success-green);" onclick="handleGenerate()">✨ Generate & Save Quiz</button>
+        </div>
+    </section>
+
+    <section id="view-custom" class="bank-section hidden">
+        <h3>🛠️ Manual MCQ Editor</h3>
+        <div style="background: #f8fafc; padding: 1.5rem; border-radius: 16px; border: 1px solid #e2e8f0;">
+            <div class="input-group" style="margin-bottom:1rem;"><label>Question Text</label><input type="text" placeholder="Enter question here..."></div>
+            <div class="form-grid">
+                <div class="input-group"><label>Option A</label><input type="text"></div>
+                <div class="input-group"><label>Option B</label><input type="text"></div>
+                <div class="input-group"><label>Option C</label><input type="text"></div>
+                <div class="input-group"><label>Option D</label><input type="text"></div>
+                <div class="input-group"><label>Correct Answer</label><select><option>Option A</option><option>Option B</option><option>Option C</option><option>Option D</option></select></div>
+            </div>
+            <button class="btn-primary" style="margin-top: 1rem; background: var(--sidebar-dark);">Add to Question Bank</button>
+        </div>
+    </section>
+</main>
+
+<script>
+    // Tab Navigation
+    function switchTab(view) {
+        document.querySelectorAll('.bank-section').forEach(s => s.classList.add('hidden'));
+        document.querySelectorAll('.tab-link').forEach(t => t.classList.remove('active'));
+        document.getElementById('view-' + view).classList.remove('hidden');
+        document.getElementById('tab-' + view).classList.add('active');
+    }
+
+    // Direct Action for AI Generation
+    function handleGenerate() {
+        // Logic to trigger AI generation and save directly goes here
+        switchTab('saved');
+    }
+
+    // Drag and Drop Logic
+    const dropZone = document.getElementById('drop-zone');
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+    });
+    dropZone.onclick = () => document.getElementById('file-input').click();
+
+    // Voice Dictation
+    function startDictation() {
+        if ('webkitSpeechRecognition' in window) {
+            const recognition = new webkitSpeechRecognition();
+            recognition.onresult = (e) => { document.getElementById('desc-box').value = e.results[0][0].transcript; };
+            recognition.start();
+        }
+    }
+</script>
+
+</body>
+</html>

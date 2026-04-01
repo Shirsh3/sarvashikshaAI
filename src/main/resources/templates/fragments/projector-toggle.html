@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  Tiny fixed "Proj" control — toggles html/body.projector-friendly + localStorage (per device).
+  html class scales rem globally; body keeps existing CSS selectors working.
+  Include after opening <body> or next to loader: th:replace="~{fragments/projector-toggle :: projectorToggle}"
+-->
+<th:block th:fragment="projectorToggle">
+<button type="button" id="projectorModeBtn" class="projector-toggle-btn" title="Projector mode (larger text)">Proj</button>
+<script>
+(function () {
+    var KEY = 'sarva.projectorMode';
+    function apply() {
+        var on = localStorage.getItem(KEY) === '1';
+        document.documentElement.classList.toggle('projector-friendly', on);
+        document.body.classList.toggle('projector-friendly', on);
+        var b = document.getElementById('projectorModeBtn');
+        if (b) {
+            b.setAttribute('aria-pressed', on ? 'true' : 'false');
+            b.setAttribute('aria-label', on ? 'Projector mode on — click to turn off' : 'Projector mode off — click for larger classroom text');
+            b.classList.toggle('is-on', on);
+        }
+    }
+    function wire() {
+        apply();
+        var b = document.getElementById('projectorModeBtn');
+        if (b) {
+            b.addEventListener('click', function () {
+                localStorage.setItem(KEY, localStorage.getItem(KEY) === '1' ? '0' : '1');
+                apply();
+            });
+        }
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
+    else wire();
+})();
+</script>
+</th:block>
+</body>
+</html>

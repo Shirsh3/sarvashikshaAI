@@ -32,5 +32,9 @@ public class AssemblyConfig {
 
     @Column(name = "hindi_prayer_url", length = 500)
     private String hindiPrayerUrl;
+
+    /** Comma-separated slot keys: anthem, pledge, prayer, hindi */
+    @Column(name = "assembly_slot_order", length = 200)
+    private String slotOrder;
 }
 

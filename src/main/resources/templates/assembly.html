@@ -3,54 +3,109 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Morning Assembly — SarvashikshaAI</title>
+    <title>Morning Assembly — SarvaSikshaAI</title>
     <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
     <link rel="stylesheet" th:href="@{/css/app.css}"/>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { min-height: 100vh; }
+        *, *::before, *::after { box-sizing: border-box; }
 
-        /* ── Header (Kider theme) ── */
-        .assembly-header {
-            background: var(--surface);
-            border-bottom: 2px solid var(--surface2);
-            padding: 14px 24px;
-            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
-        }
-        .assembly-header h1 { font-size: 1.1rem; font-family: var(--font-heading); display: flex; align-items: center; gap: 8px; color: var(--dark); }
-        .assembly-header a  { color: var(--muted); font-size: 0.85rem; text-decoration: none; }
-        .assembly-header a:hover { color: var(--primary); }
+        /* Thought hero background uses global design tokens in style.css (body.assembly-page .thought-hero) */
 
         /* ── Thought of the Day ── */
         .thought-hero {
-            background: linear-gradient(135deg, #1e3a5f, #0f4c75);
-            padding: 36px 24px; text-align: center;
-            border-bottom: 2px solid rgba(255,255,255,0.08);
+            padding: clamp(28px, 4vw, 44px) clamp(20px, 3vw, 32px);
+            text-align: center;
+            border-bottom: 1px solid var(--border);
         }
         .thought-label {
-            font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.14em;
-            color: #7dd3fc; font-weight: 700; margin-bottom: 18px;
+            font-size: clamp(0.95rem, 1.45vw, 1.12rem);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #000;
+            font-weight: 700;
+            font-family: 'Quicksand', 'Segoe UI', sans-serif;
+            margin: 0 auto 20px;
+            max-width: 860px;
+            line-height: 1.4;
         }
         .thought-grid {
             display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
-            max-width: 860px; margin: 0 auto 20px;
+            max-width: 900px; margin: 0 auto 16px;
         }
         @media(max-width:600px){ .thought-grid { grid-template-columns: 1fr; } }
         .thought-card {
-            background: rgba(255,255,255,0.07);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 14px; padding: 20px;
+            background: var(--surface-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md, 16px);
+            padding: clamp(18px, 2.5vw, 24px);
         }
-        .thought-lang { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: #7dd3fc; margin-bottom: 8px; }
-        .thought-text { font-size: clamp(1rem, 2.5vw, 1.25rem); font-weight: 600; line-height: 1.7; color: #f0f9ff; }
+        .thought-lang { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: #111; margin-bottom: 8px; font-weight: 600; }
+        .thought-text { font-size: clamp(1.12rem, 2.5vw, 1.52rem); font-weight: 600; line-height: 1.65; color: #000; font-family: 'Quicksand', 'Segoe UI', sans-serif; }
+        .thought-meta {
+            max-width: 860px;
+            margin: 8px auto 0;
+            padding: 0 4px;
+        }
+        .thought-meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px 24px;
+            align-items: stretch;
+            text-align: left;
+        }
+        @media (max-width: 640px) {
+            .thought-meta-grid { grid-template-columns: 1fr; gap: 14px; }
+        }
+        .thought-meta-item {
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .thought-meta-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #334155;
+            line-height: 1.3;
+        }
+        .thought-meta-value {
+            margin: 0;
+            font-size: clamp(1rem, 2.1vw, 1.12rem);
+            font-weight: 600;
+            line-height: 1.5;
+            color: #000;
+        }
+        .thought-meta-value .word-en { color: #000; font-weight: 700; }
+        .thought-meta-value .word-hi { color: #111; font-weight: 600; }
+        .thought-meta-value .word-sep {
+            display: inline-block;
+            margin: 0 0.35em;
+            color: #475569;
+            font-weight: 500;
+        }
+        .thought-meta-value--habit {
+            color: #000;
+            font-weight: 600;
+        }
         .read-btn-sm {
             margin-top: 12px; display: inline-flex; align-items: center; gap: 6px;
-            padding: 7px 16px; border-radius: 50px; border: none;
-            background: rgba(255,255,255,0.12); color: #e2e8f0;
-            font-size: 0.82rem; cursor: pointer; transition: all 0.2s;
+            padding: 8px 18px; border-radius: 50px; border: 1px solid var(--border);
+            background: var(--surface);
+            color: #000;
+            font-size: 0.85rem;
+            font-weight: 600;
+            font-family: 'Quicksand', 'Segoe UI', sans-serif;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s, color 0.2s;
         }
-        .read-btn-sm:hover { background: rgba(255,255,255,0.2); }
+        .read-btn-sm:hover { background: var(--surface-elevated); border-color: var(--primary); color: var(--primary); }
         .read-btn-sm.speaking { animation: pulse 1.2s infinite; }
 
         /* ── Section card ── */
@@ -59,21 +114,64 @@
             border-bottom: 1px solid var(--surface2);
             color: var(--text);
         }
-        .section:nth-child(even) { background: var(--surface2); }
-
         .section-header {
             display: flex; justify-content: space-between; align-items: center;
             flex-wrap: wrap; gap: 12px; margin-bottom: 20px;
         }
         .section-title {
-            font-size: 1.1rem; font-weight: 700; color: var(--text);
+            font-size: 1.28rem; font-weight: 700; color: #000;
             display: flex; align-items: center; gap: 10px;
         }
 
-        /* ── YouTube embed ── */
+        /* Video block headings + labels: black text, slightly larger titles */
+        .assembly-main .assembly-playing-title {
+            color: #000;
+            font-size: clamp(1.25rem, 2.2vw, 1.48rem);
+        }
+        .assembly-main .assembly-rail-title {
+            font-size: 0.82rem;
+            color: #111;
+        }
+        .assembly-main .assembly-thumb-label {
+            color: #000;
+        }
+        .assembly-playing-gif {
+            margin-top: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            color: var(--muted);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.15s ease;
+        }
+        .assembly-main.assembly-video-playing .assembly-playing-gif {
+            opacity: 1;
+            visibility: visible;
+        }
+        .assembly-playing-gif img {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        /* Projector view: keep black text; titles one step up (global rules still scale body copy) */
+        body.projector-friendly.assembly-page .thought-text,
+        body.projector-friendly.assembly-page .thought-meta-value,
+        body.projector-friendly.assembly-page .thought-meta-value--habit {
+            color: #000;
+        }
+        body.projector-friendly.assembly-page .assembly-main .assembly-playing-title {
+            color: #000;
+            font-size: clamp(1.38rem, 2.7vw, 1.88rem);
+        }
+
+        /* ── YouTube embed (main assembly player) ── */
         .video-wrap {
             position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;
-            border-radius: 14px; margin-bottom: 20px;
+            border-radius: 14px;
             background: #000;
         }
         .video-wrap iframe {
@@ -84,25 +182,17 @@
             background: var(--surface2);
             border: 2px dashed var(--muted);
             border-radius: 14px; padding: 28px; text-align: center;
-            color: var(--muted); margin-bottom: 20px;
+            color: var(--muted);
         }
         .no-video a { color: var(--primary); text-decoration: none; }
         .no-video a:hover { text-decoration: underline; }
+        .assembly-embed-error { text-align: left; max-width: 720px; margin: 0 auto; }
+        .assembly-embed-error .assembly-yt-open {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-weight: 700; color: var(--primary);
+        }
 
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
-
-        /* ── Bottom nav ── */
-        .bottom-nav {
-            padding: 24px; text-align: center;
-            display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;
-        }
-        .nav-btn {
-            padding: 12px 24px; border: 1px solid var(--surface2);
-            border-radius: 50px; background: var(--surface);
-            color: var(--text); font-size: 0.9rem; cursor: pointer;
-            text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
-        }
-        .nav-btn:hover { background: var(--surface2); color: var(--primary); }
 
         @media(max-width:600px){
             .section { padding: 24px 16px; }
@@ -110,10 +200,11 @@
         }
     </style>
 </head>
-<body>
+<body class="app-layout assembly-page">
 <div th:replace="~{fragments/loader :: loader}"></div>
-<div th:replace="~{fragments/tabs :: tabBar('assembly')}"></div>
+<div th:replace="~{fragments/shell-teacher :: sidebar('assembly')}"></div>
 
+<main class="layout-main assembly-main" id="assemblyPageMain">
 <!-- ══ Thought of the Day ══ -->
 <div class="thought-hero">
     <div class="thought-label"><i class="fa-solid fa-lightbulb"></i> &nbsp;Today's Thought &nbsp;·&nbsp; आज का विचार</div>
@@ -133,86 +224,154 @@
             </button>
         </div>
     </div>
-    <div style="margin-top:14px; color:#e0f2fe; font-size:0.9rem;">
-        <span th:text="'Word: ' + ${wordEnglish} + ' — ' + ${wordHindi}"></span>
-        <span>&nbsp;·&nbsp;</span>
-        <span th:text="'Habit: ' + ${habit}"></span>
+    <div class="thought-meta">
+        <div class="thought-meta-grid">
+            <div class="thought-meta-item">
+                <span class="thought-meta-label">Word of the day · दिन का शब्द</span>
+                <p class="thought-meta-value">
+                    <span class="word-en" th:text="${wordEnglish}">Word</span>
+                    <span class="word-sep">·</span>
+                    <span class="word-hi" th:text="${wordHindi}">शब्द</span>
+                </p>
+            </div>
+            <div class="thought-meta-item">
+                <span class="thought-meta-label">Habit of the day · आदत</span>
+                <p class="thought-meta-value thought-meta-value--habit" th:text="${habit}">Habit</p>
+            </div>
+        </div>
     </div>
-    <form th:action="@{/assembly/regenerate}" method="post" style="margin-top:16px;">
-        <button type="submit"
-                style="padding:8px 18px;border-radius:999px;border:none;
-                       background:#f97316;color:white;font-size:0.85rem;font-weight:600;
-                       display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+    <!-- th:attr for action (not th:action) avoids SpringActionTagProcessor + session edge-case; see index explain form -->
+    <form method="post" class="assembly-regen-form" th:attr="action=@{/assembly/regenerate}">
+        <button type="submit" class="assembly-ai-btn">
             <i class="fa-solid fa-wand-magic-sparkles"></i>
             Generate new Thought + Word + Habit
         </button>
     </form>
 </div>
 
-<!-- ══ National Anthem ══ -->
-<div class="section">
-    <div class="section-header">
-        <div class="section-title">🇮🇳 &nbsp;National Anthem</div>
-    </div>
-
-    <!-- YouTube video -->
-    <div th:if="${videoAnthem != null}" class="video-wrap">
-        <iframe th:src="'https://www.youtube.com/embed/' + ${videoAnthem} + '?rel=0&modestbranding=1'"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                allowfullscreen></iframe>
-    </div>
-    <div th:if="${videoAnthem == null}" class="no-video">
-        <i class="fa-solid fa-circle-info"></i> &nbsp;No video set yet.
-        <a href="/teacher/setup">Add a YouTube link under “Assembly videos” in Teacher Setup.</a>
+<!-- ══ Assembly videos: when any URL exists — main player + thumbnails; otherwise four setup hints ══ -->
+<div th:if="${assemblyFirstSlot != null}" class="assembly-media-section">
+    <div class="assembly-media-layout">
+        <div class="assembly-player-col">
+            <div class="assembly-playing-row">
+                <span class="assembly-playing-badge" aria-hidden="true"><i class="fa-solid fa-circle-play"></i> Playing</span>
+                <h3 class="assembly-playing-title" id="assemblyPlayingTitle" th:text="${assemblyFirstSlot.title}">National Anthem</h3>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 12px;">
+                <button type="button" class="btn-primary" id="assemblyStartBtn" style="padding:8px 12px;border-radius:10px;">
+                    <i class="fa-solid fa-play"></i> Start Assembly
+                </button>
+                <button type="button" class="btn-primary" id="assemblyStopBtn"
+                        style="padding:8px 12px;border-radius:10px;background:var(--surface-elevated);color:var(--text-main);border:1px solid var(--border);">
+                    <i class="fa-solid fa-stop"></i> Stop
+                </button>
+            </div>
+            <div class="assembly-playing-gif">
+                <div class="music-bars" aria-hidden="true"><span></span><span></span><span></span></div>
+            </div>
+            <div class="video-wrap" id="assemblyVideoWrap"
+                 th:style="${assemblyFirstSlot.embedError != null} ? 'display:none' : ''">
+                <iframe id="assemblyMainIframe"
+                        th:src="|https://www.youtube.com/embed/${assemblyFirstSlot.videoId}?rel=0&amp;modestbranding=1&amp;enablejsapi=1&amp;origin=${embedOriginEncoded}|"
+                        th:attr="data-embed-origin=${embedOriginEncoded}"
+                        title="Assembly video"
+                        loading="lazy"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                ></iframe>
+            </div>
+            <div class="no-video assembly-embed-error" id="assemblyMainEmbedError" role="alert"
+                 th:style="${assemblyFirstSlot.embedError == null} ? 'display:none' : ''">
+                <p style="margin:0 0 10px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span id="assemblyEmbedErrorMsg" th:text="${assemblyFirstSlot.embedError}">Message</span>
+                </p>
+                <a class="assembly-yt-open" th:href="|https://www.youtube.com/watch?v=${assemblyFirstSlot.videoId}|"
+                   target="_blank" rel="noopener noreferrer">Open on YouTube</a>
+            </div>
+        </div>
+        <aside class="assembly-thumb-rail" aria-label="Assembly videos">
+            <p class="assembly-rail-title">Related videos</p>
+            <button type="button"
+                    class="assembly-thumb"
+                    th:each="slot : ${assemblySlots}"
+                    th:classappend="${slotStat.first} ? ' is-active'"
+                    th:data-videoid="${slot.videoId}"
+                    th:data-title="${slot.title}"
+                    th:data-slot-key="${slot.slotKey}"
+                    th:attr="data-embed-error=${slot.embedError != null ? slot.embedError : ''}">
+                <img th:src="|https://img.youtube.com/vi/${slot.videoId}/mqdefault.jpg|" th:alt="${slot.title}" width="96" height="54" loading="lazy"/>
+                <span class="assembly-thumb-meta">
+                    <span class="assembly-thumb-label" th:text="${slot.title}">Title</span>
+                    <span class="assembly-thumb-playing">
+                        <div class="music-bars" aria-hidden="true"><span></span><span></span><span></span></div>
+                        <span>Playing</span>
+                    </span>
+                </span>
+            </button>
+        </aside>
     </div>
 </div>
 
-<!-- ══ Pledge ══ -->
-<div class="section">
-    <div class="section-header">
-        <div class="section-title">✊ &nbsp;Pledge</div>
+<th:block th:if="${assemblyFirstSlot == null}">
+    <div class="section">
+        <div class="section-header">
+            <div class="section-title">🇮🇳 &nbsp;National Anthem</div>
+        </div>
+        <div th:if="${videoAnthem != null}" class="video-wrap">
+            <iframe th:src="|https://www.youtube.com/embed/${videoAnthem}?rel=0&amp;modestbranding=1|"
+                    title="National Anthem"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"></iframe>
+        </div>
+        <div th:if="${videoAnthem == null}" class="no-video">
+            <i class="fa-solid fa-circle-info"></i> &nbsp;No video set yet.
+            <a th:href="@{/teacher/setup}">Add a YouTube link under “Assembly videos” in Teacher Setup.</a>
+        </div>
     </div>
+    <div class="section">
+        <div class="section-header">
+            <div class="section-title">✊ &nbsp;Pledge</div>
+        </div>
+        <div th:if="${videoPledge != null}" class="video-wrap">
+            <iframe th:src="|https://www.youtube.com/embed/${videoPledge}?rel=0&amp;modestbranding=1|"
+                    title="Pledge"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"></iframe>
+        </div>
+        <div th:if="${videoPledge == null}" class="no-video">
+            <i class="fa-solid fa-circle-info"></i> &nbsp;No video set yet.
+            <a th:href="@{/teacher/setup}">Add a YouTube link under “Assembly videos” in Teacher Setup.</a>
+        </div>
+    </div>
+    <div class="section">
+        <div class="section-header">
+            <div class="section-title">🙏 &nbsp;Morning Prayer</div>
+        </div>
+        <div th:if="${videoPrayer != null}" class="video-wrap">
+            <iframe th:src="|https://www.youtube.com/embed/${videoPrayer}?rel=0&amp;modestbranding=1|"
+                    title="Morning Prayer"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"></iframe>
+        </div>
+        <div th:if="${videoPrayer == null}" class="no-video">
+            <i class="fa-solid fa-circle-info"></i> &nbsp;No video set yet.
+            <a th:href="@{/teacher/setup}">Add a YouTube link under “Assembly videos” in Teacher Setup.</a>
+        </div>
+    </div>
+    <div class="section">
+        <div class="section-header">
+            <div class="section-title">🕉️ &nbsp;हिन्दी प्रार्थना</div>
+        </div>
+        <div th:if="${videoHindi != null}" class="video-wrap">
+            <iframe th:src="|https://www.youtube.com/embed/${videoHindi}?rel=0&amp;modestbranding=1|"
+                    title="Hindi Prayer"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"></iframe>
+        </div>
+        <div th:if="${videoHindi == null}" class="no-video">
+            <i class="fa-solid fa-circle-info"></i> &nbsp;No video set yet.
+            <a th:href="@{/teacher/setup}">Add a YouTube link under “Assembly videos” in Teacher Setup.</a>
+        </div>
+    </div>
+</th:block>
 
-    <div th:if="${videoPledge != null}" class="video-wrap">
-        <iframe th:src="'https://www.youtube.com/embed/' + ${videoPledge} + '?rel=0&modestbranding=1'"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                allowfullscreen></iframe>
-    </div>
-    <div th:if="${videoPledge == null}" class="no-video">
-        <i class="fa-solid fa-circle-info"></i> &nbsp;No video set yet.
-        <a href="/teacher/setup">Add a YouTube link under “Assembly videos” in Teacher Setup.</a>
-    </div>
-</div>
-
-<!-- ══ Morning Prayer (Saraswati Vandana) ══ -->
-<div class="section">
-    <div class="section-header">
-        <div class="section-title">🙏 &nbsp;Morning Prayer</div>
-    </div>
-
-    <div th:if="${videoPrayer != null}" class="video-wrap">
-        <iframe th:src="'https://www.youtube.com/embed/' + ${videoPrayer} + '?rel=0&modestbranding=1'"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                allowfullscreen></iframe>
-    </div>
-    <div th:if="${videoPrayer == null}" class="no-video">
-        <i class="fa-solid fa-circle-info"></i> &nbsp;No video set yet.
-        <a href="/teacher/setup">Add a YouTube link under “Assembly videos” in Teacher Setup.</a>
-    </div>
-</div>
-
-<!-- ══ Hindi Prayer (extra slot) ══ -->
-<div class="section" th:if="${videoHindi != null}">
-    <div class="section-header">
-        <div class="section-title">🕉️ &nbsp;हिन्दी प्रार्थना</div>
-    </div>
-    <div class="video-wrap">
-        <iframe th:src="'https://www.youtube.com/embed/' + ${videoHindi} + '?rel=0&modestbranding=1'"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                allowfullscreen></iframe>
-    </div>
-</div>
-
+</main>
 
 <script>
     // Keep speech only for Thought of the Day cards
@@ -245,6 +404,10 @@
         if (activeSpeech) { stopSpeaking(); return; }
         const text = document.getElementById(elementId)?.textContent?.trim();
         if (!text) return;
+        if (window.monitorIsPriorityActive && window.monitorIsPriorityActive()) {
+            setTimeout(function () { readText(elementId, btn, lang); }, 900);
+            return;
+        }
 
         const utter = new SpeechSynthesisUtterance(text);
         utter.lang  = lang || 'hi-IN';
@@ -267,6 +430,175 @@
 
     window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
     window.speechSynthesis.getVoices();
+
+    (function assemblyPlayer() {
+        const iframe = document.getElementById('assemblyMainIframe');
+        const titleEl = document.getElementById('assemblyPlayingTitle');
+        const wrap = document.getElementById('assemblyVideoWrap');
+        const errBox = document.getElementById('assemblyMainEmbedError');
+        const errText = document.getElementById('assemblyEmbedErrorMsg');
+        const mainEl = document.getElementById('assemblyPageMain');
+        if (!titleEl || !mainEl) return;
+        if (!iframe) return;
+
+        let allowAutoStart = false;
+        let player = null;
+
+        function slotsFromDom() {
+            return Array.from(document.querySelectorAll('.assembly-thumb')).map((b) => ({
+                id: (b.getAttribute('data-videoid') || '').trim(),
+                title: (b.getAttribute('data-title') || '').trim(),
+                embedError: (b.getAttribute('data-embed-error') || '').trim()
+            })).filter((x) => x.id);
+        }
+
+        function seqIds() {
+            return slotsFromDom().map((s) => s.id);
+        }
+
+        function setPlayingUi(isPlaying) {
+            mainEl.classList.toggle('assembly-video-playing', !!isPlaying);
+            let vid = null;
+            try {
+                if (player && typeof player.getVideoData === 'function') {
+                    vid = player.getVideoData().video_id;
+                }
+            } catch (e) {
+                vid = null;
+            }
+            document.querySelectorAll('.assembly-thumb').forEach((btn) => {
+                const id = (btn.getAttribute('data-videoid') || '').trim();
+                btn.classList.toggle('is-video-playing', !!(isPlaying && vid && id === vid));
+            });
+        }
+
+        function onPlayerStateChange(e) {
+            if (window.YT && e.data === window.YT.PlayerState.PLAYING) {
+                setPlayingUi(true);
+            } else {
+                setPlayingUi(false);
+            }
+        }
+
+        function buildSrcFor(id, autoplay, playlistCsv) {
+            const ap = autoplay ? '1' : '0';
+            const pl = (playlistCsv || '').trim();
+            const origin = iframe.getAttribute('data-embed-origin') || '';
+            return 'https://www.youtube.com/embed/' + id
+                + '?autoplay=' + ap
+                + '&rel=0&modestbranding=1&enablejsapi=1'
+                + (origin ? '&origin=' + origin : '')
+                + (pl ? ('&playlist=' + encodeURIComponent(pl)) : '');
+        }
+
+        function showState(id, title, embedError, autoplay, playlistCsv) {
+            if (titleEl) titleEl.textContent = title || '';
+            const msg = (embedError || '').trim();
+            if (msg && wrap && errBox && errText) {
+                wrap.style.display = 'none';
+                errBox.style.display = 'block';
+                errText.textContent = msg;
+                const link = errBox.querySelector('.assembly-yt-open');
+                if (link && id) link.href = 'https://www.youtube.com/watch?v=' + id;
+                setPlayingUi(false);
+                return;
+            }
+            if (wrap && errBox) {
+                errBox.style.display = 'none';
+                wrap.style.display = '';
+            }
+            if (player && typeof player.loadVideoById === 'function') {
+                setPlayingUi(false);
+                const csv = (playlistCsv || '').trim();
+                if (autoplay && csv) {
+                    const ids = csv.split(',').map((x) => x.trim()).filter(Boolean);
+                    if (ids.length > 1) {
+                        player.loadPlaylist(ids, 0, 0);
+                        player.playVideo();
+                        return;
+                    }
+                }
+                if (autoplay) {
+                    player.loadVideoById(id);
+                    player.playVideo();
+                } else {
+                    player.cueVideoById(id);
+                }
+                return;
+            }
+            iframe.src = buildSrcFor(id, !!autoplay, playlistCsv || '');
+        }
+
+        document.querySelectorAll('.assembly-thumb').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-videoid');
+                const title = btn.getAttribute('data-title');
+                const embedError = btn.getAttribute('data-embed-error') || '';
+                if (!id) return;
+                showState(id, title, embedError, allowAutoStart, '');
+                document.querySelectorAll('.assembly-thumb').forEach((b) => {
+                    b.classList.toggle('is-active', b === btn);
+                });
+            });
+        });
+
+        const startBtn = document.getElementById('assemblyStartBtn');
+        const stopBtn = document.getElementById('assemblyStopBtn');
+
+        if (startBtn) {
+            startBtn.addEventListener('click', function () {
+                const seq = seqIds();
+                if (!seq.length) return;
+                allowAutoStart = true;
+                const first = seq[0];
+                const slots = slotsFromDom();
+                const firstSlot = slots.find((s) => s.id === first) || null;
+                showState(first, firstSlot ? firstSlot.title : 'Assembly', firstSlot ? firstSlot.embedError : '', true, seq.join(','));
+            });
+        }
+        if (stopBtn) {
+            stopBtn.addEventListener('click', function () {
+                allowAutoStart = false;
+                try {
+                    if (player && typeof player.pauseVideo === 'function') {
+                        player.pauseVideo();
+                    }
+                } catch (e) {}
+                setPlayingUi(false);
+            });
+        }
+
+        function ensureYoutubeApi(cb) {
+            if (window.YT && window.YT.Player) {
+                cb();
+                return;
+            }
+            const prev = window.onYouTubeIframeAPIReady;
+            window.onYouTubeIframeAPIReady = function () {
+                if (typeof prev === 'function') {
+                    prev();
+                }
+                cb();
+            };
+            if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+                const tag = document.createElement('script');
+                tag.src = 'https://www.youtube.com/iframe_api';
+                document.head.appendChild(tag);
+            }
+        }
+
+        ensureYoutubeApi(function () {
+            try {
+                player = new window.YT.Player(iframe.id, {
+                    events: {
+                        onStateChange: onPlayerStateChange
+                    }
+                });
+            } catch (e) {
+                player = null;
+            }
+        });
+    })();
 </script>
 </body>
 </html>

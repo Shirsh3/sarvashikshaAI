@@ -4,8 +4,11 @@
 <th:block th:fragment="loader">
 <div id="global-loader" aria-hidden="true">
     <div class="loader-spinner"></div>
-    <span class="loader-text">SarvashikshaAI</span>
+    <img class="loader-logo" src="/img/logo-transparent.png" alt="SarvashikshaAI"/>
 </div>
+<div th:replace="~{fragments/projector-toggle :: projectorToggle}"></div>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" crossorigin="anonymous"></script>
+<script th:src="@{/js/celebrate.js}"></script>
 <script>
 (function(){
     function hideLoader(){
@@ -14,9 +17,19 @@
     }
     if (document.readyState === 'complete') hideLoader();
     else window.addEventListener('load', hideLoader);
-    document.addEventListener('DOMContentLoaded', hideLoader);
-    setTimeout(hideLoader, 1500);
 })();
+window.showGlobalLoader = function (message) {
+    var el = document.getElementById('global-loader');
+    if (!el) return;
+    el.classList.remove('hide');
+    el.setAttribute('aria-hidden', 'false');
+};
+window.hideGlobalLoader = function () {
+    var el = document.getElementById('global-loader');
+    if (!el) return;
+    el.classList.add('hide');
+    el.setAttribute('aria-hidden', 'true');
+};
 </script>
 </th:block>
 </body>

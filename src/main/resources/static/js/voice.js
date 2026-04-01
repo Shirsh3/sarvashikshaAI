@@ -84,6 +84,7 @@ function doSpeak(text, voice) {
 function startReading() {
     const text = buildTtsText();
     if (!text) return;
+    if (window.monitorIsPriorityActive && window.monitorIsPriorityActive()) return;
 
     window.speechSynthesis.cancel();
 

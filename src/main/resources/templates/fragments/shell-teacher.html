@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  Teacher shell: shared sidebar + main column. "Shell" = the outer app frame (nav + content).
+  Usage: th:replace="~{fragments/shell-teacher :: sidebar('quiz')}"
+-->
+<th:block th:fragment="sidebar(activePage)">
+<div class="app-shell">
+<div class="app-menu-rail" aria-label="Menu controls">
+    <span class="app-menu-rail-line" aria-hidden="true"></span>
+    <button type="button" class="sidebar-mobile-toggle" id="sidebarToggle" aria-label="Open navigation menu"
+            aria-controls="app-sidebar" aria-expanded="false">☰</button>
+</div>
+<aside class="sidebar" id="app-sidebar" aria-label="Teacher navigation">
+    <a href="/teacher/dashboard" class="sidebar-brand brand-lockup" aria-label="SarvashikshaAI home">
+        <img src="/img/logo-transparent.png" class="brand-mark" alt="SarvashikshaAI"/>
+    </a>
+    <nav id="sidebar-nav">
+        <!-- Fallback for unauthenticated pages -->
+        <a th:href="@{/login}" class="sidebar-link sidebar-link--danger">🔐 Login</a>
+    </nav>
+    <script>
+        (function () {
+            const mq = window.matchMedia('(min-width: 769px)');
+            const LS_KEY = 'sarva.sidebarDrawerOpen';
+            const LS_DESKTOP = 'sarva.sidebarCollapsedDesktop';
+            const toggle = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('app-sidebar');
+            const rail = document.querySelector('.app-menu-rail');
+            const backdrop = document.querySelector('.sidebar-backdrop');
+
+            function applyDesktopAria() {
+                if (!toggle) return;
+                if (mq.matches) {
+                    const collapsed = document.body.classList.contains('sidebar-desktop-collapsed');
+                    toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                }
+            }
+
+            function persistDrawer(open) {
+                if (mq.matches) return;
+                try {
+                    localStorage.setItem(LS_KEY, open ? '1' : '0');
+                } catch (e) { /* ignore */ }
+            }
+
+            function setOpen(open) {
+                if (mq.matches) {
+                    document.body.classList.remove('sidebar-open');
+                    applyDesktopAria();
+                    if (backdrop) backdrop.setAttribute('aria-hidden', 'true');
+                    return;
+                }
+                document.body.classList.toggle('sidebar-open', !!open);
+                if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                if (backdrop) backdrop.setAttribute('aria-hidden', open ? 'false' : 'true');
+                persistDrawer(!!open);
+            }
+
+            function restoreDesktopCollapsed() {
+                if (!mq.matches) return;
+                try {
+                    if (localStorage.getItem(LS_DESKTOP) === '1') {
+                        document.body.classList.add('sidebar-desktop-collapsed');
+                    }
+                } catch (e) { /* ignore */ }
+                applyDesktopAria();
+            }
+
+            function restoreDrawer() {
+                if (mq.matches) return;
+                try {
+                    if (localStorage.getItem(LS_KEY) === '1') {
+                        setOpen(true);
+                    }
+                } catch (e) { /* ignore */ }
+            }
+            restoreDesktopCollapsed();
+            restoreDrawer();
+
+            if (toggle) {
+                toggle.addEventListener('click', function () {
+                    if (mq.matches) {
+                        document.body.classList.toggle('sidebar-desktop-collapsed');
+                        try {
+                            localStorage.setItem(LS_DESKTOP, document.body.classList.contains('sidebar-desktop-collapsed') ? '1' : '0');
+                        } catch (e) { /* ignore */ }
+                        applyDesktopAria();
+                        return;
+                    }
+                    setOpen(!document.body.classList.contains('sidebar-open'));
+                });
+            }
+
+            if (backdrop) {
+                backdrop.addEventListener('click', function () {
+                    setOpen(false);
+                });
+            }
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key !== 'Escape') return;
+                if (mq.matches) {
+                    document.body.classList.remove('sidebar-desktop-collapsed');
+                    try {
+                        localStorage.setItem(LS_DESKTOP, '0');
+                    } catch (err) { /* ignore */ }
+                    applyDesktopAria();
+                } else {
+                    setOpen(false);
+                }
+            });
+
+            mq.addEventListener('change', function () {
+                if (mq.matches) {
+                    document.body.classList.remove('sidebar-open');
+                    if (backdrop) backdrop.setAttribute('aria-hidden', 'true');
+                    restoreDesktopCollapsed();
+                } else {
+                    document.body.classList.remove('sidebar-desktop-collapsed');
+                    try {
+                        localStorage.setItem(LS_DESKTOP, '0');
+                    } catch (e) { /* ignore */ }
+                    applyDesktopAria();
+                    restoreDrawer();
+                }
+            });
+
+            // Click outside (backdrop) closes the drawer.
+            document.addEventListener('click', function (e) {
+                if (!document.body.classList.contains('sidebar-open')) return;
+                if (mq.matches) return;
+                const t = e.target;
+                if (!sidebar || !t) return;
+                if (sidebar.contains(t)) return;
+                if (rail && rail.contains(t)) return;
+                if (toggle && toggle.contains(t)) return;
+                setOpen(false);
+            });
+
+            const nav = document.getElementById('sidebar-nav');
+            if (!nav) return;
+
+            const norm = (p) => String(p || '').replace(/\/+$/, '');
+            const pathname = norm(window.location.pathname);
+            const needsAuthShell = /^\/(teacher|admin|superadmin)(\/|$)/.test(pathname);
+
+            fetch('/api/menu', { credentials: 'same-origin' })
+                .then((res) => {
+                    if (!res.ok) throw new Error('menu fetch failed');
+                    return res.json();
+                })
+                .then((items) => {
+                    nav.innerHTML = '';
+                    if ((!items || items.length === 0) && needsAuthShell) {
+                        window.location.replace('/login?redirect=' + encodeURIComponent(window.location.pathname + window.location.search));
+                        return;
+                    }
+                    if (!items || items.length === 0) {
+                        const login = document.createElement('a');
+                        login.href = '/login';
+                        login.className = 'sidebar-link sidebar-link--danger';
+                        login.textContent = '🔐 Login';
+                        nav.appendChild(login);
+                        return;
+                    }
+                    const all = (items || []).map((item) => {
+                        const hrefNorm = norm(item.href);
+                        const score = pathname === hrefNorm ? 10000 : (pathname.startsWith(hrefNorm + '/') ? hrefNorm.length : -1);
+                        return { item, hrefNorm, score };
+                    });
+                    const best = all.reduce((acc, x, i) => x.score > (acc.score ?? -1) ? { idx: i, score: x.score } : acc, { idx: -1, score: -1 });
+                    const menuIsSuperAdmin = (items || []).some((it) => it && String(it.key || '') === 'superadmin');
+
+                    function renderLink(item, isActive) {
+                        const a = document.createElement('a');
+                        a.href = item.href;
+                        a.className = 'sidebar-link';
+                        if (isActive) a.classList.add('active');
+                        const icon = item.icon ? String(item.icon) : '';
+                        const label = item.label ? String(item.label) : '';
+                        a.textContent = icon ? (icon + ' ' + label) : label;
+                        return a;
+                    }
+
+                    if (menuIsSuperAdmin) {
+                        const rawItems = (items || []).slice();
+                        const isQuiz = (it) => it && (String(it.href || '') === '/quiz/teacher' || String(it.key || '').toLowerCase() === 'quiz');
+                        const isReading = (it) => it && (String(it.href || '') === '/reading' || String(it.key || '').toLowerCase() === 'reading');
+                        const isLearning = (it) => it && (String(it.href || '') === '/teacher/learning' || String(it.key || '').toLowerCase() === 'learning');
+                        const quizItem = rawItems.find(isQuiz) || null;
+                        const readingItem = rawItems.find(isReading) || null;
+                        const learningItem = rawItems.find(isLearning) || null;
+                        const topLevel = rawItems.filter((it) => !isQuiz(it) && !isReading(it));
+                        const activeHref = best.idx >= 0 && all[best.idx] ? all[best.idx].hrefNorm : '';
+                        topLevel.forEach((item) => {
+                            if (learningItem && item === learningItem && (quizItem || readingItem)) {
+                                const wrap = document.createElement('div');
+                                wrap.style.display = 'flex';
+                                wrap.style.flexDirection = 'column';
+                                wrap.style.gap = '4px';
+                                const isActiveParent =
+                                    activeHref === norm(learningItem.href)
+                                    || (quizItem && activeHref === norm(quizItem.href))
+                                    || (readingItem && activeHref === norm(readingItem.href));
+                                const parent = renderLink(learningItem, isActiveParent && activeHref === norm(learningItem.href));
+                                parent.style.display = 'flex';
+                                parent.style.alignItems = 'center';
+                                parent.style.justifyContent = 'space-between';
+                                const chev = document.createElement('span');
+                                chev.textContent = '▾';
+                                chev.style.fontWeight = '900';
+                                chev.style.opacity = '0.55';
+                                parent.appendChild(chev);
+                                const sub = document.createElement('div');
+                                sub.style.marginLeft = '10px';
+                                sub.style.paddingLeft = '10px';
+                                sub.style.borderLeft = '2px solid var(--border)';
+                                sub.style.display = 'flex';
+                                sub.style.flexDirection = 'column';
+                                sub.style.gap = '4px';
+                                sub.style.marginBottom = '6px';
+                                if (quizItem) sub.appendChild(renderLink(quizItem, activeHref === norm(quizItem.href)));
+                                if (readingItem) sub.appendChild(renderLink(readingItem, activeHref === norm(readingItem.href)));
+                                sub.querySelectorAll('a.sidebar-link').forEach((a) => {
+                                    a.style.fontSize = '0.88rem';
+                                    a.style.padding = '10px 14px';
+                                });
+                                wrap.appendChild(parent);
+                                wrap.appendChild(sub);
+                                nav.appendChild(wrap);
+                                return;
+                            }
+                            const isActive = activeHref === norm(item.href);
+                            nav.appendChild(renderLink(item, isActive));
+                        });
+                    } else {
+                        all.forEach((x, idx) => {
+                            const item = x.item;
+                            const isActive = idx === best.idx && x.score >= 0;
+                            nav.appendChild(renderLink(item, isActive));
+                        });
+                    }
+
+                    // Logout (clears JWT cookie on server-side)
+                    const logout = document.createElement('a');
+                    logout.href = '/logout';
+                    logout.className = 'sidebar-link sidebar-link--danger';
+                    logout.textContent = '🚪 Logout';
+                    nav.appendChild(logout);
+                })
+                .catch(() => {
+                    // Keep the login fallback link.
+                });
+        })();
+    </script>
+</aside>
+<button type="button" class="sidebar-backdrop" aria-label="Close navigation menu" aria-hidden="true" tabindex="-1"></button>
+</div>
+</th:block>
+</body>
+</html>

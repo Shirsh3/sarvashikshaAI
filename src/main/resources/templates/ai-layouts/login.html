@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Portal Login</title>
+    <style>
+        :root {
+            --teacher-color: #10b981;
+            --admin-color: #6366f1;
+            --primary-blue: #3b82f6;
+        }
+
+        body {
+            font-family: 'Quicksand', 'Segoe UI', sans-serif; /* Rounded fonts are better for schools */
+            background: #e0f2fe;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            transition: background 0.5s ease;
+        }
+
+        /* Changes background slightly for Admin */
+        body.admin-bg { background: #eef2ff; }
+
+        .login-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .icon-header {
+            font-size: 4rem;
+            margin-bottom: 0.5rem;
+            display: block;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        h2 { 
+            color: #1e293b; 
+            margin-top: 0;
+            font-weight: 700;
+            font-size: 1.8rem;
+        }
+
+        .role-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 2rem;
+            background: #f1f5f9;
+            padding: 6px;
+            border-radius: 16px;
+        }
+
+        .role-btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            background: transparent;
+            color: #64748b;
+            font-size: 1rem;
+        }
+
+        .role-btn.active {
+            background: white;
+            color: var(--primary-blue);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .input-group {
+            text-align: left;
+            margin-bottom: 1.5rem;
+        }
+
+        label { 
+            display: block; 
+            margin-bottom: 8px; 
+            color: #475569; 
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-left: 5px;
+        }
+
+        input {
+            width: 100%;
+            padding: 16px;
+            border: 2px solid #f1f5f9;
+            border-radius: 16px;
+            box-sizing: border-box;
+            font-size: 1.1rem;
+            background: #f8fafc;
+            transition: all 0.2s ease;
+        }
+
+        /* High visibility focus state for projectors */
+        input:focus { 
+            border-color: var(--primary-blue); 
+            background: white;
+            outline: none; 
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+        }
+
+        .login-submit {
+            width: 100%;
+            padding: 18px;
+            background: var(--teacher-color);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .login-submit:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.05);
+        }
+
+        /* Admin Specific Overrides */
+        .admin-theme .login-submit { 
+            background: var(--admin-color); 
+            box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4);
+        }
+        
+        .admin-theme input:focus { border-color: var(--admin-color); }
+    </style>
+</head>
+<body>
+
+<div class="login-card" id="loginCard">
+    <div class="icon-header" id="roleIcon">👨‍🏫</div>
+    <h2 id="portalTitle">Teacher Portal</h2>
+    
+    <div class="role-selector">
+        <button class="role-btn active" id="btnTeacher" onclick="setRole('teacher')">Teacher</button>
+        <button class="role-btn" id="btnAdmin" onclick="setRole('admin')">Admin</button>
+    </div>
+
+    <form onsubmit="return handleLogin(event)">
+        <div class="input-group">
+            <label>Username / ID</label>
+            <input type="text" id="username" placeholder="Enter your ID" required>
+        </div>
+        <div class="input-group">
+            <label>Password</label>
+            <input type="password" id="password" placeholder="Enter your password" required>
+        </div>
+        <button type="submit" class="login-submit" id="submitBtn">Launch Classroom</button>
+    </form>
+</div>
+
+<script>
+    function setRole(role) {
+        const title = document.getElementById('portalTitle');
+        const card = document.getElementById('loginCard');
+        const icon = document.getElementById('roleIcon');
+        const submitBtn = document.getElementById('submitBtn');
+        const btnTeacher = document.getElementById('btnTeacher');
+        const btnAdmin = document.getElementById('btnAdmin');
+        
+        if(role === 'admin') {
+            title.innerText = 'Admin Dashboard';
+            icon.innerText = '🛡️';
+            icon.style.transform = 'rotate(10deg)';
+            card.classList.add('admin-theme');
+            document.body.classList.add('admin-bg');
+            btnAdmin.classList.add('active');
+            btnTeacher.classList.remove('active');
+            submitBtn.innerText = 'Access System';
+        } else {
+            title.innerText = 'Teacher Portal';
+            icon.innerText = '👨‍🏫';
+            icon.style.transform = 'rotate(0deg)';
+            card.classList.remove('admin-theme');
+            document.body.classList.remove('admin-bg');
+            btnTeacher.classList.add('active');
+            btnAdmin.classList.remove('active');
+            submitBtn.innerText = 'Launch Classroom';
+        }
+    }
+
+    function handleLogin(e) {
+        e.preventDefault();
+        // Add your login logic here
+        alert("Logging in...");
+    }
+</script>
+
+</body>
+</html>

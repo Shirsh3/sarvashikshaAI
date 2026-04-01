@@ -39,7 +39,7 @@ public class Student {
         StringBuilder sb = new StringBuilder();
         sb.append("Student: ").append(name).append(", ").append(grade).append(". ");
         if (strength  != null && !strength.isBlank())  sb.append("Strength: ").append(strength).append(". ");
-        if (weakness  != null && !weakness.isBlank())  sb.append("Weakness: ").append(weakness).append(". ");
+        if (weakness  != null && !weakness.isBlank())  sb.append("Areas of Improvements: ").append(weakness).append(". ");
         if (notes     != null && !notes.isBlank())     sb.append("Note: ").append(notes).append(". ");
         return sb.toString();
     }

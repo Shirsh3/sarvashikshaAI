@@ -13,7 +13,8 @@ import java.io.InputStream;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Provides all content for the Morning Assembly page.
@@ -51,6 +52,8 @@ public class AssemblyService {
     private List<String> hindiQuotes;
     private List<String> englishQuotes;
     private Map<String, Object> assemblyContent;   // keys: anthem, pledge, prayer
+    private volatile Map<String, String> cachedLinks;
+    private volatile long cachedLinksAtMs = 0L;
 
     // ── Record returned to the controller ─────────────────────────────────────
     public record DailyThought(
@@ -112,35 +115,67 @@ public class AssemblyService {
      * Keys: "national anthem", "morning prayer", "pledge", "hindi prayer"
      */
     public Map<String, String> getAssemblyLinks(String teacherEmail) {
-        return assemblyConfigService.getLinks();
+        long now = System.currentTimeMillis();
+        if (cachedLinks != null && (now - cachedLinksAtMs) < 60_000L) {
+            return cachedLinks;
+        }
+        Map<String, String> fresh = assemblyConfigService.getLinks();
+        cachedLinks = fresh;
+        cachedLinksAtMs = now;
+        return fresh;
     }
 
+    private static final Pattern YOUTUBE_11 = Pattern.compile("([a-zA-Z0-9_-]{11})(?![a-zA-Z0-9_-])");
+
     /**
-     * Extracts the YouTube video ID from any YouTube URL format:
-     *   https://www.youtube.com/watch?v=XXXX
-     *   https://youtu.be/XXXX
-     *   https://youtube.com/shorts/XXXX
+     * Extracts the YouTube video ID from common URL formats (watch, embed, shorts, youtu.be, live).
      * Returns null if the URL is blank or unparseable.
      */
     public static String extractVideoId(String url) {
         if (url == null || url.isBlank()) return null;
         url = url.trim();
+        // /embed/VIDEOID and /v/VIDEOID
+        int embed = url.indexOf("/embed/");
+        if (embed >= 0) {
+            String id = url.substring(embed + 7).split("[?&#/]")[0];
+            if (isPlausibleId(id)) return id;
+        }
+        int slashV = url.indexOf("/v/");
+        if (slashV >= 0 && !url.contains("/watch")) {
+            String id = url.substring(slashV + 3).split("[?&#/]")[0];
+            if (isPlausibleId(id)) return id;
+        }
         // youtu.be short links
         if (url.contains("youtu.be/")) {
-            String id = url.substring(url.lastIndexOf("youtu.be/") + 9);
-            return id.split("[?&]")[0];
+            String id = url.substring(url.lastIndexOf("youtu.be/") + 9).split("[?&#/]")[0];
+            if (isPlausibleId(id)) return id;
         }
         // standard watch?v=
         if (url.contains("v=")) {
             String after = url.substring(url.indexOf("v=") + 2);
-            return after.split("[?&]")[0];
+            String id = after.split("[?&#/]")[0];
+            if (isPlausibleId(id)) return id;
         }
         // shorts
         if (url.contains("/shorts/")) {
             String after = url.substring(url.lastIndexOf("/shorts/") + 8);
-            return after.split("[?&]")[0];
+            String id = after.split("[?&#/]")[0];
+            if (isPlausibleId(id)) return id;
         }
+        // /live/VIDEOID
+        if (url.contains("/live/")) {
+            String after = url.substring(url.lastIndexOf("/live/") + 6);
+            String id = after.split("[?&#/]")[0];
+            if (isPlausibleId(id)) return id;
+        }
+        // Last resort: first 11-char YouTube-like id in the string
+        Matcher m = YOUTUBE_11.matcher(url);
+        if (m.find()) return m.group(1);
         return null;
+    }
+
+    private static boolean isPlausibleId(String id) {
+        return id != null && id.length() == 11 && id.matches("[a-zA-Z0-9_-]+");
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────

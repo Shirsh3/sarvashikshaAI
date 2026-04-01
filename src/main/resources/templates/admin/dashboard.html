@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Admin — Overview</title>
+    <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="app-layout admin-console">
+<div th:replace="~{fragments/projector-toggle :: projectorToggle}"></div>
+<div th:replace="~{fragments/shell-admin :: sidebar('dashboard')}"></div>
+<main class="layout-main">
+    <div class="layout-header">
+        <div>
+            <h2>School overview</h2>
+            <p class="layout-lead">Counts below use the date range and grade you choose. Empty grade means all grades.</p>
+        </div>
+        <div style="font-weight:700;">Welcome Admin</div>
+    </div>
+
+    <form class="admin-dashboard-filters" method="get" th:action="@{/admin}" id="adminDashFilterForm" style="display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-end;margin-bottom:1.5rem;padding:16px 18px;background:var(--surface);border:1px solid var(--border);border-radius:16px;">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+            <label for="adminDashRange" style="font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">Range</label>
+            <select id="adminDashRange" name="range" style="padding:8px 12px;border-radius:10px;border:1px solid var(--border);font-family:inherit;min-width:170px;">
+                <option value="today" th:selected="${filterRange == 'today'}">Today</option>
+                <option value="yesterday" th:selected="${filterRange == 'yesterday'}">Yesterday</option>
+                <option value="tomorrow" th:selected="${filterRange == 'tomorrow'}">Tomorrow</option>
+                <option value="week" th:selected="${filterRange == 'week'}">Last 1 week</option>
+                <option value="month" th:selected="${filterRange == 'month'}">Last 1 month</option>
+                <option value="custom" th:selected="${filterRange == 'custom'}">Custom</option>
+            </select>
+        </div>
+        <div id="filterDateFromWrap" style="display:flex;flex-direction:column;gap:4px;">
+            <label for="filterDateFrom" style="font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">From</label>
+            <input type="date" id="filterDateFrom" name="dateFrom" th:value="${filterDateFrom}" style="padding:8px 12px;border-radius:10px;border:1px solid var(--border);font-family:inherit;"/>
+        </div>
+        <div id="filterDateToWrap" style="display:flex;flex-direction:column;gap:4px;">
+            <label for="filterDateTo" style="font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">To</label>
+            <input type="date" id="filterDateTo" name="dateTo" th:value="${filterDateTo}" style="padding:8px 12px;border-radius:10px;border:1px solid var(--border);font-family:inherit;"/>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+            <label for="filterGrade" style="font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">Grade</label>
+            <select id="filterGrade" name="grade" style="padding:8px 12px;border-radius:10px;border:1px solid var(--border);font-family:inherit;min-width:140px;">
+                <option value="" th:selected="${filterGrade == null or filterGrade == ''}">All grades</option>
+                <option th:each="g : ${gradeOptions}" th:value="${g.code}" th:text="${g.label}" th:selected="${filterGrade != null and filterGrade == g.code}">Grade 5</option>
+            </select>
+        </div>
+        <button type="submit" class="btn-primary" style="padding:10px 18px;border-radius:12px;border:none;cursor:pointer;font-weight:700;">Apply</button>
+    </form>
+
+    <div class="admin-stats-row">
+        <div class="stat-card">
+            <h4>Active students</h4>
+            <div class="stat-value" th:text="${statStudents}">0</div>
+        </div>
+        <div class="stat-card" style="border-left-color:var(--success);">
+            <h4>Quizzes</h4>
+            <div class="stat-value" th:text="${statQuizzes}">0</div>
+        </div>
+        <div class="stat-card" style="border-left-color:var(--warning-orange);">
+            <h4>Question responses</h4>
+            <div class="stat-value" th:text="${statResponses}">0</div>
+        </div>
+        <div class="stat-card" style="border-left-color:#ec4899;">
+            <h4>Attendance records</h4>
+            <div class="stat-value" th:text="${statAttendanceRows}">0</div>
+        </div>
+    </div>
+
+    <div th:if="${(statStudents ?: 0) == 0 and (statQuizzes ?: 0) == 0 and (statResponses ?: 0) == 0 and (statAttendanceRows ?: 0) == 0}"
+         class="bank-section" style="margin-top:16px;">
+        <h3 style="margin-top:0;">No activity yet</h3>
+        <p style="color:var(--muted);margin:0;">
+            Start by adding students in <a th:href="@{/teacher/setup}">Teacher → Backoffice</a>, then take attendance or run a quiz.
+            This overview will automatically fill as data comes in.
+        </p>
+    </div>
+
+    <div class="charts-grid">
+        <div class="chart-box">
+            <h3 style="margin-top:0;">Attendance trend (% present)</h3>
+            <p id="attendanceChartEmpty" style="display:none;color:var(--text-muted);font-size:0.9rem;">No attendance rows in this range.</p>
+            <canvas id="attendanceChart" height="120"></canvas>
+        </div>
+        <div class="chart-box">
+            <h3 style="margin-top:0;">Activity mix</h3>
+            <p id="activityMixEmpty" style="display:none;color:var(--text-muted);font-size:0.9rem;margin:0 0 8px;">
+                No quiz answers, reading sessions, or attendance marks in this range.
+            </p>
+            <canvas id="subjectChart" height="120"></canvas>
+            <p id="activityMaxNote" style="margin:10px 0 0;color:#0f172a;font-weight:800;display:none;"></p>
+        </div>
+    </div>
+
+    <div class="bank-section">
+        <h3 style="margin-top:0;">Next steps</h3>
+        <p style="color:var(--muted);margin:0;">Use <a th:href="@{/admin/analytics}">Backoffice analytics</a> for metrics. The live roster is maintained under <a th:href="@{/teacher/setup}">Teacher → Backoffice</a>.</p>
+    </div>
+</main>
+<script th:inline="javascript">
+(function () {
+    const chartsUrl = /*[[@{/admin/api/dashboard/charts}]]*/ '/admin/api/dashboard/charts';
+    const params = new URLSearchParams(window.location.search);
+    const df = params.get('dateFrom') || '';
+    const dt = params.get('dateTo') || '';
+    const range = params.get('range') || '';
+    const gr = params.get('grade') || '';
+    const q = new URLSearchParams();
+    if (df) q.set('dateFrom', df);
+    if (dt) q.set('dateTo', dt);
+    if (range) q.set('range', range);
+    if (gr) q.set('grade', gr);
+
+    const ctxA = document.getElementById('attendanceChart');
+    const ctxS = document.getElementById('subjectChart');
+    const emptyA = document.getElementById('attendanceChartEmpty');
+    const emptyMix = document.getElementById('activityMixEmpty');
+
+    fetch(chartsUrl + (q.toString() ? '?' + q.toString() : ''))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            const trend = data.attendanceTrend || {};
+            const labels = trend.labels || [];
+            const values = trend.values || [];
+            if (emptyA) emptyA.style.display = labels.length ? 'none' : 'block';
+            if (ctxA && labels.length) {
+                new Chart(ctxA.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Present %',
+                            data: values,
+                            borderColor: '#6366f1',
+                            tension: 0.35,
+                            fill: true,
+                            backgroundColor: 'rgba(99, 102, 241, 0.08)'
+                        }]
+                    },
+                    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100 } } }
+                });
+            }
+            const mix = data.activityMix || {};
+            const mLabels = mix.labels || [];
+            const mVals = mix.values || [];
+            var mixTotal = 0;
+            for (var mi = 0; mi < mVals.length; mi++) {
+                mixTotal += Number(mVals[mi]) || 0;
+            }
+            var showMixChart = ctxS && mLabels.length && mixTotal > 0;
+            if (emptyMix) {
+                emptyMix.style.display = showMixChart ? 'none' : 'block';
+            }
+            if (ctxS) {
+                ctxS.style.display = showMixChart ? '' : 'none';
+            }
+            if (showMixChart) {
+                function shortLabel(s) {
+                    const v = String(s || '').trim().toLowerCase();
+                    if (!v) return '';
+                    if (v.includes('attend')) return 'Attendance';
+                    if (v.includes('read')) return 'Reading';
+                    if (v.includes('quiz')) return 'Quiz';
+                    return String(s || '').trim();
+                }
+                function roundRect(ctx, x, y, w, h, r) {
+                    const rr = Math.max(0, Math.min(r || 0, Math.min(w, h) / 2));
+                    ctx.beginPath();
+                    ctx.moveTo(x + rr, y);
+                    ctx.arcTo(x + w, y, x + w, y + h, rr);
+                    ctx.arcTo(x + w, y + h, x, y + h, rr);
+                    ctx.arcTo(x, y + h, x, y, rr);
+                    ctx.arcTo(x, y, x + w, y, rr);
+                    ctx.closePath();
+                }
+                const insideSliceLabels = {
+                    id: 'insideSliceLabels',
+                    afterDatasetDraw: function (chart, args) {
+                        const meta = chart.getDatasetMeta(args.index);
+                        if (!meta || !meta.data || !meta.data.length) return;
+                        const data = chart.data && chart.data.datasets && chart.data.datasets[args.index]
+                            ? chart.data.datasets[args.index].data
+                            : [];
+                        const labels = chart.data && chart.data.labels ? chart.data.labels : [];
+                        const total = (data || []).reduce(function (acc, v) { return acc + (Number(v) || 0); }, 0) || 1;
+
+                        const ctx = chart.ctx;
+                        ctx.save();
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+
+                        meta.data.forEach(function (arc, i) {
+                            const v = Number(data[i]) || 0;
+                            if (v <= 0) return;
+                            const pct = Math.round((v / total) * 100);
+                            // Hide labels for tiny slices
+                            if (pct < 6) return;
+
+                            const p = (typeof arc.getCenterPoint === 'function') ? arc.getCenterPoint() : arc.tooltipPosition();
+                            const label = shortLabel(labels[i] || '').replace(/\s+/g, ' ').trim();
+
+                            // Adaptive font sizing based on chart size
+                            const base = Math.max(11, Math.min(14, Math.floor(chart.width / 30)));
+                            const maxW = 110;
+                            const line1 = label.length > 16 ? (label.substring(0, 15) + '…') : label;
+                            const line2 = pct + '%';
+
+                            ctx.font = '800 ' + base + 'px Quicksand, Segoe UI, sans-serif';
+                            const w1 = Math.min(maxW, ctx.measureText(line1).width);
+                            ctx.font = '900 ' + (base + 2) + 'px Quicksand, Segoe UI, sans-serif';
+                            const w2 = Math.min(maxW, ctx.measureText(line2).width);
+                            const boxW = Math.min(maxW, Math.max(w1, w2)) + 14;
+                            const boxH = (base * 2) + 18;
+                            const x = p.x - boxW / 2;
+                            const y = p.y - boxH / 2;
+
+                            // soft pill background so black text is readable on any slice color
+                            ctx.fillStyle = 'rgba(255,255,255,0.78)';
+                            roundRect(ctx, x, y, boxW, boxH, 10);
+                            ctx.fill();
+                            ctx.strokeStyle = 'rgba(15,23,42,0.18)';
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+
+                            ctx.fillStyle = '#0f172a';
+                            ctx.font = '800 ' + base + 'px Quicksand, Segoe UI, sans-serif';
+                            ctx.fillText(line1, p.x, p.y - (base * 0.55), maxW);
+                            ctx.font = '900 ' + (base + 2) + 'px Quicksand, Segoe UI, sans-serif';
+                            ctx.fillText(line2, p.x, p.y + (base * 0.72), maxW);
+                        });
+                        ctx.restore();
+                    }
+                };
+
+                new Chart(ctxS.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: mLabels,
+                        datasets: [{
+                            data: mVals,
+                            backgroundColor: ['#6366f1', '#10b981', '#f59e0b']
+                        }]
+                    },
+                    options: {
+                        cutout: '65%',
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    },
+                    plugins: [insideSliceLabels]
+                });
+            }
+            var note = document.getElementById('activityMaxNote');
+            if (note && showMixChart && mLabels.length && mVals.length) {
+                var maxIdx = 0;
+                for (var i = 1; i < mVals.length; i++) {
+                    if ((Number(mVals[i]) || 0) > (Number(mVals[maxIdx]) || 0)) maxIdx = i;
+                }
+                note.textContent = 'Most activity: ' + String(mLabels[maxIdx] || '—') + ' (' + String(mVals[maxIdx] || 0) + ')';
+                note.style.display = '';
+            } else if (note) {
+                note.style.display = 'none';
+            }
+        })
+        .catch(function () {
+            if (emptyA) emptyA.style.display = 'block';
+            if (emptyMix) emptyMix.style.display = 'block';
+            if (ctxS) ctxS.style.display = 'none';
+        });
+})();
+(function adminDashRangeUi() {
+    var rangeInput = document.getElementById('adminDashRange');
+    var dateFromWrap = document.getElementById('filterDateFromWrap');
+    var dateToWrap = document.getElementById('filterDateToWrap');
+    if (!rangeInput) return;
+    function sync() {
+        var custom = rangeInput.value === 'custom';
+        if (dateFromWrap) dateFromWrap.style.display = custom ? '' : 'none';
+        if (dateToWrap) dateToWrap.style.display = custom ? '' : 'none';
+    }
+    rangeInput.addEventListener('change', sync);
+    sync();
+})();
+</script>
+</body>
+</html>

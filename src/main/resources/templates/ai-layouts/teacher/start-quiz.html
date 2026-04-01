@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Start Quiz | Sarvashiksha</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --admin-bg: #f8fafc;
+            --sidebar-dark: #0f172a;
+            --primary-indigo: #6366f1;
+            --secondary-purple: #8b5cf6;
+            --success-green: #10b981;
+            --accent-orange: #f87171;
+            --card-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            --soft-bg: #fff5f5;
+        }
+
+        body { font-family: 'Quicksand', sans-serif; margin: 0; background: var(--admin-bg); display: flex; height: 100vh; overflow: hidden; }
+
+        /* --- Sidebar --- */
+        .sidebar { width: 260px; background: var(--sidebar-dark); color: white; padding: 2rem 1rem; display: flex; flex-direction: column; }
+        .logo { font-size: 1.5rem; font-weight: 700; margin-bottom: 3rem; color: var(--primary-indigo); text-align: center; }
+        .nav-item { padding: 12px 20px; color: #94a3b8; text-decoration: none; border-radius: 12px; margin-bottom: 8px; font-weight: 600; cursor: pointer; }
+        .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+
+        /* --- Main Layout --- */
+        .content { flex: 1; padding: 2rem 4rem; overflow-y: auto; background-color: var(--soft-bg); }
+        
+        /* --- Selection Header --- */
+        .quiz-header { 
+            background: white; 
+            padding: 1.5rem 2rem; 
+            border-radius: 20px; 
+            box-shadow: var(--card-shadow); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            margin-bottom: 2rem;
+            border: 1px solid #f1f5f9;
+        }
+
+        .student-select-box { display: flex; flex-direction: column; gap: 5px; min-width: 250px; }
+        label { font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
+        select { 
+            padding: 10px; 
+            border-radius: 10px; 
+            border: 2px solid #e2e8f0; 
+            font-family: 'Quicksand'; 
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        /* --- Question Card (image_3b6421) --- */
+        .question-card { 
+            background: white; 
+            border-radius: 24px; 
+            padding: 2.5rem; 
+            box-shadow: var(--card-shadow);
+            position: relative;
+            border: 1px solid #f1f5f9;
+        }
+
+        .q-meta { color: var(--accent-orange); font-weight: 700; margin-bottom: 10px; display: block; }
+        .question-text { font-size: 1.4rem; font-weight: 700; color: #1e293b; margin-bottom: 2rem; line-height: 1.4; }
+
+        /* --- Options Grid --- */
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 2rem; }
+        .option-btn { 
+            background: white; 
+            border: 2px solid #e2e8f0; 
+            padding: 18px; 
+            border-radius: 15px; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            cursor: pointer; 
+            transition: 0.2s;
+            font-weight: 600;
+            font-family: inherit;
+            text-align: left;
+        }
+        .option-btn:hover { border-color: var(--primary-indigo); background: #f5f3ff; }
+        .radio-circle { width: 18px; height: 18px; border: 2px solid #cbd5e1; border-radius: 50%; flex-shrink: 0; }
+        
+        /* --- Voice Input Area --- */
+        .voice-section {
+            background: #f8fafc;
+            border: 2px dashed #e2e8f0;
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .btn-mic {
+            background: white;
+            border: 1px solid #e2e8f0;
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        /* --- Utility Buttons --- */
+        .action-row { display: flex; gap: 15px; margin-top: 1rem; }
+        .btn-utility {
+            flex: 1;
+            padding: 15px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .btn-reveal { background: #fee2e2; color: #ef4444; }
+        .btn-ai { background: #d8b4fe; color: #581c87; }
+        .btn-next { background: var(--primary-indigo); color: white; margin-top: 2rem; width: 100%; }
+
+        /* --- States --- */
+        .correct { border-color: var(--success-green) !important; background: #ecfdf5 !important; }
+        .correct .radio-circle { border-color: var(--success-green); background: var(--success-green); }
+    </style>
+</head>
+<body>
+
+<nav class="sidebar">
+    <div class="logo">🛡️ Admin Portal</div>
+    <a class="nav-item">📊 Overview</a>
+    <a class="nav-item active">📝 Start Quiz</a>
+    <a class="nav-item">📚 Learning Bank</a>
+    <div style="flex-grow: 1;"></div>
+    <a class="nav-item" style="color: #fb7185;">🔴 Logout</a>
+</nav>
+
+<main class="content">
+    <div class="quiz-header">
+        <div>
+            <h2 style="margin:0">Live Quiz Session</h2>
+            <p style="margin:5px 0 0; color:#64748b; font-size:0.9rem">Quiz ID: #105 • Topic: Photosynthesis</p>
+        </div>
+        <div class="student-select-box">
+            <label>Select Student to Answer</label>
+            <select>
+                <option>Choose a student...</option>
+                <option>Justin Mason</option>
+                <option>Sarah Chen</option>
+                <option>Arjun Mehta</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="question-card">
+        <span class="q-meta">QUESTION 1 • MCQ</span>
+        <div class="question-text">Which part of the plant is primarily responsible for photosynthesis?</div>
+
+        <div class="options-grid">
+            <button class="option-btn">
+                <div class="radio-circle"></div> <span>The Roots</span>
+            </button>
+            <button class="option-btn">
+                <div class="radio-circle"></div> <span>The Stem</span>
+            </button>
+            <button class="option-btn correct">
+                <div class="radio-circle"></div> <span>The Leaves</span>
+            </button>
+            <button class="option-btn">
+                <div class="radio-circle"></div> <span>The Flowers</span>
+            </button>
+        </div>
+
+        <div class="voice-section">
+            <label style="display:block; margin-bottom:10px">Voice Answer Mode</label>
+            <button class="btn-mic">🎤 Click to Speak Answer</button>
+            <p style="font-size:0.8rem; color:#94a3b8; margin-top:10px">"The student says the answer, AI detects selection"</p>
+        </div>
+
+        <div class="action-row">
+            <button class="btn-utility btn-reveal">👁️ Reveal Correct Answer</button>
+            <button class="btn-utility btn-ai">✨ AI Explanation</button>
+        </div>
+    </div>
+
+    <button class="btn-utility btn-next">Submit & Next Question ⏭️</button>
+</main>
+
+</body>
+</html>

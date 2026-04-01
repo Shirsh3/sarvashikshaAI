@@ -6,6 +6,7 @@ import com.sarvashikshaai.service.FileExtractionService;
 import com.sarvashikshaai.service.QuizService;
 import com.sarvashikshaai.service.StudentListService;
 import com.sarvashikshaai.service.UrlContentService;
+import com.sarvashikshaai.repository.GradeRefRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,14 +32,18 @@ public class QuizController {
     private final StudentListService        studentListService;
     private final FileExtractionService     extractor;
     private final UrlContentService         urlContentService;
+    private final GradeRefRepository        gradeRefRepository;
     private final ObjectMapper              objectMapper;
     private final OpenAIClient              openAIClient;
     // ── Teacher dashboard ─────────────────────────────────────────────────────
 
     @GetMapping("/teacher")
-    public String teacherDashboard(Model model) {
+    public String teacherDashboard(Model model,
+            @RequestParam(required = false) String grade) {
         model.addAttribute("quizList",     quizService.listAll());
         model.addAttribute("studentList",  studentListService.getStudents());
+        model.addAttribute("prefillGrade", grade != null ? grade.trim() : "");
+        model.addAttribute("gradeOptions", gradeRefRepository.findAllByOrderBySortOrderAsc());
         return "quiz/teacher";
     }
 
@@ -76,17 +81,27 @@ public class QuizController {
             @RequestPart(value = "file", required = false) MultipartFile file) {
 
         try {
+            boolean hasUrl = sourceUrl != null && !sourceUrl.trim().isEmpty();
+            boolean hasFile = file != null && !file.isEmpty();
+            if (hasUrl && hasFile) {
+                return ResponseEntity.ok(Map.of(
+                        "questionsJson", "[]",
+                        "error", "Choose either upload (screenshot/PDF) or NCERT URL — not both."
+                ));
+            }
+
+            boolean strictNcertSelectorUrl = isStrictNcertSelectorUrl(sourceUrl);
             int effectiveCount = Math.max(1, Math.min(count, 15));
             String topicText = topic != null ? topic.trim() : "";
             String gradeText = grade != null ? grade.trim() : "";
             String descText = description != null ? description.trim() : "";
             String classifyInput = (topicText + "\n" + gradeText + "\n" + descText).trim();
-            if (!classifyInput.isBlank()
-                    && openAIClient.classifyUserQuery(classifyInput) != OpenAIClient.QueryCategory.LEARNING) {
-                return ResponseEntity.ok(Map.of(
-                        "questionsJson", "[]",
-                        "error", "Only educational classroom content is allowed. Please ask a school-related topic."
-                ));
+            String safetyWarning = "";
+            if (!strictNcertSelectorUrl && !classifyInput.isBlank()) {
+                OpenAIClient.QueryCategory cat = openAIClient.classifyUserQuery(classifyInput);
+                if (cat == OpenAIClient.QueryCategory.UNSAFE) {
+                    safetyWarning = "Some content was filtered. Generated classroom-safe questions.";
+                }
             }
             String resolvedTypes = "MCQ"; // enforce MCQ-only quiz generation
             String sourceExtracted = "";
@@ -104,11 +119,17 @@ public class QuizController {
             String contextText = contextBuilder.toString();
 
             if (sourceUrl != null && !sourceUrl.isBlank()) {
-                String fromUrl = urlContentService.extractContextFromUrl(sourceUrl);
-                if (!fromUrl.isBlank()) {
-                    sourceExtracted = fromUrl;
-                    hasValidNcertSource = isNcertUrl(sourceUrl);
-                    contextText = contextText.isEmpty() ? fromUrl : contextText + "\n\nSource URL content:\n" + fromUrl;
+                // Requirement: only allow NCERT textbook selector URLs; otherwise error out.
+                if (!strictNcertSelectorUrl) {
+                    return ResponseEntity.ok(Map.of(
+                            "questionsJson", "[]",
+                            "error", "https://ncert.nic.in/textbook.php?ihsc1=2-12"
+                    ));
+                }
+                if (strictNcertSelectorUrl) {
+                    hasValidNcertSource = true;
+                    String urlHint = "NCERT Source URL:\n" + sourceUrl.trim();
+                    contextText = contextText.isEmpty() ? urlHint : contextText + "\n\n" + urlHint;
                 }
             }
 
@@ -190,12 +211,13 @@ public class QuizController {
                         "error", "Topic is required for strict quiz generation."
                 ));
             }
-            String json = quizService.generateQuestionsJson(topicText, contextText, effectiveCount, resolvedTypes, language, difficulty);
+            String json = quizService.generateQuestionsJson(topicText, contextText, effectiveCount, resolvedTypes, language, difficulty, gradeText);
             return ResponseEntity.ok(Map.of(
                     "questionsJson", json != null ? json : "[]",
                     "topic", topicText,
                     "grade", gradeText,
-                    "description", descText
+                    "description", descText,
+                    "warning", safetyWarning
             ));
         } catch (Exception e) {
             log.error("AI generate questions failed", e);
@@ -297,12 +319,19 @@ public class QuizController {
         }
     }
 
-    private boolean isNcertUrl(String sourceUrl) {
+    /**
+     * Allow only NCERT textbook selector URLs, e.g. {@code https://ncert.nic.in/textbook.php?leph1=2-8}.
+     */
+    private boolean isStrictNcertSelectorUrl(String sourceUrl) {
         if (sourceUrl == null || sourceUrl.isBlank()) return false;
+        String trimmed = sourceUrl.trim();
         try {
-            URI uri = URI.create(sourceUrl.trim());
-            String host = uri.getHost();
-            return host != null && host.toLowerCase().contains("ncert.nic.in");
+            URI uri = URI.create(trimmed);
+            if (uri.getScheme() == null || !"https".equalsIgnoreCase(uri.getScheme())) return false;
+            if (uri.getHost() == null || !"ncert.nic.in".equalsIgnoreCase(uri.getHost())) return false;
+            if (uri.getPath() == null || !"/textbook.php".equals(uri.getPath())) return false;
+            String q = uri.getQuery();
+            return q != null && !q.isBlank();
         } catch (Exception ignored) {
             return false;
         }

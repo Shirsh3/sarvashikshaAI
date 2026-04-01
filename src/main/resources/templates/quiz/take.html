@@ -7,12 +7,135 @@
     <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
     <link rel="stylesheet" th:href="@{/css/app.css}"/>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
     <style>
-        .quiz-wrap { max-width:1100px; margin:0 auto; padding:20px 20px 60px; }
+        .quiz-wrap { max-width:1100px; margin:0 auto; padding:4px 16px 48px; width:100%; box-sizing:border-box; }
+        body.quiz-take-page.quiz-score-view .quiz-wrap,
+        body.quiz-take-page:has(#scoreScreen.visible) .quiz-wrap {
+            max-width:100%;
+        }
 
-        .quiz-topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:10px; }
-        .quiz-title  { font-size:1.1rem; font-weight:800; color:var(--text); }
-        .quiz-meta   { font-size:0.78rem; color:var(--muted); }
+        .quiz-explain-details {
+            margin: 28px 0 24px;
+            border: 1px solid var(--surface2);
+            border-radius: 16px;
+            background: rgba(99, 102, 241, 0.06);
+            overflow: hidden;
+            display: none;
+        }
+        .quiz-explain-details > summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 14px 18px;
+            font-weight: 800;
+            font-size: 0.95rem;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            user-select: none;
+        }
+        .quiz-explain-details > summary::-webkit-details-marker { display: none; }
+        .quiz-explain-details > summary::before {
+            content: '▸';
+            display: inline-block;
+            transition: transform 0.2s;
+            color: var(--primary);
+            font-size: 0.85rem;
+        }
+        .quiz-explain-details[open] > summary::before { transform: rotate(90deg); }
+        .quiz-explain-details .quiz-explain-body {
+            padding: 12px 18px 18px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .quiz-explain-details .classroom-embed-shell { margin-top: 4px; }
+        /* Minimal explain: hide duplicate “ask a question” panel; show answer panel only */
+        body.quiz-take-page .quiz-explain-details .classroom-embed-layout { display: block; }
+        body.quiz-take-page .quiz-explain-details .classroom-embed-layout .panel:first-child {
+            display: none !important;
+        }
+        body.quiz-take-page .quiz-explain-details .classroom-embed-layout .panel:last-child {
+            width: 100%;
+            max-width: 100%;
+        }
+        .quiz-explain-intro {
+            font-size: 0.86rem;
+            color: var(--muted);
+            margin: 0 0 12px;
+            line-height: 1.45;
+        }
+        .quiz-explain-details.quiz-explain-gated .quiz-explain-body { pointer-events: none; opacity: 0.5; }
+        .quiz-explain-gate-banner {
+            display: none;
+            margin: 0 0 18px;
+            padding: 14px 16px;
+            border-radius: 14px;
+            border: 1px solid rgba(99, 102, 241, 0.35);
+            background: rgba(99, 102, 241, 0.09);
+            text-align: center;
+        }
+        .quiz-explain-gate-text { margin: 0 0 10px; font-size: 0.92rem; color: var(--text); font-weight: 600; }
+        .btn-quiz-explain-enable {
+            padding: 11px 22px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 800;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-quiz-explain-enable:hover { filter: brightness(1.06); }
+        .classroom-embed-layout.layout { max-width: 100%; }
+
+        .quiz-topbar {
+            display:grid; grid-template-columns: auto 1fr auto;
+            align-items:center; justify-content:space-between; margin-bottom:20px; gap:10px;
+            position:sticky; top:0; z-index:40;
+            background:#ffffff;
+            padding:14px 18px 16px;
+            margin-top:-4px;
+            border-radius:var(--radius-sm, 10px);
+            border:1px solid var(--surface2);
+            box-sizing:border-box;
+            box-shadow:none;
+        }
+        .quiz-topbar .quiz-back-link { justify-self: start; color:var(--muted); font-size:0.82rem; text-decoration:none; }
+        .quiz-topbar .quiz-back-link:hover { color: var(--text); }
+        .quiz-topbar .quiz-topbar-main { justify-self: center; text-align: center; }
+        .quiz-topbar .quiz-topbar-spacer { justify-self: end; }
+        .quiz-explain-fetch-status {
+            margin: 10px 0 12px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--muted);
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .quiz-explain-fetch-status .dots::after {
+            content: '...';
+        }
+        .quiz-explain-fetch-status.is-loading .dots::after {
+            display: inline-block;
+            overflow: hidden;
+            vertical-align: bottom;
+            width: 0;
+            animation: qdots 1.2s steps(4, end) infinite;
+        }
+        @keyframes qdots {
+            to { width: 1.2em; }
+        }
+        /* Inline explanation area (flat, no card shadows) */
+        .quiz-explain-details { border: 1px solid var(--border); border-radius: 14px; background: #fff; }
+        .quiz-explain-details > summary { padding: 12px 14px; font-weight: 900; cursor: pointer; }
+        .quiz-explain-body { padding: 0 14px 14px; }
+        .quiz-title  { font-size:1.2rem; font-weight:800; color:var(--text); }
+        .quiz-meta   { font-size:0.88rem; color:var(--muted); }
 
         /* Student picker */
         .student-bar { display:flex; align-items:center; gap:12px; margin-bottom:24px; flex-wrap:wrap; }
@@ -25,9 +148,23 @@
         .progress-label { font-size:0.75rem; color:var(--muted); margin-bottom:8px; }
 
         /* Question card */
-        .q-card { background:var(--surface); border:1px solid var(--surface2); border-radius:18px; padding:28px 24px; margin-bottom:20px; color:var(--text); }
+        .q-card {
+            position: relative;
+            overflow: hidden;
+            background: #ffffff;
+            border: 1px solid var(--surface2);
+            border-radius: var(--radius-sm, 10px);
+            padding: 24px 20px;
+            margin-bottom: 20px;
+            color: var(--text);
+            box-shadow: none;
+        }
+        .q-card.has-watermark {
+            background-color: var(--surface);
+            background-blend-mode: normal;
+        }
         .q-type-tag { font-size:0.85rem; text-transform:uppercase; letter-spacing:0.08em; font-weight:700; color:var(--primary); margin-bottom:10px; }
-        .q-text { font-size:1.05rem; font-weight:700; color:var(--text); line-height:1.5; margin-bottom:20px; }
+        .q-text { font-size:1.12rem; font-weight:700; color:var(--text); line-height:1.5; margin-bottom:20px; }
         .read-q-btn { background:none; border:none; color:#6366f1; font-size:0.78rem; cursor:pointer; padding:0; margin-bottom:16px; }
         .read-q-btn:hover { color:#818cf8; }
 
@@ -96,16 +233,27 @@
         .btn-next:disabled { opacity:0.4; cursor:not-allowed; }
 
         /* Score screen */
-        .score-screen { display:none; text-align:center; padding:24px 12px; }
+        .score-screen { display:none; text-align:center; padding:24px 12px; width:100%; max-width:100%; box-sizing:border-box; }
         .score-screen.visible { display:block; }
-        .score-circle { width:140px; height:140px; border-radius:50%; background:linear-gradient(135deg,#6366f1,#8b5cf6); display:flex; align-items:center; justify-content:center; margin:0 auto 24px; flex-direction:column; }
+        .score-circle { display:none; }
         .score-num { font-size:2.4rem; font-weight:900; color:white; }
         .score-pct { font-size:0.85rem; color:rgba(255,255,255,0.7); }
-        .score-title { font-size:1.5rem; font-weight:900; margin-bottom:8px; }
-        .score-sub { color:var(--muted); margin-bottom:28px; font-size:0.9rem; }
-        .review-table-wrap { margin:16px 0 24px; border:1px solid var(--surface2); border-radius:12px; overflow:auto; }
-        .review-table { width:100%; border-collapse:collapse; min-width:980px; text-align:left; font-size:0.88rem; }
-        .review-table th { padding:10px; color:var(--muted); border-bottom:1px solid var(--surface2); }
+        .score-title { font-size:1.1rem; font-weight:800; margin-bottom:10px; }
+        .score-sub { display:none; }
+        .review-table-wrap {
+            margin:16px auto 24px; border:1px solid var(--surface2); border-radius:12px;
+            overflow:auto; -webkit-overflow-scrolling: touch;
+            width:min(980px, 100%); max-width:100%; box-sizing:border-box;
+        }
+        .review-table { width:100%; border-collapse:separate; border-spacing:0; min-width:980px; text-align:left; font-size:0.88rem; }
+        .review-table thead th {
+            position:sticky; top:0; z-index:3;
+            background:var(--surface);
+            box-shadow:0 1px 0 var(--surface2);
+            padding:10px;
+            color:var(--muted);
+            border-bottom:1px solid var(--surface2);
+        }
         .review-table td { padding:10px; border-bottom:1px solid rgba(255,255,255,0.05); vertical-align:top; color:var(--text); }
         .review-table tr:last-child td { border-bottom:none; }
         .answer-ok { color:#34d399; font-weight:700; }
@@ -118,17 +266,84 @@
         .view-attempts { margin-top:32px; margin-bottom:24px; padding:20px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; }
         .view-attempts h4 { font-size:0.85rem; font-weight:700; color:var(--muted); margin-bottom:10px; }
         .view-attempts-msg { font-size:0.88rem; color:var(--muted); margin:0 0 10px 0; }
-        .view-attempts .attempt-table-wrap { margin-top:12px; border:1px solid var(--surface2); border-radius:10px; overflow:auto; max-height:56vh; }
+        .view-attempts .attempt-table-wrap {
+            margin-top:12px; border:1px solid var(--surface2); border-radius:10px;
+            overflow:auto; -webkit-overflow-scrolling: touch; max-height:56vh;
+            width:100%; max-width:100%; box-sizing:border-box;
+        }
+
+        /* Projector / classroom display — readable from the back row */
+        body.projector-friendly.quiz-take-page .quiz-title { font-size: clamp(1.35rem, 2.8vw, 1.85rem); font-weight: 700; }
+        body.projector-friendly.quiz-take-page .quiz-meta { font-size: clamp(0.88rem, 1.3vw, 1.05rem); }
+        body.projector-friendly.quiz-take-page .progress-label { font-size: clamp(0.88rem, 1.2vw, 1.05rem); margin-bottom: 10px; }
+        body.projector-friendly.quiz-take-page .progress-bar { height: 10px; border-radius: 6px; }
+        body.projector-friendly.quiz-take-page .q-type-tag { font-size: clamp(0.82rem, 1.2vw, 1rem); }
+        body.projector-friendly.quiz-take-page .q-text { font-size: clamp(1.3rem, 2.8vw, 1.85rem); line-height: 1.45; }
+        body.projector-friendly.quiz-take-page .read-q-btn { font-size: clamp(0.92rem, 1.4vw, 1.1rem); }
+        body.projector-friendly.quiz-take-page .mcq-opt { font-size: clamp(1.05rem, 2vw, 1.35rem); padding: 18px 22px; border-radius: 14px; }
+        body.projector-friendly.quiz-take-page .tf-btn { font-size: clamp(1.15rem, 2.2vw, 1.5rem); padding: 20px 24px; }
+        body.projector-friendly.quiz-take-page .short-input { font-size: clamp(1.1rem, 1.9vw, 1.35rem); padding: 16px 18px; }
+        body.projector-friendly.quiz-take-page .student-select { font-size: clamp(1rem, 1.6vw, 1.2rem); padding: 12px 16px; }
+        body.projector-friendly.quiz-take-page .voice-q-btn { font-size: clamp(1rem, 1.6vw, 1.2rem); padding: 12px 18px; }
+        body.projector-friendly.quiz-take-page .tool-btn { font-size: clamp(0.95rem, 1.5vw, 1.15rem); padding: 10px 16px; }
+        body.projector-friendly.quiz-take-page .btn-next { font-size: clamp(1.05rem, 1.8vw, 1.25rem); padding: 18px 22px; }
+        body.projector-friendly.quiz-take-page .answer-reveal { font-size: clamp(1rem, 1.6vw, 1.2rem); padding: 14px 16px; }
+        body.projector-friendly.quiz-take-page .score-circle { width: clamp(160px, 28vw, 220px); height: clamp(160px, 28vw, 220px); }
+        body.projector-friendly.quiz-take-page .score-num { font-size: clamp(2.6rem, 6vw, 4rem); }
+        body.projector-friendly.quiz-take-page .score-pct { font-size: clamp(1rem, 2vw, 1.25rem); }
+        body.projector-friendly.quiz-take-page .score-title { font-size: clamp(1.45rem, 3vw, 2rem); }
+        body.projector-friendly.quiz-take-page .score-sub { font-size: clamp(1.05rem, 2vw, 1.35rem); }
+        body.projector-friendly.quiz-take-page .review-table { font-size: clamp(0.98rem, 1.6vw, 1.2rem); }
+        body.projector-friendly.quiz-take-page .review-table thead th { padding: 14px 12px; font-weight: 700; }
+        body.projector-friendly.quiz-take-page .review-table td { padding: 14px 12px; }
+        body.projector-friendly.quiz-take-page .btn-done { font-size: clamp(1.05rem, 1.8vw, 1.25rem); padding: 16px 28px; }
+        body.projector-friendly.quiz-take-page .view-attempts h4 { font-size: clamp(1rem, 1.5vw, 1.15rem); }
+        body.projector-friendly.quiz-take-page .view-attempts-msg { font-size: clamp(0.95rem, 1.4vw, 1.1rem); }
+        body.projector-friendly.quiz-take-page .quiz-explain-details > summary { font-size: clamp(1rem, 1.6vw, 1.2rem); padding: 16px 20px; }
+
+        /* Mobile + touch: stack controls, avoid cramped TF row */
+        @media (max-width: 640px) {
+            .quiz-wrap { padding: 4px 10px 36px; }
+            .quiz-topbar {
+                position: relative;
+                padding: 12px 14px;
+                margin-top: 0;
+            }
+            .student-bar { flex-direction: column; align-items: stretch; gap: 10px; }
+            .student-select { min-width: 0; width: 100%; min-height: 44px; }
+            .tf-btns { flex-direction: column; gap: 10px; }
+            .tf-btn { min-height: 48px; width: 100%; }
+            .mcq-opt { min-height: 48px; padding: 14px 16px; }
+            .btn-next { min-height: 48px; padding: 16px; }
+            .voice-q-btn { min-height: 44px; width: 100%; justify-content: center; }
+            .question-tools { flex-direction: column; align-items: stretch; }
+            .tool-btn { min-height: 44px; text-align: center; }
+            .q-card { padding: 20px 16px; }
+            .review-table-wrap,
+            .view-attempts .attempt-table-wrap {
+                -webkit-overflow-scrolling: touch;
+                scroll-snap-type: none;
+            }
+            .review-table { min-width: 720px; font-size: 0.92rem; }
+        }
+        @media (max-width: 480px) {
+            .review-table { min-width: 560px; }
+            .quiz-title { font-size: 1rem; word-break: break-word; }
+        }
     </style>
 </head>
-<body>
+<body class="app-layout quiz-take-page">
 <div th:replace="~{fragments/loader :: loader}"></div>
-<div th:replace="~{fragments/tabs :: tabBar('quiz')}"></div>
+<div th:replace="~{fragments/shell-teacher :: sidebar('quiz')}"></div>
 
+<main class="layout-main">
 <div class="quiz-wrap">
     <!-- Quiz header -->
-    <div class="quiz-topbar">
-        <div>
+    <div class="quiz-topbar bank-section" style="margin-bottom:1.25rem;">
+        <a href="/quiz/teacher" class="quiz-back-link">
+            <i class="fa-solid fa-arrow-left"></i> Back
+        </a>
+        <div class="quiz-topbar-main">
             <div class="quiz-title" th:text="${quiz.title}"></div>
             <div class="quiz-meta">
                 <span th:if="${quiz.subject != null and !quiz.subject.isBlank()}" th:text="${quiz.subject + ' · '}"></span>
@@ -136,9 +351,7 @@
             </div>
                 <div class="quiz-meta" th:text="'Quiz ID: ' + ${quiz.id}" style="margin-top:6px;"></div>
         </div>
-        <a href="/quiz/teacher" style="color:var(--muted); font-size:0.82rem; text-decoration:none;">
-            <i class="fa-solid fa-arrow-left"></i> Back
-        </a>
+        <div class="quiz-topbar-spacer"></div>
     </div>
 
     <!-- Student name: full class roster (who is taking this attempt). Bottom section lists saved attempts only. -->
@@ -163,6 +376,8 @@
         <i class="fa-solid fa-id-card"></i> Student code is mandatory. Select a student with a valid code from the roster.
     </p>
 
+    <!-- AI explanation gate removed: explanations are always available from review -->
+
     <!-- Quiz player -->
     <div id="quizPlayer">
         <div class="progress-label" id="progressLabel">Question 1 of <span th:text="${quiz.questionCount}"></span></div>
@@ -184,6 +399,18 @@
         </div>
     </div>
 
+    <!-- AI explanation (inline, used from both quiz view + score/result view) -->
+    <details class="quiz-explain-details" id="quizExplainDetails" style="display:none;">
+        <summary>
+            <i class="fa-solid fa-lightbulb" style="color:var(--primary);"></i>
+            AI Explanation
+        </summary>
+        <div class="quiz-explain-body">
+            <div id="quizExplainFetchStatus" class="quiz-explain-fetch-status" style="display:none;"></div>
+            <div th:replace="~{fragments/classroom-embed :: embed}"></div>
+        </div>
+    </details>
+
     <!-- Score screen -->
     <div class="score-screen" id="scoreScreen">
         <div class="score-circle">
@@ -200,44 +427,31 @@
                     <th>Question</th>
                     <th>Your answer</th>
                     <th>Correct answer</th>
-                    <th>Explanation</th>
+                    <th>Explain via AI</th>
                     <th>Status</th>
                 </tr>
                 </thead>
                 <tbody id="reviewTableBody"></tbody>
             </table>
         </div>
-        <button type="button" class="btn-done" style="margin-bottom:12px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);" onclick="resetQuizForAnotherStudent()">
-            <i class="fa-solid fa-rotate-left"></i> Back to Quiz View
-        </button>
-        <button class="btn-done" onclick="location.href='/quiz/teacher'">
-            <i class="fa-solid fa-house"></i> Back to Quizzes
-        </button>
-    </div>
-
-    <!-- View question-wise responses -->
-    <div class="view-attempts" id="viewAttemptsSection">
-        <h4><i class="fa-solid fa-chart-column"></i> Question-wise responses</h4>
-        <p class="view-attempts-msg" id="viewAttemptsMsg">Loading…</p>
-        <div class="attempt-table-wrap" id="attemptTableWrap" style="display:none;">
-            <table class="review-table">
-                <thead>
-                <tr>
-                    <th>Question</th>
-                    <th>Student</th>
-                    <th>Student ID</th>
-                    <th>Answer</th>
-                    <th>Correct Answer</th>
-                    <th>Marks</th>
-                    <th>Explanation</th>
-                    <th>Status</th>
-                </tr>
-                </thead>
-                <tbody id="attemptTableBody"></tbody>
-            </table>
+        <div class="score-actions" style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin: 14px auto 0; width: min(980px, 100%); max-width: 100%; box-sizing: border-box;">
+            <button type="button" class="btn-done" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);" onclick="resetQuizForAnotherStudent()">
+                <i class="fa-solid fa-rotate-left"></i> Back to Quiz View
+            </button>
         </div>
     </div>
+
 </div>
+
+</main>
+<div th:replace="~{fragments/monitor-panel :: active}"></div>
+
+<script th:src="@{/js/scenes.js}"></script>
+<script th:src="@{/js/app.js}"></script>
+<script th:src="@{/js/voice.js}"></script>
+<script th:src="@{/js/mic.js}"></script>
+<script th:src="@{/js/monitor.js}"></script>
+<script th:src="@{/js/learning-grade-context.js}"></script>
 
 <script th:inline="javascript">
 const QUIZ_ID    = /*[[${quiz.id}]]*/   0;
@@ -261,13 +475,59 @@ const studentNameByKey = {};
 const studentCodeByKey = {};
 const questionAssignments = {};
 let quizLocked = !!QUIZ_LOCKED;
+window.quizExplainAiUnlocked = true;
+window.__quizAnswerRecording = false;
+
+window.isQuizExplainAiAllowed = function () {
+    return true;
+};
+
+function applyQuizExplainAiGate() {
+    const det = document.getElementById('quizExplainDetails');
+    if (det) det.classList.remove('quiz-explain-gated');
+    const mic = document.getElementById('micBtn');
+    const send = document.getElementById('sendBtn');
+    const topic = document.getElementById('topicInput');
+    if (mic) mic.disabled = false;
+    if (send) send.disabled = false;
+    if (topic) {
+        topic.disabled = false;
+        topic.placeholder = 'Your question will appear here — or type it directly...';
+    }
+}
+
+function syncQuizGradeToExplainForm() {
+    const g = (QUIZ_GRADE || '').toString().trim() || '5';
+    const pg = document.getElementById('inputPrepareGrade');
+    if (pg) pg.value = g;
+    if (typeof window.syncPrepareGradeToFormAndBanners === 'function') {
+        try { window.syncPrepareGradeToFormAndBanners(); } catch (e) { /* no-op */ }
+    }
+}
 
 window.onload = () => {
+    syncQuizGradeToExplainForm();
     renderQuestion(0);
     onStudentPickerChange();
-    if (quizLocked) lockQuizIfAlreadyAttempted();
-    loadQuizResults();
+    if (quizLocked) {
+        loadQuizResults().then(function () {
+            tryAutoExplainFromQuery();
+        });
+        return;
+    }
+    applyQuizExplainAiGate();
 };
+
+function tryAutoExplainFromQuery() {
+    try {
+        const p = new URLSearchParams(window.location.search || '');
+        const qid = (p.get('explainQuestionId') || '').trim();
+        if (!qid) return;
+        const found = questions.findIndex(q => q && String(q.id) === qid);
+        if (found < 0) return;
+        explainFromReview(found);
+    } catch (_) {}
+}
 function onStudentPickerChange() {
     const selectedName = getStudentNameValue();
     const selectedCode = getStudentCodeValue();
@@ -315,6 +575,7 @@ function resetQuizForAnotherStudent() {
     if (submittedKey) delete studentAttemptMap[submittedKey];
     lastSubmittedStudentName = null;
     document.getElementById('scoreScreen').classList.remove('visible');
+    document.body.classList.remove('quiz-score-view');
     document.getElementById('quizPlayer').style.display = '';
     currentIdx = 0;
     givenAnswers = [];
@@ -337,62 +598,69 @@ function resetQuizForAnotherStudent() {
     enforceStudentCodeMandatory();
 }
 async function loadQuizResults() {
-    const msgEl = document.getElementById('viewAttemptsMsg');
-    const tableWrap = document.getElementById('attemptTableWrap');
-    const tableBody = document.getElementById('attemptTableBody');
-    if (msgEl) { msgEl.textContent = 'Loading…'; msgEl.style.display = 'block'; }
-    if (tableWrap) tableWrap.style.display = 'none';
-    if (tableBody) tableBody.innerHTML = '';
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-        const r = await fetch('/quiz/' + QUIZ_ID + '/question-results', { signal: controller.signal });
-        clearTimeout(timeoutId);
-        const data = await r.json();
-        if (!r.ok) {
-            throw new Error(data && data.error ? data.error : 'Failed to load question responses.');
-        }
-        quizResults = Array.isArray(data.results) ? data.results : (Array.isArray(data) ? data : (data && typeof data === 'object' && !Array.isArray(data) ? [data] : []));
-        // Always show a message for empty results (prevents "blank" UI).
-        if (quizResults.length === 0) {
-            if (msgEl) { msgEl.textContent = 'No question responses yet.'; msgEl.style.display = 'block'; }
-            if (tableWrap) tableWrap.style.display = 'none';
-            return;
-        }
-        const rows = [];
-        quizResults.forEach((row) => {
-            const questionText = row.questionText != null ? row.questionText : '—';
-            const student = row.studentName != null ? row.studentName : 'Student';
-            const studentId = row.studentId != null ? row.studentId : '—';
-            const answer = row.answer != null && row.answer !== '' ? row.answer : '—';
-            const correctAnswer = row.correctAnswer != null && row.correctAnswer !== '' ? row.correctAnswer : '—';
-            const marksAwarded = row.marksAwarded != null ? row.marksAwarded : '—';
-            const explanation = row.explanation != null && row.explanation !== '' ? row.explanation : '—';
-            const isCorrect = !!row.isCorrect;
-            rows.push(
-                '<tr>'
-                + '<td>' + escapeHtml(questionText) + '</td>'
-                + '<td>' + escapeHtml(student) + '</td>'
-                + '<td>' + escapeHtml(studentId || '—') + '</td>'
-                + '<td>' + escapeHtml(answer) + '</td>'
-                + '<td>' + escapeHtml(correctAnswer) + '</td>'
-                + '<td>' + escapeHtml(String(marksAwarded)) + '</td>'
-                + '<td>' + escapeHtml(explanation) + '</td>'
-                + '<td class="' + (isCorrect ? 'answer-ok' : 'answer-bad') + '">' + (isCorrect ? 'Correct' : 'Wrong') + '</td>'
-                + '</tr>'
-            );
-        });
-        if (msgEl) {
-            msgEl.textContent = rows.length + ' response row(s) loaded.';
-            msgEl.style.display = 'block';
-        }
-        if (tableBody) tableBody.innerHTML = rows.join('');
-        if (tableWrap) tableWrap.style.display = '';
-    } catch (e) {
-        console.warn('Could not load quiz results', e);
-        if (msgEl) { msgEl.textContent = (e.name === 'AbortError' ? 'Request timed out.' : 'Could not load results. You can try again later.'); msgEl.style.display = 'block'; }
-        if (tableWrap) tableWrap.style.display = 'none';
+    quizLocked = true;
+    window.quizExplainAiUnlocked = true;
+    applyQuizExplainAiGate();
+    if (typeof window.stopMonitor === 'function') {
+        try { window.stopMonitor(); } catch (_) {}
     }
+
+    const quizPlayer = document.getElementById('quizPlayer');
+    if (quizPlayer) quizPlayer.style.display = 'none';
+    const screen = document.getElementById('scoreScreen');
+    if (screen) screen.classList.add('visible');
+    document.body.classList.add('quiz-score-view');
+
+    const lockWarn = document.getElementById('quizLockedWarn');
+    if (lockWarn) lockWarn.style.display = 'none';
+
+    try {
+        const res = await fetch('/quiz/' + QUIZ_ID + '/question-results', { method: 'GET' });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok || body.error) throw new Error(body.error || 'Could not load results.');
+
+        const results = Array.isArray(body.results) ? body.results : [];
+        let score = 0;
+        results.forEach(r => { if (r && r.isCorrect === true) score++; });
+        // One row per (question, student); denominator must match row count or % blows past 100%.
+        const total = results.length > 0 ? results.length : (questions.length || 0);
+
+        document.getElementById('scoreNum').textContent = '';
+        document.getElementById('scorePct').textContent = '';
+        document.getElementById('scoreTitle').textContent = 'Quiz complete';
+        document.getElementById('scoreSub').textContent = total > 0
+            ? (score + ' / ' + total + ' correct across all students shown below')
+            : '';
+
+        let reviewRows = '';
+        if (!results.length) {
+            reviewRows = `<tr><td colspan="6" style="color:var(--muted);padding:14px;">No saved responses found for this quiz yet.</td></tr>`;
+        } else {
+            results.forEach((r, idx) => {
+                const qText = r.questionText || '';
+                let qIdx = idx;
+                if (typeof questions.findIndex === 'function') {
+                    const found = questions.findIndex(q => q && q.id === r.questionId);
+                    if (found >= 0) qIdx = found;
+                }
+                reviewRows += `<tr>
+                    <td>${escapeHtml(r.studentName || r.studentId || 'Student')}</td>
+                    <td>${escapeHtml(qText)}</td>
+                    <td>${escapeHtml(r.answer || '—')}</td>
+                    <td>${escapeHtml(r.correctAnswer || '—')}</td>
+                    <td><button type="button" class="tool-btn" onclick="explainFromReview(${qIdx})"><i class="fa-solid fa-lightbulb"></i> Explain via AI</button></td>
+                    <td class="${r.isCorrect ? 'answer-ok' : 'answer-bad'}">${r.isCorrect ? 'Correct' : 'Wrong'}</td>
+                </tr>`;
+            });
+        }
+        document.getElementById('reviewTableBody').innerHTML = reviewRows;
+    } catch (e) {
+        document.getElementById('scoreTitle').textContent = 'Quiz complete';
+        document.getElementById('reviewTableBody').innerHTML =
+            `<tr><td colspan="6" style="color:#b91c1c;padding:14px;">${escapeHtml(e && e.message ? e.message : 'Could not load results.')}</td></tr>`;
+    }
+
+    updateStudentSelectorVisibility();
 }
 function escapeHtml(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
@@ -405,6 +673,24 @@ function renderQuestion(idx) {
     document.getElementById('qType').textContent = q.type === 'MCQ' ? 'Multiple Choice' : q.type === 'TF' ? 'True / False' : 'Short Answer';
     document.getElementById('qText').textContent = q.text;
     document.getElementById('nextBtn').textContent = idx === total - 1 ? 'Submit Quiz' : 'Next';
+
+    const card = document.getElementById('qCard');
+    if (card) {
+        const raw = (q.watermarkUrl || '').trim();
+        if (raw && /^https?:\/\//i.test(raw)) {
+            const safe = raw.replace(/\\/g, '').replace(/'/g, '');
+            card.style.backgroundImage =
+                'linear-gradient(to bottom, rgba(248,250,252,0.92), rgba(248,250,252,0.82)), url(' + safe + ')';
+            card.style.backgroundSize = 'cover';
+            card.style.backgroundPosition = 'center';
+            card.classList.add('has-watermark');
+        } else {
+            card.style.backgroundImage = '';
+            card.style.backgroundSize = '';
+            card.style.backgroundPosition = '';
+            card.classList.remove('has-watermark');
+        }
+    }
 
     const area = document.getElementById('qInputArea');
     let inputMarkup = '';
@@ -436,7 +722,7 @@ function renderQuestion(idx) {
     area.innerHTML = inputMarkup
         + `<div class="question-tools">
             <button type="button" class="tool-btn" onclick="revealCorrectAnswer(${idx})"><i class="fa-solid fa-eye"></i> Reveal Correct Answer</button>
-            <button type="button" class="tool-btn" onclick="explainInClassroom(${idx})"><i class="fa-solid fa-graduation-cap"></i> Explain in Classroom</button>
+            <button type="button" class="tool-btn" onclick="explainInClassroom(${idx})"><i class="fa-solid fa-lightbulb"></i> Explain answer</button>
            </div>
            <div id="answerRevealBox" class="answer-reveal" style="display:none;"></div>`;
 
@@ -465,9 +751,14 @@ function revealCorrectAnswer(idx) {
     box.innerHTML = '<strong>Correct Answer:</strong> ' + escapeHtml(correct);
 }
 
-function explainInClassroom(idx) {
-    const q = questions[idx];
-    if (!q) return;
+function truncateExplainLabel(text, max) {
+    const t = (text || '').replace(/\s+/g, ' ').trim();
+    if (!t) return 'Explain answer';
+    if (t.length <= max) return t;
+    return t.slice(0, max - 1) + '…';
+}
+
+function buildQuizExplainPayload(q) {
     const grade = (QUIZ_GRADE || '').toString().trim() || '5';
     const ncertUrl = extractNcertUrlFromText(QUIZ_DESCRIPTION || '');
     const sourceBlock = ncertUrl
@@ -476,30 +767,149 @@ NCERT Source URL: ${ncertUrl}
 
 `
         : '';
-    const prompt = `Explain this MCQ for a Grade ${grade} student.
+    const typeLabel = q.type === 'MCQ' ? 'multiple-choice question' : q.type === 'TF' ? 'true/false question' : 'short-answer question';
+    const prompt = `Explain this ${typeLabel} for a Grade ${grade} student.
 
 Question: ${q.text || ''}
 Correct Answer: ${q.answer || ''}
 
-${sourceBlock}\
-Return ONLY in this JSON format:
+${sourceBlock}Return ONLY in this JSON format:
 {
   "key_point": "1 short sentence",
   "simple_explanation": "2 short sentences max",
   "example": "1 simple relatable example"
 }`;
+    const label = truncateExplainLabel(q.text || '', 96);
+    return { prompt, label };
+}
 
+function openQuizExplainSection() {
+    const det = document.getElementById('quizExplainDetails');
+    if (det) {
+        det.style.display = 'block';
+        det.open = true;
+        det.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+function resetQuizExplainUi() {
+    var s = document.getElementById('quizExplainFetchStatus');
+    if (s) {
+        s.style.display = 'none';
+        s.textContent = '';
+        s.classList.remove('is-loading');
+    }
+    var det = document.getElementById('quizExplainDetails');
+    if (det) {
+        det.open = false;
+        det.style.display = 'none';
+    }
+    // Clear the per-question explain hook so it doesn't re-submit the old prompt
+    var input = document.getElementById('topicInput');
+    if (input && input.dataset) {
+        try { delete input.dataset.fullPrompt; } catch (_) {}
+    }
+    var qid = document.getElementById('inputSourceQuestionId');
+    if (qid) qid.value = '';
+    var iv = document.getElementById('inputIncludeVideo');
+    if (iv) iv.value = 'false';
+}
+
+window.onAiExplainLoaded = function () {
+    var s = document.getElementById('quizExplainFetchStatus');
+    if (!s) return;
+    s.style.display = 'none';
+    s.textContent = '';
+    s.classList.remove('is-loading');
+    openQuizExplainSection();
+};
+
+window.onAiExplainFailed = function () {
+    var s = document.getElementById('quizExplainFetchStatus');
+    if (!s) return;
+    s.style.display = '';
+    s.textContent = 'Unable to fetch AI explanation.';
+    s.classList.remove('is-loading');
+    // Keep the explain panel hidden until we have content.
+    var det = document.getElementById('quizExplainDetails');
+    if (det) { det.open = false; det.style.display = 'none'; }
+};
+
+document.addEventListener('keydown', function (e) {
+    // Esc closes explanation (if open)
+    if (e.key === 'Escape') {
+        const det = document.getElementById('quizExplainDetails');
+        if (det) { det.open = false; }
+        return;
+    }
+    // Ctrl+M toggles monitor
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'm' || e.key === 'M')) {
+        if (typeof window.toggleMonitor === 'function') {
+            e.preventDefault();
+            try { window.toggleMonitor(); } catch (_) {}
+        }
+        return;
+    }
+    // Ctrl+E triggers first Explain via AI on score screen
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'e' || e.key === 'E')) {
+        const score = document.getElementById('scoreScreen');
+        if (score && score.classList.contains('visible')) {
+            const btn = document.querySelector('#reviewTableBody button.tool-btn');
+            if (btn) {
+                e.preventDefault();
+                btn.click();
+            }
+        }
+    }
+});
+
+function explainInClassroom(idx) {
+    const q = questions[idx];
+    if (!q) return false;
+    resetQuizExplainUi();
+    var s = document.getElementById('quizExplainFetchStatus');
+    if (s) {
+        s.style.display = '';
+        s.innerHTML = 'Loading explanation<span class="dots"></span>';
+        s.classList.add('is-loading');
+    }
+    var det = document.getElementById('quizExplainDetails');
+    if (det) { det.open = false; det.style.display = 'none'; }
+    // Make this request faster by skipping video/gif enrichment on the server
+    var mode = document.getElementById('inputClassSessionMode');
+    if (mode) mode.value = 'quiz';
+    var qid = document.getElementById('inputSourceQuestionId');
+    if (qid) qid.value = String(q.id || '');
+    var iv = document.getElementById('inputIncludeVideo');
+    if (iv) iv.value = 'false';
+    const { prompt, label } = buildQuizExplainPayload(q);
+    const input = document.getElementById('topicInput');
+    syncQuizGradeToExplainForm();
+    if (input) {
+        input.value = label;
+        input.dataset.fullPrompt = prompt;
+        window.CLASSROOM_POST_TOPIC_LABEL = label;
+    }
     try {
-        localStorage.setItem('classroom_prefill_prompt', prompt);
-        localStorage.setItem('classroom_auto_explain', '1');
         localStorage.setItem('classroom_selected_context', JSON.stringify({
             question: q.text || '',
             correctAnswer: q.answer || '',
             grade: (QUIZ_GRADE || '').toString().trim() || '5',
-            ncertUrl: ncertUrl || ''
+            ncertUrl: extractNcertUrlFromText(QUIZ_DESCRIPTION || '') || ''
         }));
     } catch (_) {}
-    window.open('/?selectedExplain=1', '_blank');
+    if (typeof submitForm === 'function') {
+        // Do not auto-speak on load; teacher controls Read Aloud manually.
+        window.__quizExplainAutoTts = false;
+        setTimeout(function () { submitForm(); }, 150);
+    }
+    return true;
+}
+
+function explainFromReview(questionIndex) {
+    const idx = typeof questionIndex === 'number' ? questionIndex : parseInt(questionIndex, 10);
+    if (!questions[idx]) return;
+    explainInClassroom(idx);
 }
 
 function extractNcertUrlFromText(text) {
@@ -552,6 +962,8 @@ function restoreAnswer(q, val) {
 }
 
 function nextQuestion() {
+    // Hide any explanation UI while moving through questions
+    resetQuizExplainUi();
     if (!enforceStudentCodeMandatory()) {
         alert('Student code is required.');
         return;
@@ -599,8 +1011,28 @@ function nextQuestion() {
     }
 }
 
+function buildQuestionReadAloudText() {
+    const q = questions[currentIdx];
+    const stem = (q && q.text) ? String(q.text).trim() : (document.getElementById('qText')?.textContent || '').trim();
+    if (!q) return stem;
+    if (q.type === 'MCQ' && Array.isArray(q.options) && q.options.length) {
+        const opts = q.options.map(function (o, i) {
+            const label = i < 26 ? String.fromCharCode(65 + i) : String(i + 1);
+            return label + ', ' + String(o).trim();
+        });
+        return stem + '. Your options are: ' + opts.join('. ') + '.';
+    }
+    if (q.type === 'TF') {
+        return stem + '. Choose True or False.';
+    }
+    if (q.type === 'SHORT') {
+        return stem + '. Type your answer in the box.';
+    }
+    return stem;
+}
+
 function readQuestion() {
-    const text = document.getElementById('qText').textContent;
+    const text = buildQuestionReadAloudText();
     if (questionSpeechLoopEnabled) {
         stopQuestionSpeech();
         setQuestionReadButtonState(false);
@@ -608,19 +1040,26 @@ function readQuestion() {
     }
     questionSpeechLoopEnabled = true;
     setQuestionReadButtonState(true);
-    speakQuestionLoop(text);
+    speakQuestionOnce(text);
 }
 
-function speakQuestionLoop(text) {
+/** One pass only — avoids hearing the same question/options repeat in a loop. */
+function speakQuestionOnce(text) {
     if (!questionSpeechLoopEnabled) return;
+    if (window.monitorIsPriorityActive && window.monitorIsPriorityActive()) {
+        setTimeout(function () {
+            speakQuestionOnce(text);
+        }, 900);
+        return;
+    }
     const u = new SpeechSynthesisUtterance(text);
     currentQuestionUtterance = u;
     u.lang = 'en-IN';
     u.rate = 0.88;
     u.onend = () => {
-        if (questionSpeechLoopEnabled) {
-            setTimeout(() => speakQuestionLoop(text), 120);
-        }
+        questionSpeechLoopEnabled = false;
+        currentQuestionUtterance = null;
+        setQuestionReadButtonState(false);
     };
     u.onerror = () => {
         stopQuestionSpeech();
@@ -671,8 +1110,9 @@ function toStudentKey(name) {
     return (name || '').trim().toLowerCase();
 }
 
-function lockQuizIfAlreadyAttempted() {
+function lockQuizIfAlreadyAttempted(keepScoreVisible) {
     quizLocked = true;
+    window.quizExplainAiUnlocked = false;
     const quizPlayer = document.getElementById('quizPlayer');
     const scoreScreen = document.getElementById('scoreScreen');
     const lockWarn = document.getElementById('quizLockedWarn');
@@ -680,7 +1120,8 @@ function lockQuizIfAlreadyAttempted() {
     const roster = document.getElementById('studentRosterSelect');
     const input = document.getElementById('studentNameInput');
     if (quizPlayer) quizPlayer.style.display = 'none';
-    if (scoreScreen) scoreScreen.classList.remove('visible');
+    if (scoreScreen && !keepScoreVisible) scoreScreen.classList.remove('visible');
+    if (!keepScoreVisible) document.body.classList.remove('quiz-score-view');
     if (lockWarn) lockWarn.style.display = 'block';
     if (nextBtn) {
         nextBtn.disabled = true;
@@ -690,6 +1131,7 @@ function lockQuizIfAlreadyAttempted() {
     if (input) input.value = '';
     activeStudentKey = '';
     updateStudentSelectorVisibility();
+    applyQuizExplainAiGate();
 }
 
 function updateStudentSelectorVisibility() {
@@ -749,6 +1191,7 @@ function startShortAnswerVoice(idx) {
     rec.lang = 'en-IN';
     rec.interimResults = true;
     rec.continuous = false;
+    rec.onstart = function() { window.__quizAnswerRecording = true; };
     rec.onresult = function(e) {
         let t = '';
         for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -768,7 +1211,8 @@ function startShortAnswerVoice(idx) {
             if (v && sName && sCode) questionAssignments[idx] = { studentName: sName, studentCode: sCode };
         }
     };
-    rec.onerror = function() {};
+    rec.onerror = function() { window.__quizAnswerRecording = false; };
+    rec.onend = function() { window.__quizAnswerRecording = false; };
     try { rec.start(); } catch (err) { console.warn(err); }
 }
 
@@ -849,6 +1293,7 @@ function startMcqAnswerVoice(idx) {
     rec.interimResults = true;
     rec.continuous = false;
 
+    rec.onstart = function() { window.__quizAnswerRecording = true; };
     rec.onresult = function(e) {
         let t = '';
         for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -859,7 +1304,8 @@ function startMcqAnswerVoice(idx) {
             setMcqAnswer(chosen);
         }
     };
-    rec.onerror = function() {};
+    rec.onerror = function() { window.__quizAnswerRecording = false; };
+    rec.onend = function() { window.__quizAnswerRecording = false; };
     try { rec.start(); } catch (err) { console.warn(err); }
 }
 
@@ -872,6 +1318,7 @@ function startTfAnswerVoice(idx) {
     rec.interimResults = true;
     rec.continuous = false;
 
+    rec.onstart = function() { window.__quizAnswerRecording = true; };
     rec.onresult = function(e) {
         let t = '';
         for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -895,7 +1342,8 @@ function startTfAnswerVoice(idx) {
         if (isTrue && !isFalse) setTfAnswer('True');
         else if (isFalse && !isTrue) setTfAnswer('False');
     };
-    rec.onerror = function() {};
+    rec.onerror = function() { window.__quizAnswerRecording = false; };
+    rec.onend = function() { window.__quizAnswerRecording = false; };
     try { rec.start(); } catch (err) { console.warn(err); }
 }
 
@@ -994,8 +1442,8 @@ async function submitQuiz() {
             percent: questions.length > 0 ? Math.round((score * 100) / questions.length) : 0,
             answersJson: JSON.stringify(reviewRows)
         }, studentName);
-        lockQuizIfAlreadyAttempted();
-        await loadQuizResults();
+        lockQuizIfAlreadyAttempted(true);
+        // single table shown in score view
     } catch(e) {
         alert(e && e.message ? e.message : 'Submit failed. Please try again.');
         nextBtn.disabled = false;
@@ -1006,19 +1454,26 @@ async function submitQuiz() {
 function showScore(d, studentName) {
     stopQuestionSpeech();
     lastSubmittedStudentName = (studentName || '').trim() || null;
+    quizLocked = true;
+    window.quizExplainAiUnlocked = true;
+    if (typeof window.stopMonitor === 'function') {
+        try { window.stopMonitor(); } catch (_) {}
+    }
     document.getElementById('quizPlayer').style.display = 'none';
     const screen = document.getElementById('scoreScreen');
     screen.classList.add('visible');
+    document.body.classList.add('quiz-score-view');
     onStudentPickerChange();
     updateStudentSelectorVisibility();
+    applyQuizExplainAiGate();
 
     const pct   = d.percent || 0;
     const score = d.score || 0;
     const total = d.total || questions.length;
-    document.getElementById('scoreNum').textContent   = score + '/' + total;
-    document.getElementById('scorePct').textContent   = pct + '%';
-    document.getElementById('scoreTitle').textContent = pct >= 80 ? 'Excellent!' : pct >= 50 ? 'Good Effort!' : 'Keep Practising!';
-    document.getElementById('scoreSub').textContent = studentName + ' — Quiz Complete';
+    document.getElementById('scoreNum').textContent   = '';
+    document.getElementById('scorePct').textContent   = '';
+    document.getElementById('scoreTitle').textContent = 'Quiz complete';
+    document.getElementById('scoreSub').textContent = '';
 
     // Review table
     let reviewRows = '';
@@ -1026,12 +1481,13 @@ function showScore(d, studentName) {
     annotated.forEach((a) => {
         const qText = questions[a.questionIndex]?.text || a.text || '';
         const rowStudent = (a.answeredBy || studentName || 'Student');
+        const qIdx = typeof a.questionIndex === 'number' ? a.questionIndex : 0;
         reviewRows += `<tr>
             <td>${escapeHtml(rowStudent)}</td>
             <td>${escapeHtml(qText)}</td>
             <td>${escapeHtml(a.given || '—')}</td>
             <td>${escapeHtml(a.correct || '—')}</td>
-            <td>${escapeHtml(a.explanation || '')}</td>
+            <td><button type="button" class="tool-btn" onclick="explainFromReview(${qIdx})"><i class="fa-solid fa-lightbulb"></i> Explain via AI</button></td>
             <td class="${a.isRight ? 'answer-ok' : 'answer-bad'}">${a.isRight ? 'Correct' : 'Wrong'}</td>
         </tr>`;
     });
@@ -1044,6 +1500,19 @@ function esc(s) { return (s||'').replace(/'/g,"\\'"); }
 window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 window.speechSynthesis.getVoices();
 window.addEventListener('beforeunload', stopQuestionSpeech);
+window.addEventListener('beforeunload', function (e) {
+    if (!window.__quizAnswerRecording) return;
+    e.preventDefault();
+    e.returnValue = '';
+});
+document.addEventListener('click', function (e) {
+    const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a) return;
+    if (!window.__quizAnswerRecording) return;
+    if (!confirm('Recording is in progress. Leaving will stop it.')) {
+        e.preventDefault();
+    }
+});
 </script>
 </body>
 </html>

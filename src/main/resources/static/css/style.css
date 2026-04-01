@@ -1,0 +1,2256 @@
+/* SarvaSikshaAI Global Design System — Modern Educational / Soft-UI */
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    /* Brand */
+    --primary: #3b82f6;
+    --primary-dark: #1d4ed8;
+    --primary-soft: #eff6ff;
+    --secondary: #6366f1;
+
+    /* Semantic */
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --gold: #fbbf24;
+
+    /* Surfaces */
+    --sidebar-bg: #0f172a;
+    --bg-main: #f8fafc;
+    --surface: #ffffff;
+    --border: #e2e8f0;
+    --surface-elevated: #f1f5f9;
+
+    /* Text */
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --text-on-dark: #f8fafc;
+
+    /* Layout */
+    --sidebar-width: 260px;
+    /* Fixed left strip: vertical rule + hamburger (mobile) */
+    --menu-rail-width: 44px;
+    --layout-content-max: 1120px;
+    --radius-lg: 24px;
+    --radius-md: 16px;
+    --radius-sm: 10px;
+    --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+
+    /* Legacy aliases (templates / older CSS) */
+    --text: var(--text-main);
+    --muted: var(--text-muted);
+    --bg: var(--bg-main);
+    --surface2: var(--border);
+    --light: var(--primary-soft);
+    --font-kid: 'Quicksand', 'Segoe UI', sans-serif;
+    --font-heading: 'Quicksand', 'Segoe UI', sans-serif;
+    --font-brand: 'Inter', 'Poppins', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --dark: var(--sidebar-bg);
+
+    /* Font weights (aligned with admin dashboard & Quicksand) */
+    --fw-normal: 400;
+    --fw-semibold: 600;
+    --fw-bold: 700;
+
+    /* Projector / back-row readability (clamp scales with viewport) */
+    --fs-p-display: clamp(1.5rem, 3.2vw, 2.15rem);
+    --fs-p-title: clamp(1.3rem, 2.6vw, 1.85rem);
+    --fs-p-body: clamp(1.1rem, 2vw, 1.4rem);
+    --fs-p-ui: clamp(1rem, 1.6vw, 1.2rem);
+}
+
+/* ── Brand lockup (sidebar / header logo) ─────────────────────────────── */
+.brand-lockup {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 8px;
+    text-decoration: none;
+    user-select: none;
+}
+.brand-lockup .brand-mark {
+    height: 52px;
+    width: auto;
+    max-width: 260px;
+    display: block;
+    object-fit: contain;
+    opacity: 0.96;
+    image-rendering: -webkit-optimize-contrast;
+    filter: saturate(1) contrast(1.06) drop-shadow(0 10px 22px rgba(15,23,42,0.16));
+}
+.brand-lockup .brand-wordmark {
+    font-family: var(--font-brand);
+    font-size: 1.02rem;
+    font-weight: 560;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    color: var(--text-on-dark);
+}
+.brand-lockup .brand-ai {
+    font-weight: 750;
+    color: #93c5fd; /* calm blue accent on dark */
+    margin-left: 1px;
+}
+.brand-lockup:focus-visible {
+    outline: 3px solid rgba(59, 130, 246, 0.35);
+    outline-offset: 3px;
+    border-radius: 10px;
+}
+@media (max-width: 520px) {
+    .brand-lockup .brand-wordmark { display: none; }
+    .brand-lockup { gap: 0; padding: 10px 4px; }
+}
+
+* {
+    box-sizing: border-box;
+}
+
+/* Slightly larger root than browser default 16px — reduces “zoomed out” UI */
+html {
+    font-size: 106.25%;
+}
+
+/* Admin overview / analytics / roster: normal density (class on body in admin templates) */
+html:has(body.admin-console) {
+    font-size: 100%;
+}
+
+body.admin-console .layout-header h2,
+body.admin-console .layout-header h1 {
+    font-size: 1.2rem;
+}
+
+body.admin-console .layout-lead {
+    font-size: 0.875rem;
+}
+
+body.admin-console .stat-card .stat-value {
+    font-size: 1.45rem;
+}
+
+body.admin-console .stat-card h4 {
+    font-size: 0.8rem;
+}
+
+body {
+    font-family: 'Quicksand', 'Segoe UI', sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* App shell: white canvas, flat sections (no floating card chrome) */
+body.app-layout {
+    background: #ffffff;
+}
+
+body.app-layout > .layout-main {
+    background: #ffffff;
+}
+
+body.app-layout .top-nav {
+    box-shadow: none;
+    border-bottom: 1px solid var(--border);
+    background: #ffffff;
+}
+
+body.app-layout .panel {
+    box-shadow: none;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: #ffffff;
+}
+
+body.app-layout .card,
+body.app-layout .admin-card {
+    box-shadow: none;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: #ffffff;
+}
+
+/* Reading: stacked sections / list rows — not boxed cards */
+body.reading-bg .news-list .news-card {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 1.35rem 0;
+    border-top: 1px solid var(--border);
+}
+body.reading-bg .news-list .news-card:first-child {
+    border-top: none;
+    padding-top: 0;
+}
+
+body.reading-bg .controls-bar {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 0 14px;
+}
+
+body.reading-bg .teacher-reading-card {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0 0 1.25rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border);
+}
+
+body.reading-bg .student-oral-panel {
+    background: transparent;
+    border: none;
+    border-left: none;
+    border-radius: 0;
+    padding: 0 0 1.25rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+body.app-layout .stat-card {
+    box-shadow: none;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    border-left: 5px solid var(--primary);
+}
+
+body.app-layout .chart-box {
+    box-shadow: none;
+    border-radius: var(--radius-sm);
+}
+
+body.app-layout .lb-podium-card {
+    /* Subtle elevation (not heavy "card" chrome) */
+    box-shadow: var(--shadow-sm);
+    border-radius: var(--radius-sm);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+}
+
+body.app-layout .lb-podium-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+    border-color: var(--primary);
+}
+
+body.app-layout .learning-hub {
+    box-shadow: none;
+    border-radius: var(--radius-sm);
+}
+
+body.app-layout .learning-hub-card:hover {
+    box-shadow: none;
+}
+
+body.app-layout.assembly-page {
+    background: #ffffff;
+}
+
+body.app-layout .assembly-main {
+    background: #ffffff;
+}
+
+body.app-layout.assembly-page .thought-card {
+    background: #ffffff;
+    box-shadow: none;
+    border-radius: var(--radius-sm);
+}
+
+body.teacher-students-page .card {
+    box-shadow: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+body.app-layout .admin-analytics .stat-box {
+    box-shadow: none;
+    border-radius: var(--radius-sm);
+}
+
+body.app-layout .admin-analytics .chart-card {
+    box-shadow: none;
+    border-radius: var(--radius-sm);
+}
+
+body.app-layout .admin-analytics .student-search {
+    box-shadow: none;
+}
+
+body.app-layout .dash-class-mode-card {
+    box-shadow: none;
+    border-radius: var(--radius-sm);
+}
+
+body.app-layout .dash-class-mode-seg-btn.is-active {
+    box-shadow: none;
+}
+
+/* ── Global loader ─────────────────────────────────────── */
+#global-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.42);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    pointer-events: auto;
+    transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+
+/* Admin console: show loader but do not block UI interactions */
+body.admin-console #global-loader {
+    pointer-events: none;
+}
+#global-loader.hide {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+#global-loader .loader-spinner {
+    width: 56px;
+    height: 56px;
+    border: 4px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: global-spin 0.8s linear infinite;
+    box-shadow: 0 4px 28px rgba(0, 0, 0, 0.25);
+}
+#global-loader .loader-logo {
+    position: absolute;
+    top: 22%;
+    height: 54px;
+    width: auto;
+    max-width: min(340px, 82vw);
+    object-fit: contain;
+    opacity: 0.98;
+    filter: drop-shadow(0 14px 30px rgba(0,0,0,0.28));
+}
+#global-loader .loader-text {
+    position: absolute;
+    bottom: 28%;
+    font-family: 'Quicksand', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+@keyframes global-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ── Core components ───────────────────────────────────── */
+.card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    padding: 1.5rem;
+    border: 1px solid var(--border);
+}
+
+.sidebar {
+    width: var(--sidebar-width);
+    background: var(--sidebar-bg);
+    color: var(--text-on-dark);
+    height: 100vh;
+    padding: 2rem 1.2rem;
+}
+
+.main-content {
+    margin-left: var(--sidebar-width);
+    padding: 2.5rem;
+    min-height: 100vh;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+    padding: 12px 24px;
+    border-radius: var(--radius-md);
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+.input-field {
+    width: 100%;
+    padding: 14px 18px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: 1rem;
+    background: var(--surface);
+    color: var(--text-main);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px var(--primary-soft);
+}
+
+/* Tables (global baseline) */
+table { width: 100%; border-collapse: collapse; }
+th {
+    background: var(--surface-elevated);
+    padding: 15px;
+    text-align: left;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+td {
+    padding: 15px;
+    border-bottom: 1px solid var(--border);
+}
+
+/* ── App shell: menu rail + sidebar + main ─────────────── */
+/* Rail: in-flow on desktop (hamburger always visible); fixed on small screens */
+.app-menu-rail {
+    display: flex;
+    position: relative;
+    flex: 0 0 var(--menu-rail-width);
+    width: var(--menu-rail-width);
+    align-self: stretch;
+    min-height: 100vh;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 0 14px;
+    box-sizing: border-box;
+    background: #ffffff;
+    border-right: 1px solid var(--border);
+    pointer-events: auto;
+    z-index: 5;
+}
+
+.app-menu-rail-line {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    border-radius: 0 2px 2px 0;
+    background: linear-gradient(180deg, var(--primary) 0%, var(--secondary) 100%);
+    opacity: 0.9;
+    pointer-events: none;
+}
+
+.sidebar-mobile-toggle {
+    display: flex;
+    position: relative;
+    top: auto;
+    left: auto;
+    z-index: 1;
+    width: 36px;
+    height: 36px;
+    margin-top: 2px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+    font-size: 1.15rem;
+    line-height: 1;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    color: var(--text-main);
+    flex-shrink: 0;
+}
+
+/* Keep hamburger clickable above iframes/embeds */
+body.app-layout .app-shell {
+    position: relative;
+    z-index: 10;
+}
+body.app-layout > .layout-main {
+    position: relative;
+    z-index: 1;
+}
+
+body.app-layout {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg-main);
+    color: var(--text-main);
+    font-family: 'Quicksand', 'Segoe UI', sans-serif;
+    font-weight: var(--fw-normal);
+    -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Horizontal shell: [ .app-shell = sidebar column ] [ .layout-main | .lb-main ]
+ * Why content stacked vertically before: body was a flex row with many direct children
+ * (loader, rail, sidebar, backdrop, main). Rail/backdrop are fixed, but sidebar + main
+ * were not guaranteed adjacent flex items. Wrapping rail+sidebar+backdrop in .app-shell
+ * fixes the row so main always sits beside the reserved sidebar width on desktop.
+ */
+body.app-layout > .app-shell {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    flex: 0 0 calc(var(--menu-rail-width) + var(--sidebar-width));
+    min-width: calc(var(--menu-rail-width) + var(--sidebar-width));
+    max-width: calc(var(--menu-rail-width) + var(--sidebar-width));
+    min-height: 100vh;
+    align-items: stretch;
+    position: relative;
+    z-index: 2;
+}
+
+body.app-layout.reading-bg {
+    background: var(--primary-soft);
+}
+
+/* Sidebar sits in the shell column (desktop: pushes main; mobile: overlay) */
+body.app-layout > .app-shell > .sidebar {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    width: auto;
+    height: 100vh;
+    max-height: 100vh;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #ffffff;
+    border-right: 1px solid var(--border);
+    box-shadow: none;
+    color: var(--text-main);
+    transform: translateX(-100%);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform 0.28s ease, opacity 0.2s ease, visibility 0.2s ease;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+body.app-layout > .app-shell > .sidebar::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+}
+
+/* If nav exceeds height, scroll inside nav (not whole sidebar) without showing scrollbars */
+body.app-layout .sidebar nav {
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+body.app-layout .sidebar nav::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+}
+
+/* Real backdrop (mobile drawer); below sidebar + rail, above main content */
+.sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 204;
+    background: rgba(15, 23, 42, 0.45);
+    border: 0;
+    padding: 0;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+body.app-layout .sidebar-brand {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 0 0 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--primary);
+    text-align: center;
+    font-family: 'Quicksand', sans-serif;
+}
+
+body.app-layout .sidebar nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+body.app-layout .sidebar-link {
+    padding: 12px 16px;
+    color: var(--text-main);
+    text-decoration: none;
+    border-radius: 12px;
+    margin-bottom: 6px;
+    font-weight: 600;
+    font-size: 0.92rem;
+    border: none;
+    background: none;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    transition: background 0.2s ease, color 0.2s ease;
+    white-space: normal;
+    word-break: break-word;
+    overflow: visible;
+    text-overflow: clip;
+}
+
+/* Monitor FAB: must stay viewport-fixed (not inside overflow flex main) + above shell */
+.monitor-fab {
+    position: fixed !important;
+    left: auto !important;
+    right: 16px !important;
+    top: 12px;
+    bottom: auto !important;
+    z-index: 300;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: calc(100vw - 24px);
+    box-sizing: border-box;
+}
+
+/* Quiz: keep monitor below sticky top bar */
+body.quiz-take-page .monitor-fab {
+    top: 56px !important;
+}
+
+body.app-layout .sidebar-link:hover:not(.active) {
+    background: var(--surface-elevated);
+    color: var(--text-main);
+}
+
+body.app-layout .sidebar-link.active {
+    background: var(--primary);
+    color: #fff;
+}
+
+body.app-layout .sidebar-link.sidebar-link--danger {
+    color: var(--danger);
+}
+
+body.app-layout .sidebar-link.sidebar-link--danger:hover:not(.active) {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+body.app-layout > .layout-main > header:first-of-type {
+    padding: 0.35rem 0.25rem 0.5rem;
+}
+
+body.app-layout > .layout-main {
+    margin-left: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 100vh;
+    padding: 12px 20px 28px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Center page content within the remaining horizontal space */
+body.app-layout > .layout-main > * {
+    width: 100%;
+    max-width: var(--layout-content-max);
+    box-sizing: border-box;
+}
+
+body.app-layout.quiz-take-page .layout-main > * {
+    max-width: 100%;
+}
+
+/* Open state: show sidebar (desktop pushes, mobile overlays via other rules) */
+body.sidebar-open.app-layout > .app-shell > .sidebar { transform: translateX(0); opacity: 1; visibility: visible; pointer-events: auto; }
+body.sidebar-open.app-layout .sidebar-backdrop { opacity: 1; pointer-events: auto; }
+
+/* Desktop: sidebar is OPEN by default (ChatGPT-like). Collapse via .sidebar-desktop-collapsed */
+@media (min-width: 769px) {
+    /* Default (open): reserve full width so content sits beside sidebar */
+    body.app-layout > .app-shell {
+        flex: 0 0 calc(var(--menu-rail-width) + var(--sidebar-width));
+        min-width: calc(var(--menu-rail-width) + var(--sidebar-width));
+        max-width: calc(var(--menu-rail-width) + var(--sidebar-width));
+    }
+    body.app-layout > .app-shell > .sidebar {
+        position: absolute;
+        left: var(--menu-rail-width);
+        top: 0;
+        bottom: 0;
+        width: var(--sidebar-width);
+        height: 100vh;
+        transform: translateX(0);
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        overflow: hidden; /* no visible scrollbar in menu */
+    }
+
+    /* Collapsed desktop: only keep the rail, hide the sidebar off-canvas */
+    body.app-layout.sidebar-desktop-collapsed > .app-shell {
+        flex: 0 0 var(--menu-rail-width);
+        min-width: var(--menu-rail-width);
+        max-width: var(--menu-rail-width);
+    }
+    body.app-layout.sidebar-desktop-collapsed > .app-shell > .sidebar {
+        transform: translateX(-100%);
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
+}
+
+body.app-layout .layout-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+body.app-layout .layout-header h1,
+body.app-layout .layout-header h2 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-main);
+    font-family: 'Quicksand', sans-serif;
+}
+
+body.app-layout .layout-lead {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin: 0.4rem 0 0;
+    line-height: 1.5;
+    max-width: 720px;
+}
+
+/* Tabs */
+.tab-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.tab-link {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--text-muted);
+    border-radius: var(--radius-sm);
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: 0.92rem;
+    transition: color 0.2s ease, background 0.2s ease;
+}
+
+.tab-link:hover {
+    color: var(--secondary);
+}
+
+.tab-link.active {
+    background: var(--primary);
+    color: #fff;
+}
+
+/* Section blocks (dashboard, quiz bank, etc.) — flat, not floating cards */
+.bank-section {
+    background: #ffffff;
+    padding: 1.25rem 1.5rem;
+    border-radius: var(--radius-sm);
+    box-shadow: none;
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--border);
+}
+
+.btn-success {
+    background: var(--success);
+    color: #fff;
+}
+
+.is-hidden {
+    display: none !important;
+}
+
+/* Admin dashboard */
+.admin-stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: var(--surface);
+    padding: 1.25rem;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    border-left: 5px solid var(--primary);
+}
+
+.stat-card h4 {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+}
+
+.stat-card .stat-value {
+    font-size: 1.65rem;
+    font-weight: 700;
+    margin: 6px 0 0;
+    color: var(--text-main);
+    font-family: 'Quicksand', sans-serif;
+}
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 900px) {
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.chart-box {
+    background: var(--surface);
+    padding: 1.25rem;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+}
+
+/* Leaderboard — same flex main slot as .layout-main */
+body.app-layout > .lb-main {
+    margin-left: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 100vh;
+    padding: 12px 16px 24px;
+    overflow-y: auto;
+    box-sizing: border-box;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+body.app-layout > .lb-main > * {
+    width: 100%;
+    max-width: var(--layout-content-max);
+    box-sizing: border-box;
+}
+
+.lb-main .lb-podium-card,
+.lb-main .lb-table-wrap {
+    border-radius: 18px;
+}
+
+.lb-main .lb-table-wrap {
+    position: relative;
+}
+
+.lb-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.lb-podium {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.lb-podium-card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    text-align: center;
+    padding: 1.25rem;
+    box-shadow: var(--shadow);
+    min-width: 160px;
+    border: 1px solid var(--border);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+}
+
+.lb-podium-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
+    border-color: var(--primary);
+}
+
+.lb-podium-card.rank-1 {
+    border: 4px solid var(--gold);
+    min-height: 200px;
+}
+
+.lb-podium-card.rank-2 {
+    border: 4px solid #94a3b8;
+    min-height: 170px;
+}
+
+.lb-podium-card.rank-3 {
+    border: 4px solid #d97706;
+    min-height: 150px;
+}
+
+.lb-score-pill {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-weight: 700;
+    display: inline-block;
+    margin-top: 8px;
+}
+
+.lb-table-wrap {
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid var(--border);
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    box-shadow: var(--shadow-sm);
+}
+
+.lb-table-wrap table {
+    min-width: 520px;
+}
+
+.lb-table-wrap th {
+    background: var(--surface-elevated);
+    color: var(--text-muted);
+}
+
+.lb-table-wrap td {
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+/* Quiz / forms */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.1rem;
+    margin-bottom: 1.1rem;
+}
+
+.field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+}
+
+.field-group label,
+body.app-layout .field-label {
+    font-weight: 700;
+    color: var(--text-main);
+    font-size: 0.82rem;
+}
+
+body.app-layout .field-group input[type="text"],
+body.app-layout .field-group input[type="number"],
+body.app-layout .field-group input[type="url"],
+body.app-layout .field-group select,
+body.app-layout .field-group textarea {
+    padding: 11px 12px;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--border);
+    font-family: inherit;
+    outline: none;
+    font-size: 0.92rem;
+    box-sizing: border-box;
+    background: var(--surface);
+    color: var(--text-main);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+body.app-layout .field-group input:focus,
+body.app-layout .field-group select:focus,
+body.app-layout .field-group textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.speak-btn-abs {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    background: var(--surface-elevated);
+    border: none;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.2rem;
+}
+
+.upload-zone {
+    border: 2px dashed var(--border);
+    padding: 20px;
+    border-radius: var(--radius-md);
+    text-align: center;
+    color: var(--text-muted);
+    cursor: pointer;
+    margin-top: 0.5rem;
+    background: var(--surface);
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.upload-zone:hover,
+.upload-zone.drag-over {
+    background: var(--primary-soft);
+    border-color: var(--secondary);
+    color: var(--secondary);
+}
+
+.upload-zone.has-file {
+    border-color: var(--success);
+    color: var(--success);
+}
+
+/* Teacher setup */
+.setup-stage {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.setup-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.setup-title {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-main);
+    font-family: 'Quicksand', sans-serif;
+}
+
+.setup-tagline {
+    margin: 4px 0 0;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+}
+
+.setup-account {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+}
+
+.setup-signout {
+    color: var(--primary);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.setup-signout:hover {
+    text-decoration: underline;
+}
+
+.setup-pill-nav {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.setup-pill {
+    padding: 12px 18px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: var(--surface-elevated);
+    color: var(--text-main);
+    font-weight: 700;
+    font-size: 0.92rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.setup-pill:hover {
+    background: var(--primary-soft);
+    color: var(--primary);
+}
+
+.setup-pill.active {
+    background: var(--primary);
+    color: #fff;
+}
+
+.setup-view {
+    display: none;
+}
+
+.setup-view.active {
+    display: block;
+}
+
+/* Teacher setup: flat white layout (no elevated cards) */
+body.setup-page-flat.app-layout {
+    background: #ffffff;
+}
+
+body.setup-page-flat.app-layout > .layout-main {
+    background: #ffffff;
+}
+
+body.setup-page-flat .setup-section {
+    padding: 1.25rem 0 1.75rem;
+    margin-bottom: 0;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+}
+
+body.setup-page-flat .setup-section:last-of-type {
+    border-bottom: none;
+}
+
+body.setup-page-flat .video-config-item {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    box-shadow: none;
+}
+
+body.setup-page-flat .setup-pill:not(.active) {
+    background: #f3f4f6;
+}
+
+.setup-flash-success {
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    background: #ecfdf5;
+    color: #065f46;
+    font-size: 0.88rem;
+    margin: 0 0 14px;
+    border: 1px solid #a7f3d0;
+}
+
+.setup-flash-success a {
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.yt-preview-host {
+    margin-top: 10px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: #f9fafb;
+    border: 1px solid var(--border);
+}
+
+.yt-preview-placeholder {
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.yt-preview-iframe {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    height: auto;
+    border: 0;
+    display: block;
+    vertical-align: top;
+}
+
+.admin-card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem 1.75rem;
+    box-shadow: var(--shadow);
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--border);
+}
+
+.admin-card h2 {
+    margin: 0 0 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-main);
+    font-family: 'Quicksand', sans-serif;
+}
+
+.setup-lead {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    margin: 0 0 14px;
+    line-height: 1.5;
+}
+
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.toolbar-heading {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    white-space: nowrap;
+    font-family: 'Quicksand', sans-serif;
+    color: var(--text-main);
+}
+
+.search-container {
+    flex: 1;
+    min-width: 160px;
+    position: relative;
+}
+
+.search-container .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.55;
+    pointer-events: none;
+    font-size: 0.95rem;
+}
+
+.search-input {
+    width: 100%;
+    padding: 11px 12px 11px 38px;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--border);
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 0.88rem;
+    outline: none;
+    box-sizing: border-box;
+    background: var(--surface);
+    color: var(--text-main);
+}
+
+.search-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.btn-add {
+    background: var(--primary);
+    color: #fff;
+    padding: 11px 20px;
+    border-radius: var(--radius-sm);
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: inherit;
+    font-size: 0.88rem;
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
+    transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+.btn-add:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+}
+
+/* Responsive form grids (Teacher setup — students) */
+.setup-form-grid {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.setup-form-grid--4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.setup-form-grid--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-bottom: 12px;
+}
+@media (max-width: 960px) {
+    .setup-form-grid--4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .setup-form-grid--3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 520px) {
+    .setup-form-grid--4,
+    .setup-form-grid--3 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Student table: horizontal scroll so Actions / projector mode never clip */
+.table-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-md);
+}
+
+.student-preview {
+    margin-top: 8px;
+}
+
+.setup-table {
+    width: 100%;
+    min-width: 920px;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    table-layout: auto;
+}
+
+.setup-table th {
+    background: var(--surface-elevated);
+    color: var(--text-muted);
+    border-bottom: 2px solid var(--border);
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: bottom;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.setup-table td {
+    color: var(--text-main);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 12px;
+    vertical-align: top;
+}
+
+.setup-table .col-num {
+    width: 2.5rem;
+    text-align: center;
+}
+
+.setup-table .col-updated {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.78rem;
+}
+
+.setup-table .col-actions {
+    min-width: 148px;
+    white-space: nowrap;
+}
+
+.setup-table .setup-td-notes {
+    max-width: 14rem;
+    word-break: break-word;
+}
+
+.setup-table tr:hover td {
+    background: var(--primary-soft);
+}
+
+/* Projector: keep student table readable without blowing past the card */
+body.projector-friendly.app-layout .setup-table {
+    font-size: clamp(0.82rem, 1.1vw, 0.95rem);
+    min-width: 860px;
+}
+
+body.projector-friendly.app-layout .setup-table th {
+    font-size: clamp(0.68rem, 0.95vw, 0.78rem);
+}
+
+body.projector-friendly.app-layout .admin-card {
+    overflow-x: hidden;
+}
+
+body.projector-friendly.app-layout .student-preview.table-scroll {
+    margin-left: 0;
+    margin-right: 0;
+    padding-bottom: 4px;
+}
+
+.action-icon {
+    padding: 7px 10px;
+    cursor: pointer;
+    border-radius: 8px;
+    margin-right: 4px;
+    border: none;
+    font-size: 0.78rem;
+    font-weight: 700;
+    font-family: inherit;
+    transition: filter 0.15s ease;
+}
+
+.edit-btn {
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+}
+
+.del-btn {
+    background: rgba(239, 68, 68, 0.12);
+    color: var(--danger);
+}
+
+.media-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+@media (max-width: 720px) {
+    .media-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.video-config-item {
+    border: 2px solid var(--border);
+    padding: 1.1rem;
+    border-radius: var(--radius-md);
+    background: var(--primary-soft);
+}
+
+.video-config-item label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text-main);
+    font-size: 0.85rem;
+}
+
+.yt-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.88rem;
+    box-sizing: border-box;
+    background: var(--surface);
+    color: var(--text-main);
+}
+
+.yt-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.preview-box {
+    height: 100px;
+    background: var(--sidebar-bg);
+    margin-top: 8px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.78rem;
+    text-align: center;
+    padding: 8px;
+}
+
+.setup-go-card {
+    text-align: center;
+}
+
+.setup-go-card .btn-go-wide {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    border-radius: var(--radius-md);
+    background: var(--primary);
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+    font-size: 1rem;
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
+    transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+.setup-go-card .btn-go-wide:hover {
+    filter: brightness(1.06);
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.badge-pill {
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.gen-btn {
+    padding: 12px 26px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: var(--secondary);
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+}
+
+.gen-btn:hover {
+    filter: brightness(1.08);
+}
+
+.gen-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.gen-section {
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: var(--radius-md);
+    padding: 18px;
+    margin-bottom: 18px;
+}
+
+.gen-section h3 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--secondary);
+    margin-bottom: 14px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-family: 'Quicksand', sans-serif;
+}
+
+/* ── Assembly page (shell + AI regenerate) ─────────────── */
+.assembly-regen-form {
+    margin-top: 16px;
+}
+
+.assembly-ai-btn {
+    padding: 8px 18px;
+    border-radius: 999px;
+    border: none;
+    background: var(--secondary);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+    transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+.assembly-ai-btn:hover {
+    filter: brightness(1.08);
+    transform: translateY(-2px);
+}
+
+/* ── Assembly: main player + thumbnail rail (draw.io–style) ─ */
+.assembly-media-section {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 28px 24px 36px;
+}
+
+.assembly-media-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+    gap: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+    align-items: start;
+}
+
+.assembly-player-col {
+    min-width: 0;
+}
+
+.assembly-playing-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.assembly-playing-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease;
+}
+
+.assembly-main.assembly-video-playing .assembly-playing-badge {
+    opacity: 1;
+    visibility: visible;
+}
+
+.assembly-playing-gif {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease;
+}
+
+.assembly-playing-title {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.assembly-thumb-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.assembly-rail-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin: 0 0 4px;
+}
+
+.assembly-thumb {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px;
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.assembly-thumb:hover:not(.is-active) {
+    border-color: #cbd5e1;
+    background: var(--surface-elevated);
+}
+
+.assembly-thumb img {
+    width: 96px;
+    height: 54px;
+    object-fit: cover;
+    border-radius: 8px;
+    background: #0f172a;
+    flex-shrink: 0;
+}
+
+.assembly-thumb-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.assembly-thumb-label {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-main);
+    line-height: 1.3;
+}
+
+.assembly-thumb-playing {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.assembly-thumb-playing img {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+}
+.music-bars {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 16px;
+}
+.music-bars span {
+    width: 3px;
+    height: 8px;
+    background: #4CAF50;
+    border-radius: 2px;
+    animation: music-bars-bounce 1s infinite ease-in-out;
+}
+.music-bars span:nth-child(2) { animation-delay: 0.2s; }
+.music-bars span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes music-bars-bounce {
+    0%, 100% { height: 6px; }
+    50% { height: 16px; }
+}
+
+.assembly-thumb.is-active {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35);
+}
+
+.assembly-thumb.is-video-playing .assembly-thumb-playing {
+    display: inline-flex;
+}
+
+@keyframes assembly-thumb-ring {
+    0%, 100% {
+        box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35), 0 4px 14px rgba(59, 130, 246, 0.12);
+    }
+    50% {
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15), 0 4px 18px rgba(59, 130, 246, 0.18);
+    }
+}
+
+.assembly-no-videos {
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+@media (max-width: 900px) {
+    .assembly-media-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .assembly-thumb-rail {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 8px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .assembly-thumb {
+        min-width: min(280px, 85vw);
+        flex-shrink: 0;
+    }
+}
+
+/* ── Typography: headings / labels (admin-style 600/700) ─ */
+body.app-layout h1,
+body.app-layout h2,
+body.app-layout h3,
+body.app-layout h4 {
+    font-family: 'Quicksand', 'Segoe UI', sans-serif;
+    font-weight: var(--fw-bold);
+}
+
+body.app-layout .layout-lead,
+body.app-layout .sub {
+    font-weight: var(--fw-normal);
+}
+
+/* Fixed micro control: projector mode (included via fragments/projector-toggle) */
+.projector-toggle-btn {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    z-index: 100000;
+    padding: 12px 18px;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: 0.02em;
+    border-radius: 999px;
+    border: 2px solid rgba(255, 255, 255, 0.92);
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    color: #e2e8f0;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    font-family: inherit;
+    outline: 3px solid rgba(99, 102, 241, 0.18);
+    outline-offset: 2px;
+    transition: transform 0.18s ease, filter 0.18s ease, box-shadow 0.18s ease;
+}
+.projector-toggle-btn { animation: proj-nudge 2.8s ease-in-out infinite; }
+@keyframes proj-nudge {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+.projector-toggle-btn:hover {
+    filter: brightness(1.08);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+}
+.projector-toggle-btn.is-on {
+    background: linear-gradient(135deg, #1d4ed8, #4f46e5);
+    color: #fff;
+    border-color: transparent;
+    outline-color: rgba(139, 92, 246, 0.22);
+}
+
+/* ── Projector mode: global rem scale + app shell (all app-layout pages) ─────────── */
+html.projector-friendly {
+    font-size: clamp(17px, 2.35vmin, 21px);
+}
+
+/* Projector on phones: cap root size so text does not spill horizontally */
+@media (max-width: 480px) {
+    html.projector-friendly {
+        font-size: clamp(16px, 4.2vw, 18px);
+    }
+}
+
+@media (max-width: 768px) {
+    body.projector-friendly.quiz-take-page > .layout-main {
+        padding-left: clamp(10px, 3vw, 20px);
+        padding-right: clamp(10px, 3vw, 20px);
+        padding-bottom: clamp(20px, 4vw, 32px);
+    }
+}
+
+body.projector-friendly {
+    --fs-p-display: clamp(1.55rem, 3.2vw, 2.25rem);
+    --fs-p-title: clamp(1.35rem, 2.6vw, 1.95rem);
+    --fs-p-body: clamp(1.12rem, 2vw, 1.45rem);
+    --fs-p-ui: clamp(1.02rem, 1.65vw, 1.25rem);
+    line-height: 1.55;
+}
+
+body.projector-friendly.app-layout > .layout-main {
+    padding: clamp(14px, 2.2vw, 24px) clamp(18px, 3vw, 32px) clamp(28px, 3vw, 40px);
+}
+
+body.projector-friendly.app-layout .layout-header h1,
+body.projector-friendly.app-layout .layout-header h2 {
+    font-size: clamp(1.4rem, 2.6vw, 1.95rem);
+}
+
+body.projector-friendly.app-layout .layout-lead,
+body.projector-friendly.app-layout .sub {
+    font-size: var(--fs-p-ui);
+    line-height: 1.55;
+}
+
+body.projector-friendly.app-layout .app-shell .sidebar-brand {
+    font-size: clamp(1.12rem, 1.35vw, 1.38rem);
+}
+
+body.projector-friendly.app-layout .app-shell .sidebar-link {
+    font-size: var(--fs-p-ui);
+    padding: 14px 18px;
+    margin-bottom: 8px;
+}
+
+body.projector-friendly.app-layout .tab-link {
+    font-size: var(--fs-p-ui);
+    padding: 10px 18px;
+}
+
+body.projector-friendly.app-layout .bank-section {
+    padding: 1.4rem 1.65rem;
+}
+
+body.projector-friendly.app-layout .stat-card h4 {
+    font-size: var(--fs-p-ui);
+}
+
+body.projector-friendly.app-layout .stat-card .stat-value {
+    font-size: clamp(1.75rem, 3vw, 2.15rem);
+}
+
+body.projector-friendly .btn-primary {
+    font-size: var(--fs-p-ui);
+    padding: 14px 26px;
+}
+
+body.projector-friendly .input-field {
+    font-size: var(--fs-p-ui);
+    padding: 16px 20px;
+}
+
+body.projector-friendly:not(.quiz-take-page) th,
+body.projector-friendly:not(.quiz-take-page) td {
+    font-size: var(--fs-p-ui);
+    padding: clamp(12px, 1.5vw, 18px);
+}
+
+/* Login */
+body.projector-friendly.login-body .login-card {
+    font-size: var(--fs-p-ui);
+    padding: clamp(2.5rem, 4vw, 3rem);
+}
+
+body.projector-friendly.login-body .login-card h1,
+body.projector-friendly.login-body .login-card h2 {
+    font-size: var(--fs-p-title);
+}
+
+body.projector-friendly.login-body .icon-header {
+    font-size: clamp(3.5rem, 8vw, 4.5rem);
+}
+
+/* Teacher students roster (standalone layout) */
+body.projector-friendly.teacher-students-page .students-header h1 {
+    font-size: clamp(1.15rem, 2vw, 1.45rem);
+}
+
+body.projector-friendly.teacher-students-page .students-header a {
+    font-size: var(--fs-p-ui);
+}
+
+body.projector-friendly.teacher-students-page main {
+    padding: clamp(20px, 3vw, 32px) clamp(16px, 3vw, 24px);
+}
+
+body.projector-friendly.teacher-students-page .toolbar h2 {
+    font-size: var(--fs-p-title);
+}
+
+body.projector-friendly.teacher-students-page table {
+    font-size: var(--fs-p-ui);
+}
+
+body.projector-friendly.teacher-students-page .btn {
+    font-size: var(--fs-p-ui);
+    padding: 10px 18px;
+}
+
+body.projector-friendly.teacher-students-page .search-box {
+    font-size: var(--fs-p-ui);
+    padding: 10px 16px;
+}
+
+body.projector-friendly.teacher-students-page th,
+body.projector-friendly.teacher-students-page td {
+    padding: 12px 14px;
+}
+
+/* Admin: form labels use inline font-size — bump for projector */
+body.projector-friendly.app-layout .admin-dashboard-filters label {
+    font-size: var(--fs-p-ui) !important;
+}
+
+body.projector-friendly.app-layout .admin-dashboard-filters input[type="date"],
+body.projector-friendly.app-layout .admin-dashboard-filters select {
+    font-size: var(--fs-p-ui) !important;
+    padding: 10px 14px !important;
+}
+
+body.projector-friendly.app-layout .admin-dashboard-filters .btn-primary {
+    font-size: var(--fs-p-ui) !important;
+    padding: 12px 20px !important;
+}
+
+body.projector-friendly.app-layout .app-menu-rail .sidebar-mobile-toggle {
+    width: 44px;
+    height: 44px;
+    font-size: 1.3rem;
+}
+
+/* ── Projector-friendly: large student-facing UI (page-specific) ─────────── */
+
+body.projector-friendly.reading-bg .page-hero h2 {
+    font-size: var(--fs-p-title);
+}
+
+body.projector-friendly.reading-bg .page-hero p {
+    font-size: var(--fs-p-ui);
+    line-height: 1.55;
+}
+
+body.projector-friendly.reading-bg .news-title {
+    font-size: var(--fs-p-title);
+}
+
+body.projector-friendly.reading-bg .news-summary {
+    font-size: var(--fs-p-body);
+    line-height: 1.65;
+    padding: clamp(16px, 2vw, 22px) clamp(18px, 2.5vw, 24px);
+}
+
+body.projector-friendly.reading-bg .live-read-preview {
+    font-size: var(--fs-p-ui);
+    min-height: 3.5em;
+}
+
+body.projector-friendly.reading-bg .live-read-label {
+    font-size: clamp(0.78rem, 1.1vw, 0.9rem);
+    font-weight: var(--fw-semibold);
+}
+
+body.projector-friendly.reading-bg .metric-value {
+    font-size: clamp(1.65rem, 2.5vw, 2rem);
+}
+
+body.projector-friendly.reading-bg .score-title {
+    font-size: var(--fs-p-title);
+}
+
+body.projector-friendly.reading-bg .practice-btn,
+body.projector-friendly.reading-bg .evaluate-btn {
+    font-size: var(--fs-p-ui);
+    padding: 11px 20px;
+}
+
+body.projector-friendly.reading-bg .teacher-reading-textarea {
+    font-size: var(--fs-p-ui);
+    line-height: 1.55;
+}
+
+body.projector-friendly.reading-bg .teacher-reading-heading {
+    font-size: var(--fs-p-title);
+}
+
+body.projector-friendly.reading-bg .teacher-reading-label {
+    font-size: clamp(0.92rem, 1.3vw, 1.05rem);
+    font-weight: var(--fw-semibold);
+}
+
+body.projector-friendly.reading-bg .reading-btn-outline {
+    font-size: var(--fs-p-ui);
+}
+
+body.projector-friendly.reading-bg .controls-bar {
+    font-size: var(--fs-p-ui);
+}
+
+body.projector-friendly.reading-bg .read-all-btn {
+    font-size: var(--fs-p-ui);
+    padding: 11px 20px;
+}
+
+body.projector-friendly .lb-header h1 {
+    font-size: var(--fs-p-display);
+    font-weight: var(--fw-bold);
+}
+
+body.projector-friendly .lb-podium-card h2,
+body.projector-friendly .lb-podium-card h3 {
+    font-size: var(--fs-p-title);
+}
+
+body.projector-friendly .lb-podium {
+    gap: 1.6rem;
+}
+
+body.projector-friendly .lb-podium-card {
+    min-width: 220px;
+    padding: 1.6rem 1.4rem;
+    border-radius: 22px;
+    border-width: 6px;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
+}
+
+body.projector-friendly .lb-podium-card.rank-1 {
+    border-color: var(--gold);
+    background: rgba(245, 158, 11, 0.08);
+    min-height: 280px;
+}
+body.projector-friendly .lb-podium-card.rank-2 {
+    border-color: #94a3b8;
+    background: rgba(148, 163, 184, 0.10);
+    min-height: 240px;
+}
+body.projector-friendly .lb-podium-card.rank-3 {
+    border-color: #d97706;
+    background: rgba(217, 119, 6, 0.08);
+    min-height: 215px;
+}
+
+body.projector-friendly .lb-table-wrap table {
+    font-size: var(--fs-p-ui);
+}
+
+body.projector-friendly .lb-table-wrap th {
+    font-weight: var(--fw-semibold);
+    font-size: clamp(0.9rem, 1.3vw, 1.05rem);
+}
+
+body.projector-friendly .lb-score-pill {
+    font-size: var(--fs-p-ui);
+}
+
+/* Assembly: match app shell background + projector hero */
+body.assembly-page {
+    background: var(--bg-main);
+}
+
+body.assembly-page .thought-hero {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}
+
+body.assembly-page .assembly-media-section {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}
+
+body.projector-friendly.assembly-page .thought-text {
+    font-size: clamp(1.15rem, 2.8vw, 1.65rem);
+    font-weight: var(--fw-semibold);
+}
+
+body.projector-friendly.assembly-page .thought-meta-value {
+    font-size: clamp(1.05rem, 2.2vw, 1.35rem);
+}
+
+body.projector-friendly.assembly-page .read-btn-sm {
+    font-size: clamp(0.88rem, 1.4vw, 1.05rem);
+    padding: 10px 18px;
+}
+
+body.projector-friendly.assembly-page .assembly-playing-title {
+    font-size: var(--fs-p-title);
+}
+
+/* ── Mobile: shell collapses to 0 width; drawer slides OVER main content ───── */
+@media (max-width: 768px) {
+    body.app-layout > .app-shell {
+        flex: 0 0 0 !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        width: 0 !important;
+        overflow: visible;
+    }
+
+    .app-menu-rail {
+        display: flex;
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        flex: none;
+        align-self: auto;
+        width: var(--menu-rail-width);
+        min-height: 0;
+        height: 100vh;
+        z-index: 220;
+    }
+
+    .sidebar-mobile-toggle {
+        display: flex;
+    }
+
+    /* Drawer overlays content; shell column does not reserve width */
+    body.app-layout > .app-shell > .sidebar {
+        position: fixed;
+        left: var(--menu-rail-width);
+        top: 0;
+        bottom: 0;
+        width: var(--sidebar-width);
+        height: 100vh;
+        max-height: none;
+        z-index: 210;
+        transform: translateX(-100%);
+        box-shadow: 4px 0 20px rgba(15, 23, 42, 0.10);
+        will-change: transform;
+    }
+
+    .sidebar-backdrop { display: block; }
+
+    body.app-layout > .layout-main,
+    body.app-layout > .lb-main {
+        flex: 1 1 auto;
+        min-width: 0;
+        margin-left: 0;
+        padding-top: 12px;
+        padding-left: calc(var(--menu-rail-width) + 12px);
+        padding-right: 12px;
+        transition: padding 0.2s ease;
+    }
+
+    .main-content {
+        margin-left: 0;
+        padding: 1.25rem;
+        padding-top: 12px;
+        padding-left: calc(var(--menu-rail-width) + 12px);
+    }
+
+    body.sidebar-open.app-layout > .layout-main,
+    body.sidebar-open.app-layout > .lb-main {
+        margin-left: 0;
+    }
+}
+
+/* (desktop collapse rules live above; keep a single source of truth) */

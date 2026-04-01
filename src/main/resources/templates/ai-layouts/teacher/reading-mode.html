@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reading Mode | Sarvashiksha</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --admin-bg: #f8fafc;
+            --sidebar-dark: #0f172a;
+            --primary-indigo: #6366f1;
+            --secondary-purple: #8b5cf6;
+            --accent-orange: #f87171;
+            --success-green: #10b981;
+            --soft-pink-bg: #fff5f5;
+            --card-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        body { font-family: 'Quicksand', sans-serif; margin: 0; background: var(--admin-bg); display: flex; height: 100vh; overflow: hidden; }
+
+        /* --- Sidebar --- */
+        .sidebar { width: 260px; background: var(--sidebar-dark); color: white; padding: 2rem 1rem; display: flex; flex-direction: column; flex-shrink: 0; }
+        .logo { font-size: 1.5rem; font-weight: 700; margin-bottom: 3rem; color: var(--primary-indigo); text-align: center; }
+        .nav-item { padding: 12px 20px; color: #94a3b8; text-decoration: none; border-radius: 12px; margin-bottom: 8px; font-weight: 600; cursor: pointer; }
+        .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+
+        /* --- Layout --- */
+        .content { flex: 1; padding: 2rem 3rem; overflow-y: auto; background-color: var(--soft-pink-bg); }
+        .header-section { margin-bottom: 2rem; }
+        .header-section h2 { margin: 0; display: flex; align-items: center; gap: 10px; font-size: 1.6rem; }
+        .header-section p { color: #64748b; font-size: 0.9rem; margin-top: 8px; line-height: 1.5; }
+
+        /* --- Top AI Input Box (image_3bccc1) --- */
+        .input-card { background: white; border-radius: 24px; padding: 2rem; box-shadow: var(--card-shadow); border: 1px solid #f1f5f9; margin-bottom: 2rem; }
+        .input-label { font-size: 0.75rem; font-weight: 700; color: #1e293b; text-transform: uppercase; margin-bottom: 12px; display: block; }
+        .sub-label { font-size: 0.7rem; color: #94a3b8; margin-bottom: 10px; display: block; }
+        
+        textarea { width: 100%; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.2rem; font-family: inherit; font-size: 1rem; resize: none; box-sizing: border-box; }
+        
+        .action-bar { display: flex; align-items: center; gap: 12px; margin-top: 15px; }
+        .btn { padding: 10px 20px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; font-family: 'Quicksand'; font-size: 0.9rem; }
+        .btn-speak { background: white; border: 1px solid #e2e8f0; }
+        .btn-clear { background: #fee2e2; color: #ef4444; }
+        .btn-submit { background: var(--secondary-purple); color: white; padding: 12px 25px; }
+
+        /* --- Practice Session Area (image_3bd107) --- */
+        .practice-card { background: white; border-radius: 24px; padding: 2rem; box-shadow: var(--card-shadow); border: 1px solid #f1f5f9; }
+        .passage-text-box { background: #fff5f5; border-left: 4px solid var(--accent-orange); padding: 1.5rem; border-radius: 12px; line-height: 1.7; color: #475569; margin-bottom: 1.5rem; }
+        
+        .recording-controls { display: flex; align-items: center; gap: 15px; margin-bottom: 1.5rem; }
+        .btn-stop { background: #fb7185; color: white; }
+        .btn-eval { background: #c084fc; color: white; opacity: 0.6; cursor: not-allowed; }
+
+        /* --- Metrics Grid (image_3bd107) --- */
+        .metrics-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin: 20px 0; }
+        .metric-item { background: white; border: 1px solid #f1f5f9; border-bottom: 4px solid #fee2e2; padding: 12px 5px; border-radius: 12px; text-align: center; }
+        .metric-val { font-size: 1.2rem; font-weight: 700; color: #1e293b; display: block; }
+        .metric-label { font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; font-weight: 700; }
+
+        /* --- Live Transcription --- */
+        .live-box { border: 1px solid var(--success-green); background: #f0fdf4; padding: 15px; border-radius: 12px; margin-top: 20px; }
+        .live-box p { margin: 0; font-style: italic; color: #10b981; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="logo">🏫 Teacher Suite</div>
+    <a class="nav-item">📊 Dashboard</a>
+    <a class="nav-item active">📖 Reading Mode</a>
+    <a class="nav-item">❓ Quiz Mode</a>
+</aside>
+
+<main class="content">
+    <section class="header-section">
+        <h2>📖 Reading Practice</h2>
+        <p>Paste a passage, type a prompt, or use <b>Speak to type</b> below. Submit sends it to AI to build the reading text, then students use Practice Reading for voice feedback.</p>
+    </section>
+
+    <div class="input-card">
+        <span class="input-label">🖋️ Choose or paste the passage</span>
+        <span class="sub-label">PASTE A PASSAGE FROM THE TEXTBOOK, TYPE A PROMPT, OR DICTATE WITH THE MIC</span>
+        <textarea rows="4" placeholder="Example: Generate a passage on Ram Dhari — or paste your full paragraph here."></textarea>
+        
+        <div class="action-bar">
+            <button class="btn btn-speak">🎤 Speak to type</button>
+            <button class="btn btn-clear">🗑️ Clear</button>
+            <span style="font-size: 0.8rem; color: #94a3b8;">Tap mic to dictate into the box (Chrome / Edge works best).</span>
+        </div>
+        <button class="btn btn-submit" style="margin-top: 20px;">🚀 Submit passage</button>
+    </div>
+
+    <div class="practice-card">
+        <button class="btn" style="background: #3b82f6; color: white; margin-bottom: 1.5rem;">🔊 Read Passage Aloud</button>
+        
+        <div class="passage-text-box">
+            Testing is an important part of learning. When we take a test, it helps us understand what we know and what we still need to learn. Tests can be in many forms, such as quizzes, written exams, or even fun activities.
+        </div>
+
+        <div class="recording-controls">
+            <select style="padding: 10px; border-radius: 10px; border: 1px solid #e2e8f0; font-family: inherit;">
+                <option>Hindi</option>
+                <option selected>English</option>
+            </select>
+            <button class="btn btn-stop">🛑 Stop recording</button>
+            <button class="btn btn-eval">🪄 Evaluate now</button>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h4 style="margin:0;">Practice results</h4>
+            <div style="background:#fee2e2; color:#ef4444; padding:5px 15px; border-radius:20px; font-weight:700; font-size: 0.85rem;">
+                2/10 Keep Practising!
+            </div>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-item"><span class="metric-val">2/10</span><span class="metric-label">Fluency</span></div>
+            <div class="metric-item"><span class="metric-val">7/10</span><span class="metric-label">Pronunciation</span></div>
+            <div class="metric-item"><span class="metric-val">2/10</span><span class="metric-label">Pace</span></div>
+            <div class="metric-item"><span class="metric-val">1/10</span><span class="metric-label">Accuracy</span></div>
+            <div class="metric-item"><span class="metric-val">3/10</span><span class="metric-label">Confidence</span></div>
+            <div class="metric-item"><span class="metric-val">10%</span><span class="metric-label">Words Hit</span></div>
+        </div>
+
+        <div class="live-box">
+            <span class="input-label" style="color: #10b981;">What we hear as you read (Live)</span>
+            <p>Speak clearly — words and punctuation appear here as you read.</p>
+        </div>
+    </div>
+</main>
+
+</body>
+</html>
