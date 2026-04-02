@@ -19,11 +19,13 @@ import java.util.regex.Pattern;
 /**
  * Provides all content for the Morning Assembly page.
  *
- * Thought of the Day:
- *   - Hindi  → curated 200-quote JSON rotated by dayOfYear (offline, no API)
- *   - English → ZenQuotes API (https://zenquotes.io/api/today); falls back to
- *               curated 200-quote JSON if the API is unreachable
- *   Both are cached by date — at most one API call per day.
+ * Thought of the Day (see {@link ThoughtConfigService}):
+ *   - DB pools of AI-generated rows; each OpenAI refill adds 10 Hindi and 10 English entries.
+ *   - Each {@link #getDailyThought(String)} picks one random unseen Hindi and one random unseen
+ *     English entry, then marks both shown.
+ *   - When either pool is empty, {@link ThoughtConfigService#ensureThoughtPool()} calls OpenAI once
+ *     to refill. Assembly loads thought via {@code GET /api/assembly/daily-thought} so the UI can
+ *     show a global loader during that call.
  *
  * Assembly text (Anthem, Pledge, Prayer):
  *   Loaded once from src/main/resources/data/assembly-content.json.

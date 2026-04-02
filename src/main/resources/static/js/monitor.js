@@ -10,6 +10,8 @@ let monitorLastSpoken = 0;
 // Medium sensitivity: higher value = less likely to warn on normal classroom voice.
 // Lower value = more sensitive (warn sooner).
 const THRESHOLD_MEDIUM = { noisy: 48 };
+// Faster reaction for live quiz sessions.
+const THRESHOLD_QUIZ = { noisy: 46 };
 
 const MONITOR_MESSAGES = {
     attendance: [
@@ -135,6 +137,9 @@ function monitorContextActive() {
         return !!btn || recognizer;
     }
     if (p.indexOf('/quiz') === 0) {
+        // During quiz voice recording or quiz TTS, suppress monitor warnings.
+        if (window.__quizAnswerRecording) return false;
+        if (window.__quizQuestionTtsActive) return false;
         // Disable monitor on result/explanation views
         var scoreScreen = document.getElementById('scoreScreen');
         if (scoreScreen && scoreScreen.classList.contains('visible')) return false;
@@ -175,6 +180,7 @@ async function startMonitor() {
         monitorStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         monitorAnalyser = monitorAudioCtx.createAnalyser();
         monitorAnalyser.fftSize = 256;
+        // Default smoothing is a bit "laggy"; quiz overrides in evaluateNoise.
         monitorAnalyser.smoothingTimeConstant = 0.7;
         monitorAudioCtx.createMediaStreamSource(monitorStream).connect(monitorAnalyser);
     } catch (e) {
@@ -219,9 +225,25 @@ function evaluateNoise(db) {
     const now = Date.now();
     if (!monitorContextActive()) return;
     if (window.__monitorSuppressUntil && now < window.__monitorSuppressUntil) return;
-    if (db > THRESHOLD_MEDIUM.noisy &&
-        (now - monitorLastWarning) >= 8000 &&
-        (now - monitorLastSpoken) >= 6000) {
+
+    const p = String(window.location.pathname || '').toLowerCase();
+    const isQuiz = p.indexOf('/quiz') === 0;
+
+    // Quiz: react faster + slightly more sensitive
+    const threshold = isQuiz ? THRESHOLD_QUIZ.noisy : THRESHOLD_MEDIUM.noisy;
+    const warnCooldownMs = isQuiz ? 3000 : 8000;
+    const speakCooldownMs = isQuiz ? 2500 : 6000;
+
+    // On quiz pages, reduce smoothing so spikes are detected sooner.
+    if (isQuiz && monitorAnalyser) {
+        monitorAnalyser.smoothingTimeConstant = 0.45;
+    } else if (monitorAnalyser) {
+        monitorAnalyser.smoothingTimeConstant = 0.7;
+    }
+
+    if (db > threshold &&
+        (now - monitorLastWarning) >= warnCooldownMs &&
+        (now - monitorLastSpoken) >= speakCooldownMs) {
         monitorLastWarning = now;
         monitorLastSpoken = now;
         var ctx = monitorContextMessage();

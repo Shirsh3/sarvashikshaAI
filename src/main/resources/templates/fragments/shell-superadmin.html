@@ -156,7 +156,8 @@
                 }
             };
 
-            showLoader();
+            const skipMenuLoader = pathname.startsWith('/superadmin');
+            if (!skipMenuLoader) showLoader();
             fetch('/api/menu', { credentials: 'same-origin' })
                 .then(async (res) => {
                     if (res.status === 401 || res.status === 403) {
@@ -168,13 +169,14 @@
                 })
                 .then((items) => {
                     if (items == null) return;
-                    nav.innerHTML = '';
+                    const frag = document.createDocumentFragment();
                     if (!items || items.length === 0) {
                         const login = document.createElement('a');
                         login.href = '/login';
                         login.className = 'sidebar-link sidebar-link--danger';
                         login.textContent = '🔐 Login';
-                        nav.appendChild(login);
+                        frag.appendChild(login);
+                        nav.replaceChildren(frag);
                         return;
                     }
                     const all = (items || []).map((item) => {
@@ -253,12 +255,12 @@
 
                             wrap.appendChild(parent);
                             wrap.appendChild(sub);
-                            nav.appendChild(wrap);
+                            frag.appendChild(wrap);
                             return;
                         }
 
                         const isActive = activeHref === norm(item.href);
-                        nav.appendChild(renderLink(item, isActive));
+                        frag.appendChild(renderLink(item, isActive));
                     });
 
                     // Logout (clears JWT cookie on server-side)
@@ -266,7 +268,8 @@
                     logout.href = '/logout';
                     logout.className = 'sidebar-link sidebar-link--danger';
                     logout.textContent = '🚪 Logout';
-                    nav.appendChild(logout);
+                    frag.appendChild(logout);
+                    nav.replaceChildren(frag);
                 })
                 .catch(() => {
                     // Keep the login fallback link.

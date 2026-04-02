@@ -166,6 +166,8 @@ public class TeacherPanelController {
                 student.setName(student.getName().trim());
             }
             studentCrudService.createOrUpdate(student);
+            boolean isEdit = student.getOriginalName() != null && !student.getOriginalName().isBlank();
+            redirectAttributes.addFlashAttribute("infoMessage", isEdit ? "Student updated." : "Student added.");
         } catch (IllegalArgumentException ex) {
             log.warn("Failed to save student: {}", ex.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());

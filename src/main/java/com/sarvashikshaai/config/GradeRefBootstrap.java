@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Seeds {@code grade_ref} with KG, UKG, and grades 1–12 if the table is empty.
+ * Seeds {@code grade_ref} with LKG, UKG, and grades 1–12 if the table is empty.
  */
 @Component
 @Order(1)
@@ -28,7 +28,7 @@ public class GradeRefBootstrap implements ApplicationRunner {
         }
         List<GradeRef> rows = new ArrayList<>();
         int order = 0;
-        rows.add(g("KG", "KG", order++));
+        rows.add(g("LKG", "LKG", order++));
         rows.add(g("UKG", "UKG", order++));
         for (int i = 1; i <= 12; i++) {
             String c = String.valueOf(i);

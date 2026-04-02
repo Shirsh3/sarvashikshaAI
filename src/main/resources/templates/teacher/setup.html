@@ -7,6 +7,21 @@
     <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
     <link rel="stylesheet" th:href="@{/css/style.css}"/>
+    <style>
+        .setup-toast {
+            position: fixed;
+            bottom: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10050;
+            max-width: min(420px, 92vw);
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            box-shadow: 0 8px 24px rgba(15,23,42,0.12);
+        }
+    </style>
 </head>
 <body class="app-layout setup-page-flat">
 <div th:replace="~{fragments/loader :: loader}"></div>
@@ -32,30 +47,28 @@
         <!-- Students -->
         <section id="setup-view-students" class="setup-view active">
             <div class="setup-section" id="studentFormTop">
-                <div class="toolbar">
+                <div class="toolbar" style="margin-bottom:6px;">
                     <h2 class="toolbar-heading">Backoffice</h2>
-                    <div class="search-container">
-                        <span class="search-icon" aria-hidden="true">🔍</span>
-                        <input type="search" class="search-input" id="studentFilter" placeholder="Search by name or code…" autocomplete="off"/>
-                    </div>
-                    <span class="badge-pill" th:if="${students != null and !#lists.isEmpty(students)}"
-                          th:text="${students.size()} + ' students'">0 students</span>
-                    <button type="button" class="btn-add" onclick="document.getElementById('studentNameInput')?.focus(); document.getElementById('studentFormTop')?.scrollIntoView({behavior:'smooth'});">
-                        + Add student
-                    </button>
                 </div>
 
-                <p class="setup-lead">Add, update, or remove learners. Codes are used for quiz and attendance.</p>
+                <div class="setup-block setup-block--search" style="margin-bottom:18px;">
+                    <h3 class="setup-subheading" style="margin:0 0 8px;font-size:1rem;font-weight:800;color:var(--text-main);">Search students</h3>
+                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;">
+                        <div class="search-container" style="flex:1;min-width:200px;">
+                            <span class="search-icon" aria-hidden="true">🔍</span>
+                            <input type="search" class="search-input" id="studentFilter" placeholder="Search Student Details" autocomplete="off"/>
+                        </div>
+                        <span class="badge-pill" th:if="${students != null and !#lists.isEmpty(students)}"
+                              th:text="${students.size()} + ' students'">0 students</span>
+                    </div>
+                </div>
 
-                <p th:if="${infoMessage}" style="color:#0f766e;font-size:0.85rem;margin-bottom:10px;">
-                    <i class="fa-solid fa-circle-check"></i>
-                    <span th:text="${infoMessage}"></span>
-                </p>
+                <div class="setup-block setup-block--add">
+                    <h3 class="setup-subheading" style="margin:0 0 8px;font-size:1rem;font-weight:800;color:var(--text-main);">Add student</h3>
+                    <p class="setup-lead" style="margin-top:0;">Add, update, or remove learners. Codes are used for quiz and attendance.</p>
+                </div>
 
-                <p th:if="${errorMessage}" style="color:#b91c1c;font-size:0.85rem;margin-bottom:10px;">
-                    <i class="fa-solid fa-circle-exclamation"></i>
-                    <span th:text="${errorMessage}"></span>
-                </p>
+                <div id="setupToast" class="setup-toast" role="status" aria-live="polite" style="display:none;"></div>
 
                 <form th:action="@{/teacher/students/save}" method="post" th:object="${studentForm}" class="setup-student-form" style="margin-bottom:18px;">
                     <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
@@ -101,10 +114,16 @@
                         </div>
                     </div>
                     <input type="hidden" th:field="*{originalName}"/>
-                    <button type="submit" class="btn-add" style="box-shadow:none;">
-                        <i class="fa-solid fa-floppy-disk"></i>
-                        <span th:text="${editing} != null ? 'Update student' : 'Save student'">Save student</span>
-                    </button>
+                    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:4px;">
+                        <button type="submit" class="btn-add" style="box-shadow:none;">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            <span th:text="${editing} != null ? 'Update student' : 'Save student'">Save student</span>
+                        </button>
+                        <a th:if="${editing != null}" th:href="@{/teacher/setup}" class="btn-add"
+                           style="box-shadow:none;text-decoration:none;background:var(--surface);color:var(--text);border:1px solid var(--border);display:inline-flex;align-items:center;gap:8px;">
+                            <i class="fa-solid fa-xmark"></i> Cancel
+                        </a>
+                    </div>
                 </form>
 
                 <div class="student-preview table-scroll" th:if="${students != null and !#lists.isEmpty(students)}">
@@ -194,8 +213,7 @@
                     </div>
 
                     <div class="bank-section" style="margin-top:20px;padding:14px 16px;">
-                        <h3 style="margin:0 0 6px;font-size:1.05rem;">Playback order</h3>
-                        <p class="setup-lead" style="margin-bottom:12px;">Order used on the Assembly page when you press <strong>Start Assembly</strong>. Use ↑ ↓ to reorder.</p>
+                        <p class="setup-lead" style="margin:0 0 12px;">Drag a row to set the order used on the <a th:href="@{/assembly}">Assembly</a> page when you press <strong>Start Assembly</strong>.</p>
                         <div id="assemblyOrderRows" style="display:flex;flex-direction:column;gap:8px;"></div>
                         <input type="hidden" name="slotOrder" id="assemblySlotOrder" th:value="${assemblySlotOrderCsv}"/>
                     </div>
@@ -217,6 +235,27 @@
     </div>
 </main>
 
+<script th:inline="javascript">
+(function() {
+    var info = /*[[${infoMessage}]]*/ null;
+    var err = /*[[${errorMessage}]]*/ null;
+    var toastEl = document.getElementById('setupToast');
+    function showToast(text, kind) {
+        if (!toastEl || !text) return;
+        toastEl.textContent = text;
+        toastEl.style.display = 'block';
+        toastEl.style.background = kind === 'err' ? '#fef2f2' : '#ecfdf5';
+        toastEl.style.color = kind === 'err' ? '#991b1b' : '#065f46';
+        toastEl.style.border = '1px solid ' + (kind === 'err' ? '#fecaca' : '#a7f3d0');
+        clearTimeout(window.__setupToastT);
+        window.__setupToastT = setTimeout(function () {
+            toastEl.style.display = 'none';
+        }, 4200);
+    }
+    if (info) showToast(String(info), 'ok');
+    if (err) showToast(String(err), 'err');
+})();
+</script>
 <script>
 (function() {
     function showSetupView(view) {
@@ -316,58 +355,60 @@
             host.innerHTML = '';
             order.forEach(function (key, idx) {
                 var row = document.createElement('div');
+                row.setAttribute('draggable', 'true');
+                row.setAttribute('data-order-idx', String(idx));
                 row.style.display = 'flex';
                 row.style.alignItems = 'center';
-                row.style.justifyContent = 'space-between';
-                row.style.gap = '10px';
+                row.style.gap = '12px';
                 row.style.padding = '10px 12px';
                 row.style.border = '1px solid var(--border)';
                 row.style.borderRadius = '12px';
                 row.style.background = 'var(--surface)';
+                row.style.cursor = 'grab';
+                var grip = document.createElement('span');
+                grip.setAttribute('aria-hidden', 'true');
+                grip.innerHTML = '<i class="fa-solid fa-grip-vertical" style="color:var(--muted);"></i>';
+                grip.style.flexShrink = '0';
                 var left = document.createElement('div');
                 left.style.fontWeight = '800';
                 left.style.color = 'var(--text)';
+                left.style.flex = '1';
                 left.textContent = (idx + 1) + '. ' + (LABELS[key] || key);
-                var right = document.createElement('div');
-                right.style.display = 'flex';
-                right.style.gap = '8px';
-                var up = document.createElement('button');
-                up.type = 'button';
-                up.textContent = '↑';
-                up.className = 'btn-add';
-                up.style.padding = '6px 12px';
-                up.style.borderRadius = '10px';
-                up.disabled = idx === 0;
-                up.addEventListener('click', function () {
-                    var o = parseHidden();
-                    var t = o[idx - 1];
-                    o[idx - 1] = o[idx];
-                    o[idx] = t;
-                    hidden.value = o.join(',');
-                    render();
-                });
-                var down = document.createElement('button');
-                down.type = 'button';
-                down.textContent = '↓';
-                down.className = 'btn-add';
-                down.style.padding = '6px 12px';
-                down.style.borderRadius = '10px';
-                down.disabled = idx === order.length - 1;
-                down.addEventListener('click', function () {
-                    var o = parseHidden();
-                    var t = o[idx + 1];
-                    o[idx + 1] = o[idx];
-                    o[idx] = t;
-                    hidden.value = o.join(',');
-                    render();
-                });
-                right.appendChild(up);
-                right.appendChild(down);
+                row.appendChild(grip);
                 row.appendChild(left);
-                row.appendChild(right);
                 host.appendChild(row);
+                row.addEventListener('dragstart', function (e) {
+                    try {
+                        e.dataTransfer.setData('text/plain', String(idx));
+                        e.dataTransfer.effectAllowed = 'move';
+                    } catch (err) { /* ignore */ }
+                    row.style.opacity = '0.55';
+                });
+                row.addEventListener('dragend', function () {
+                    row.style.opacity = '';
+                });
             });
         }
+
+        host.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            try { e.dataTransfer.dropEffect = 'move'; } catch (err) { /* ignore */ }
+        });
+        host.addEventListener('drop', function (e) {
+            e.preventDefault();
+            var targetRow = e.target && e.target.closest ? e.target.closest('[data-order-idx]') : null;
+            if (!targetRow) return;
+            var fromStr = '';
+            try { fromStr = e.dataTransfer.getData('text/plain'); } catch (err) { /* ignore */ }
+            var from = parseInt(fromStr, 10);
+            var to = parseInt(targetRow.getAttribute('data-order-idx'), 10);
+            if (isNaN(from) || isNaN(to) || from === to) return;
+            var o = parseHidden();
+            var moved = o.splice(from, 1)[0];
+            o.splice(to, 0, moved);
+            hidden.value = o.join(',');
+            render();
+        });
 
         render();
         if (form) {

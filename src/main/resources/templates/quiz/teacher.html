@@ -89,44 +89,6 @@
         .btn-del:hover { background:#ef4444; color:white; }
         .empty-msg { color:var(--muted); text-align:center; padding:40px; }
 
-        /* Results modal */
-        .results-overlay { display:none; position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; padding:12px 16px; box-sizing:border-box; }
-        .results-overlay.visible { display:flex; }
-        .results-modal {
-            background:var(--surface); border-radius:16px; padding:0;
-            width:100%; max-width:100%;
-            max-height:min(92vh, calc(100vh - 24px));
-            display:flex; flex-direction:column;
-            border:1px solid var(--surface2); color:var(--text);
-            min-height:0;
-        }
-        .results-modal-header {
-            flex-shrink:0;
-            padding:20px 24px 12px;
-            border-bottom:1px solid var(--surface2);
-            background:var(--surface);
-            position:sticky; top:0; z-index:5;
-        }
-        .results-modal-header h3 { font-size:1rem; font-weight:800; color:var(--dark); margin:0 0 4px; }
-        .results-modal .results-count { font-size:0.8rem; color:var(--muted); margin:0 0 8px; }
-        .results-modal .results-note { font-size:0.78rem; color:var(--muted); margin:0; }
-        .results-modal-body { flex:1; min-height:0; overflow:hidden; display:flex; flex-direction:column; padding:0 24px; }
-        .results-table-wrap { overflow:auto; flex:1; min-height:0; margin:0 0 10px; }
-        .results-modal-footer { flex-shrink:0; padding:12px 24px 20px; border-top:1px solid var(--surface2); background:var(--surface); }
-        .results-table { width:100%; border-collapse:separate; border-spacing:0; font-size:0.88rem; }
-        .results-table thead th {
-            position:sticky; top:0; z-index:2;
-            text-align:left; padding:10px 12px; color:var(--muted); font-weight:600;
-            border-bottom:1px solid var(--surface2);
-            background:var(--surface);
-            box-shadow:0 1px 0 var(--surface2);
-        }
-        .results-table td { padding:10px 12px; border-bottom:1px solid var(--surface2); color:var(--text); }
-        .results-table tr:last-child td { border-bottom:none; }
-        .results-empty { color:var(--muted); text-align:center; padding:24px; font-size:0.9rem; }
-        .results-close { padding:8px 20px; border-radius:8px; border:none; background:var(--surface2); color:var(--muted); font-size:0.85rem; cursor:pointer; }
-        .results-close:hover { background:var(--surface2); color:var(--text); }
-
         /* Create panel */
         .create-panel { display:none; }
         .create-panel.visible { display:block; }
@@ -257,36 +219,12 @@
                 <a th:href="@{/quiz/take/{id}(id=${quiz.id})}" class="btn-take" th:attr="data-id=${quiz.id}">
                     <i class="fa-solid fa-play"></i> Start
                 </a>
-                <button type="button" class="btn-results" th:attr="data-id=${quiz.id}, data-title=${quiz.title}, data-grade=${quiz.grade}, data-description=${quiz.description}" onclick="try{showQuizResults(this)}catch(e){alert((e&&e.message)?e.message:String(e))}">
+                <a class="btn-results" th:href="@{/quiz/{id}/results(id=${quiz.id})}">
                     <i class="fa-solid fa-chart-column"></i> Results
-                </button>
+                </a>
                 <button class="btn-del" th:attr="data-id=${quiz.id}" onclick="deleteQuiz(this)">
                     <i class="fa-solid fa-trash"></i>
                 </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Results modal (all students who took this quiz) -->
-    <div class="results-overlay" id="resultsOverlay">
-        <div class="results-modal">
-            <div class="results-modal-header">
-                <h3 id="resultsModalTitle">Quiz Results</h3>
-            </div>
-            <div class="results-modal-body">
-                <div class="results-table-wrap" id="resultsTableWrap"></div>
-                <div id="teacherResultsExplainStatus" class="results-empty" style="display:none;margin-top:10px;"></div>
-                <details id="teacherResultsExplainDetails" class="quiz-explain-details" style="display:none;margin:12px 0 0;">
-                    <summary style="padding: 12px 14px; font-weight:800; cursor:pointer;">
-                        <i class="fa-solid fa-lightbulb" style="color:var(--primary);"></i> Explanation
-                    </summary>
-                    <div style="padding: 0 14px 14px;">
-                        <div th:replace="~{fragments/classroom-embed :: embed}"></div>
-                    </div>
-                </details>
-            </div>
-            <div class="results-modal-footer">
-                <button type="button" class="results-close" onclick="closeResultsModal()">Close</button>
             </div>
         </div>
     </div>
@@ -318,7 +256,6 @@
                 <div class="form-group" style="flex:1; min-width:140px;">
                     <label>Language</label>
                     <select id="languageInput">
-                        <option value="AUTO">Auto</option>
                         <option value="ENGLISH" selected>English</option>
                         <option value="HINDI">Hindi</option>
                     </select>
@@ -326,7 +263,6 @@
                 <div class="form-group" style="flex:1; min-width:140px;">
                     <label>Difficulty</label>
                     <select id="difficultyInput">
-                        <option value="AUTO">Auto</option>
                         <option value="EASY" selected>Easy</option>
                         <option value="MEDIUM">Medium</option>
                         <option value="HARD">Hard</option>
@@ -351,12 +287,8 @@
                     </div>
                 </div>
             </div>
-            <div class="form-row" style="margin-bottom:14px;">
-                <div class="form-group" style="flex:2; min-width:220px;">
-                    <label>Source URL (optional)</label>
-                    <input type="text" id="sourceUrlInput" placeholder="https://ncert.nic.in/textbook.php?ihsc1=2-12…"/>
-                </div>
-            </div>
+            <!-- NCERT URL hidden from UI; empty string sent — backend unchanged -->
+            <input type="hidden" id="sourceUrlInput" value=""/>
             <!-- File upload -->
             <div style="margin-top:10px;">
                 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
@@ -382,7 +314,7 @@
         <!-- Questions editor -->
         <div class="q-editor" id="qEditor"></div>
 
-        <button onclick="addQuestion('MCQ')" style="background:rgba(99,102,241,0.15);color:#818cf8;border:1px solid rgba(99,102,241,0.25);padding:8px 16px;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;margin-right:8px;">+ MCQ</button>
+        <button type="button" id="addMcqBtn" onclick="addQuestion('MCQ')" style="background:rgba(99,102,241,0.15);color:#818cf8;border:1px solid rgba(99,102,241,0.25);padding:8px 16px;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;margin-right:8px;">+ MCQ</button>
 
         <button class="save-quiz-btn" id="saveQuizBtn" onclick="saveQuiz()" style="margin-top:20px;" disabled>
             <i class="fa-solid fa-floppy-disk"></i> Save Quiz
@@ -403,8 +335,17 @@
 
 <script>
 let questions = [];
+/** After AI generation, block editing question text/options (still allow Save Quiz). */
+let questionsAiLocked = false;
 let quizGenFileData = null;
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5 MB
+
+function toggleQuizLockUi() {
+    const note = document.getElementById('quizAiLockedNote');
+    const addBtn = document.getElementById('addMcqBtn');
+    if (note) note.style.display = questionsAiLocked ? 'block' : 'none';
+    if (addBtn) addBtn.style.display = questionsAiLocked ? 'none' : '';
+}
 
 function updateSaveButton() {
     const btn = document.getElementById('saveQuizBtn');
@@ -495,8 +436,8 @@ async function aiGenerate() {
     const sourceUrl = document.getElementById('sourceUrlInput').value.trim();
     const requestedCount = parseInt(document.getElementById('countInput').value.trim() || '5', 10);
     const count = String(Math.max(1, Math.min(Number.isFinite(requestedCount) ? requestedCount : 5, 15)));
-    const language = document.getElementById('languageInput').value.trim() || 'AUTO';
-    const difficulty = document.getElementById('difficultyInput').value.trim() || 'AUTO';
+    const language = document.getElementById('languageInput').value.trim() || 'ENGLISH';
+    const difficulty = document.getElementById('difficultyInput').value.trim() || 'EASY';
     if (!topic && !grade && !description && !quizGenFileData && !sourceUrl) {
         alert('Please provide at least one input: topic/grade/description, source URL, or upload a file.');
         return;
@@ -541,6 +482,8 @@ async function aiGenerate() {
             }
             /* Replace editor contents each time — do not stack onto the last generation */
             questions = Array.isArray(arr) ? arr.slice() : [];
+            questionsAiLocked = true;
+            toggleQuizLockUi();
             renderQuestions();
             updateSaveButton();
         }
@@ -552,6 +495,7 @@ async function aiGenerate() {
 }
 
 function addQuestion(type) {
+    if (questionsAiLocked) return;
     const q = { type, text:'', options: type === 'MCQ' ? ['','','',''] : [], answer:'' };
     questions.push(q);
     renderQuestions();
@@ -559,6 +503,7 @@ function addQuestion(type) {
 }
 
 function removeQuestion(idx) {
+    if (questionsAiLocked) return;
     questions.splice(idx, 1);
     renderQuestions();
     updateSaveButton();
@@ -567,49 +512,51 @@ function removeQuestion(idx) {
 function renderQuestions() {
     const editor = document.getElementById('qEditor');
     if (!editor) return;
+    const L = questionsAiLocked;
     editor.innerHTML = questions.map((q, i) => `
         <div class="q-item">
-            <button class="q-del" onclick="removeQuestion(${i})"><i class="fa-solid fa-xmark"></i></button>
+            ${L ? '' : `<button type="button" class="q-del" onclick="removeQuestion(${i})"><i class="fa-solid fa-xmark"></i></button>`}
             <div class="q-header">
                 <span class="q-num">Q${i+1}</span>
                 <span class="q-type-badge">${q.type}</span>
             </div>
             <input type="text" value="${esc(q.text)}" placeholder="Question text…"
-                   oninput="questions[${i}].text=this.value"
-                   style="width:100%; margin-bottom:8px;"/>
-            ${ q.type === 'MCQ' ? renderMcqOptions(q, i) : '' }
-            ${ q.type === 'TF'  ? renderTfAnswer(q, i)   : '' }
-            ${ q.type === 'SHORT' ? renderShortAnswer(q, i) : '' }
+                   ${L ? 'readonly' : `oninput="questions[${i}].text=this.value"`}
+                   style="width:100%; margin-bottom:8px;${L ? 'opacity:0.95;' : ''}"/>
+            ${ q.type === 'MCQ' ? renderMcqOptions(q, i, L) : '' }
+            ${ q.type === 'TF'  ? renderTfAnswer(q, i, L)   : '' }
+            ${ q.type === 'SHORT' ? renderShortAnswer(q, i, L) : '' }
         </div>`).join('');
 }
 
-function renderMcqOptions(q, i) {
+function renderMcqOptions(q, i, locked) {
     return `<div class="q-options">
         ${q.options.map((opt, oi) => `
             <div style="display:flex; gap:6px; align-items:center;">
                 <input type="radio" name="ans_${i}" value="${esc(opt)}"
                        ${ q.answer === opt ? 'checked' : '' }
-                       onchange="questions[${i}].answer=questions[${i}].options[${oi}]"/>
+                       ${locked ? 'disabled' : `onchange="questions[${i}].answer=questions[${i}].options[${oi}]"`}/>
                 <input type="text" value="${esc(opt)}" placeholder="Option ${oi+1}"
-                       oninput="questions[${i}].options[${oi}]=this.value; updateRadioValues(${i})"
+                       ${locked ? 'readonly' : `oninput="questions[${i}].options[${oi}]=this.value; updateRadioValues(${i})"`}
                        style="flex:1;"/>
             </div>`).join('')}
-    </div><div style="font-size:0.72rem;color:var(--muted);margin-top:4px;">Select the correct answer (radio)</div>`;
-}
-function renderTfAnswer(q, i) {
-    return `<div style="display:flex; gap:12px; margin-top:4px;">
-        <label style="display:flex;align-items:center;gap:6px;color:var(--text);font-size:0.88rem;">
-            <input type="radio" name="tf_${i}" value="True"  ${ q.answer==='True'  ? 'checked':'' } onchange="questions[${i}].answer='True'"/> True</label>
-        <label style="display:flex;align-items:center;gap:6px;color:var(--text);font-size:0.88rem;">
-            <input type="radio" name="tf_${i}" value="False" ${ q.answer==='False' ? 'checked':'' } onchange="questions[${i}].answer='False'"/> False</label>
     </div>`;
 }
-function renderShortAnswer(q, i) {
+function renderTfAnswer(q, i, locked) {
+    const dis = locked ? 'disabled' : '';
+    return `<div style="display:flex; gap:12px; margin-top:4px;">
+        <label style="display:flex;align-items:center;gap:6px;color:var(--text);font-size:0.88rem;">
+            <input type="radio" name="tf_${i}" value="True"  ${ q.answer==='True'  ? 'checked':'' } ${dis} ${locked ? '' : `onchange="questions[${i}].answer='True'"`}/> True</label>
+        <label style="display:flex;align-items:center;gap:6px;color:var(--text);font-size:0.88rem;">
+            <input type="radio" name="tf_${i}" value="False" ${ q.answer==='False' ? 'checked':'' } ${dis} ${locked ? '' : `onchange="questions[${i}].answer='False'"`}/> False</label>
+    </div>`;
+}
+function renderShortAnswer(q, i, locked) {
     return `<input type="text" value="${esc(q.answer)}" placeholder="Expected answer…"
-                   oninput="questions[${i}].answer=this.value"
+                   ${locked ? 'readonly' : `oninput="questions[${i}].answer=this.value"`}
                    style="width:100%; margin-top:4px;"/>`;
 }
-function updateRadioValues(idx) { renderQuestions(); }
+function updateRadioValues(idx) { if (!questionsAiLocked) renderQuestions(); }
 function esc(s) { return (s||'').replace(/"/g,'&quot;'); }
 
 // ── Description voice input (teacher) ───────────────────────────────────────
@@ -728,12 +675,27 @@ document.addEventListener('DOMContentLoaded', wireAiPromptClear);
 document.addEventListener('DOMContentLoaded', wireQuizUploadDnD);
 
 async function saveQuiz() {
+    const btn = document.getElementById('saveQuizBtn');
+    if (window.__savingQuiz) return;
+    window.__savingQuiz = true;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Saving…';
+    }
     let topic = document.getElementById('quizGenTopicInput').value.trim();
     let grade = document.getElementById('gradeInput').value.trim();
     let description = document.getElementById('descriptionInput').value.trim();
     if (!topic) topic = 'Auto-detected topic';
     if (!description) description = 'Auto-generated from uploaded screenshot/text.';
-    if (questions.length === 0) { alert('Please add at least one question.'); return; }
+    if (questions.length === 0) {
+        alert('Please add at least one question.');
+        window.__savingQuiz = false;
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Quiz';
+        }
+        return;
+    }
 
     const fd = new FormData();
     fd.append('topic',         topic);
@@ -748,124 +710,16 @@ async function saveQuiz() {
             alert('Quiz saved! ' + d.count + ' questions.');
             location.reload();
         } else { alert('Error: ' + (d.error || 'Unknown')); }
-    } catch(e) { alert('Save failed.'); }
-}
-
-async function showQuizResults(btn) {
-    const id = btn.dataset.id;
-    const title = btn.dataset.title || 'Quiz';
-    const grade = (btn.dataset.grade || '').trim();
-    const description = (btn.dataset.description || '').trim();
-    const ncertUrl = getNcertUrlFromText(description);
-    document.getElementById('resultsModalTitle').textContent = title + ' (ID: ' + id + ') — Results';
-    document.getElementById('resultsTableWrap').innerHTML = '<div class="results-empty"><span class="spinner"></span> Loading…</div>';
-    document.getElementById('resultsOverlay').classList.add('visible');
-    window.__lastQuizResults = [];
-    window.__lastQuizResultsGrade = grade;
-    window.__lastQuizResultsNcertUrl = ncertUrl;
-    try {
-        const r = await fetch('/quiz/' + id + '/question-results');
-        if (!r.ok) throw new Error('Failed to load results');
-        const data = await r.json();
-        const list = Array.isArray(data.results) ? data.results : (Array.isArray(data) ? data : (data && typeof data === 'object' && !Array.isArray(data) ? [data] : []));
-        const displayList = list;
-        window.__lastQuizResults = displayList;
-        const distinctNames = new Set(displayList.map(row => (row.studentName || '').trim()).filter(Boolean));
-        const countEl = document.getElementById('resultsCount');
-        if (countEl) {
-            countEl.textContent = displayList.length === 0
-                ? ''
-                : displayList.length + ' response row(s) from ' + distinctNames.size + ' student(s).';
+    } catch(e) {
+        alert('Save failed.');
+        window.__savingQuiz = false;
+        if (btn) {
+            btn.disabled = questions.length === 0;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Quiz';
         }
-        if (displayList.length === 0) {
-            document.getElementById('resultsTableWrap').innerHTML = '<div class="results-empty">No responses yet.</div>';
-        } else {
-            const rows = displayList.map((row) => {
-                const qText = row.questionText != null ? row.questionText : '—';
-                const name = row.studentName != null ? row.studentName : '—';
-                const studentId = row.studentId != null ? row.studentId : '—';
-                const answer = row.answer != null && row.answer !== '' ? row.answer : '—';
-                const correct = row.correctAnswer != null && row.correctAnswer !== '' ? row.correctAnswer : '—';
-                const marks = row.marksAwarded != null ? row.marksAwarded : '—';
-                const explanation = row.explanation != null && row.explanation !== '' ? row.explanation : '—';
-                const status = row.isCorrect ? 'Correct' : 'Wrong';
-                const qid = row.questionId != null ? String(row.questionId) : '';
-                const explainBtn = qid
-                    ? `<button type="button" class="btn-explain" onclick="openExplainInTake('${escJs(id)}','${escJs(qid)}')"><i class="fa-solid fa-lightbulb"></i> Explain via AI</button>`
-                    : '—';
-                return `<tr><td>${escapeHtml(qText)}</td><td>${escapeHtml(name)}</td><td>${escapeHtml(studentId)}</td><td>${escapeHtml(answer)}</td><td>${escapeHtml(correct)}</td><td>${escapeHtml(String(marks))}</td><td>${explainBtn}</td><td>${escapeHtml(status)}</td></tr>`;
-            }).join('');
-            document.getElementById('resultsTableWrap').innerHTML =
-                '<table class="results-table"><thead><tr><th>Question</th><th>Student</th><th>Student ID</th><th>Answer</th><th>Correct Answer</th><th>Marks</th><th>Explain via AI</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table>';
-        }
-    } catch (e) {
-        document.getElementById('resultsTableWrap').innerHTML = '<div class="results-empty">Could not load results. Try again.</div>';
     }
 }
 
-function openExplainInTake(quizId, questionId) {
-    // Inline explain inside results modal (no navigation)
-    if (!questionId) return;
-    const qid = String(questionId);
-    const status = document.getElementById('teacherResultsExplainStatus');
-    const det = document.getElementById('teacherResultsExplainDetails');
-    if (status) { status.style.display = ''; status.textContent = 'Loading explanation...'; }
-    if (det) { det.open = false; det.style.display = 'none'; }
-
-    // Find row to build prompt
-    const row = (window.__lastQuizResults || []).find(r => r && String(r.questionId) === qid) || null;
-    if (!row) {
-        if (status) status.textContent = 'Unable to fetch AI explanation.';
-        return;
-    }
-    const grade = (window.__lastQuizResultsGrade || '').trim();
-    const ncertUrl = (window.__lastQuizResultsNcertUrl || '').trim();
-
-    const typeLabel = 'multiple-choice question';
-    const prompt = `Explain this ${typeLabel} for a Grade ${(grade || '5')} student.
-
-Question: ${row.questionText || ''}
-Correct Answer: ${row.correctAnswer || ''}
-
-${ncertUrl ? `Use ONLY this NCERT source for explanation. Do not use outside facts.\nNCERT Source URL: ${ncertUrl}\n\n` : ''}Return ONLY in this JSON format:
-{
-  "key_point": "1 short sentence",
-  "simple_explanation": "2 short sentences max",
-  "example": "1 simple relatable example"
-}`;
-
-    const input = document.getElementById('topicInput');
-    const pg = document.getElementById('inputPrepareGrade');
-    const mode = document.getElementById('inputClassSessionMode');
-    if (pg) pg.value = (grade || '5');
-    if (mode) mode.value = 'quiz';
-    if (input) {
-        input.value = 'Explain answer';
-        input.dataset.fullPrompt = prompt;
-    }
-    if (typeof submitForm === 'function') {
-        submitForm();
-    } else {
-        if (status) status.textContent = 'Unable to fetch AI explanation.';
-    }
-}
-
-window.onAiExplainLoaded = function () {
-    const status = document.getElementById('teacherResultsExplainStatus');
-    const det = document.getElementById('teacherResultsExplainDetails');
-    if (status) { status.style.display = 'none'; status.textContent = ''; }
-    if (det) { det.style.display = 'block'; det.open = true; det.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
-};
-
-window.onAiExplainFailed = function () {
-    const status = document.getElementById('teacherResultsExplainStatus');
-    const det = document.getElementById('teacherResultsExplainDetails');
-    if (det) { det.open = false; det.style.display = 'none'; }
-    if (status) { status.style.display = ''; status.textContent = 'Unable to fetch AI explanation.'; }
-};
-function closeResultsModal() {
-    document.getElementById('resultsOverlay').classList.remove('visible');
-}
 function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function escJs(s) { return String(s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, ' ').replace(/\r/g, ' '); }
 

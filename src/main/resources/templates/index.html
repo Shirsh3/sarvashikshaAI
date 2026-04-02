@@ -18,11 +18,6 @@
         .classroom-details summary::before { content: '▸ '; display: inline-block; transition: transform 0.15s; }
         .classroom-details[open] summary::before { transform: rotate(90deg); }
         .classroom-details .section-text { margin-top: 10px; line-height: 1.65; font-size: 0.95rem; padding-bottom: 6px; }
-        .btn-load-video {
-            display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 12px;
-            border: 1px solid var(--surface2); background: var(--surface2); color: var(--text); font-weight: 700; font-size: 0.9rem; cursor: pointer;
-        }
-        .btn-load-video:hover { border-color: var(--primary); color: var(--primary); }
     </style>
 </head>
 <body class="app-layout">
@@ -84,9 +79,16 @@
                 <span class="topic-icon" id="topicIcon">💬</span>
                 <span th:text="${teachingRequest.topic}">Topic</span>
             </div>
-            <button class="read-aloud-btn" id="readAloudBtn" type="button">
-                <i class="fa-solid fa-volume-high"></i> Read Aloud
-            </button>
+            <details class="read-aloud-details" id="readAloudDetails">
+                <summary class="read-aloud-summary">
+                    <button type="button" class="read-aloud-btn" id="readAloudBtn">
+                        <i class="fa-solid fa-volume-high"></i> Read Aloud
+                    </button>
+                </summary>
+                <div class="read-aloud-dropdown">
+                    Reads <strong>Key points</strong>, then <strong>Detailed explanation</strong>, then <strong>Example</strong> using your browser voice (Hindi when available). Click <strong>Stop</strong> to pause and close this panel.
+                </div>
+            </details>
         </div>
 
         <!-- Non-educational: short refusal only -->
@@ -97,7 +99,8 @@
         <!-- Tier 1: Lazy YouTube (videoId is fetched on click for quiz mode) -->
         <div class="media-visual video-lazy-wrap"
              th:if="${response != null and !response.nonEducational and (response.videoId != null or (teachingRequest != null and teachingRequest.classSessionMode == 'quiz'))}">
-            <div class="video-lazy" th:attr="data-videoid=${response.videoId}">
+            <div class="video-lazy" th:attr="data-videoid=${response.videoId}"
+                 th:data-youtube-query="${response.youtubeSearchQuery}">
                 <button type="button" class="btn-load-video" onclick="loadYouTubeForCurrentAnswer(event)">
                     <i class="fa-brands fa-youtube"></i> Load video
                 </button>
@@ -125,16 +128,16 @@
 
         <!-- Clickable sections (educational answers only) -->
         <div class="answer-cards" th:if="${response != null and !response.nonEducational}">
-            <details class="classroom-details" th:if="${response.keyPointSection != null}">
-                <summary>Key points</summary>
+            <details class="classroom-details" id="keyPointsDetails" th:if="${response.keyPointSection != null}">
+                <summary><i class="fa-solid fa-key" style="color:var(--primary);margin-right:8px;"></i><strong>Key points</strong></summary>
                 <div class="section-text" th:text="${response.keyPointSection}"></div>
             </details>
-            <details class="classroom-details" th:if="${response.explanationSection != null}">
-                <summary>Detailed explanation</summary>
+            <details class="classroom-details" id="explanationDetails" th:if="${response.explanationSection != null}">
+                <summary><i class="fa-solid fa-book-open" style="color:var(--primary);margin-right:8px;"></i><strong>Detailed explanation</strong></summary>
                 <div class="section-text" th:text="${response.explanationSection}"></div>
             </details>
-            <details class="classroom-details" th:if="${response.exampleSection != null}">
-                <summary>Example</summary>
+            <details class="classroom-details" id="exampleDetails" th:if="${response.exampleSection != null}">
+                <summary><i class="fa-solid fa-lightbulb" style="color:var(--primary);margin-right:8px;"></i><strong>Example</strong></summary>
                 <div class="section-text" th:text="${response.exampleSection}"></div>
             </details>
             <!-- Fallback: raw response when sections could not be parsed -->

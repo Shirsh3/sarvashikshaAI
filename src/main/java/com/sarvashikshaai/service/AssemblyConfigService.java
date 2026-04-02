@@ -76,6 +76,13 @@ public class AssemblyConfigService {
         return String.join(",", resolveSlotOrder(csv));
     }
 
+    @Transactional
+    public void updateSlotOrderCsv(String csv) {
+        AssemblyConfig cfg = getOrCreate();
+        cfg.setSlotOrder(normalizeSlotOrderCsv(csv));
+        repo.save(cfg);
+    }
+
     public Map<String, String> getLinks() {
         AssemblyConfig cfg = repo.findAll().stream().findFirst().orElse(null);
         Map<String, String> map = new HashMap<>();

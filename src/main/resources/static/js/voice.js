@@ -5,6 +5,7 @@
 
 let isSpeaking = false;
 let ttsTimer   = null;
+let __ttsSequence = null;
 
 // ── Voice selection ───────────────────────────────────────────────────────────
 
@@ -44,14 +45,47 @@ function buildTtsText() {
 
 // ── Read Aloud state ──────────────────────────────────────────────────────────
 
+function setReadAloudDetailsOpen(open) {
+    const det = document.getElementById('readAloudDetails');
+    if (!det) return;
+    det.open = !!open;
+}
+
 function resetReadAloudBtn() {
     isSpeaking = false;
+    __ttsSequence = null;
     if (ttsTimer) { clearInterval(ttsTimer); ttsTimer = null; }
     const btn = document.getElementById('readAloudBtn');
     if (btn) {
         btn.className = 'read-aloud-btn';
         btn.innerHTML = '<i class="fa-solid fa-volume-high"></i> Read Aloud';
     }
+    setReadAloudDetailsOpen(false);
+}
+
+function setSectionOpen(detailsEl, open) {
+    if (!detailsEl) return;
+    try { detailsEl.open = !!open; } catch (_) {}
+}
+
+function closeAllSpokenSections() {
+    setSectionOpen(document.getElementById('keyPointsDetails'), false);
+    setSectionOpen(document.getElementById('explanationDetails'), false);
+    setSectionOpen(document.getElementById('exampleDetails'), false);
+}
+
+function buildTtsSectionsQueue() {
+    const explain = document.getElementById('ttsExplain')?.textContent.trim();
+    const example = document.getElementById('ttsExample')?.textContent.trim();
+    const key     = document.getElementById('ttsKey')?.textContent.trim();
+    const raw     = document.getElementById('ttsRaw')?.textContent.trim();
+
+    const q = [];
+    if (key) q.push({ label: 'Key points', text: key, details: document.getElementById('keyPointsDetails') });
+    if (explain) q.push({ label: 'Detailed explanation', text: explain, details: document.getElementById('explanationDetails') });
+    if (example) q.push({ label: 'Example', text: example, details: document.getElementById('exampleDetails') });
+    if (q.length === 0 && raw) q.push({ label: 'Explanation', text: raw, details: null });
+    return q;
 }
 
 function doSpeak(text, voice) {
@@ -60,12 +94,20 @@ function doSpeak(text, voice) {
     utter.rate    = 0.9;
     utter.pitch   = 1;
     if (voice) utter.voice = voice;
-    utter.onend   = resetReadAloudBtn;
+    utter.onend   = () => {
+        // If we are in a section-by-section sequence, proceed; otherwise reset.
+        if (__ttsSequence && typeof __ttsSequence.next === 'function') {
+            __ttsSequence.next();
+        } else {
+            resetReadAloudBtn();
+        }
+    };
     utter.onerror = (e) => {
         if (e.error !== 'interrupted') resetReadAloudBtn();
     };
 
     isSpeaking = true;
+    setReadAloudDetailsOpen(true);
     const btn = document.getElementById('readAloudBtn');
     if (btn) {
         btn.className = 'read-aloud-btn speaking';
@@ -82,22 +124,48 @@ function doSpeak(text, voice) {
 }
 
 function startReading() {
-    const text = buildTtsText();
-    if (!text) return;
+    const queue = buildTtsSectionsQueue();
+    if (!queue || queue.length === 0) return;
     if (window.monitorIsPriorityActive && window.monitorIsPriorityActive()) return;
 
     window.speechSynthesis.cancel();
 
-    // Chrome sometimes returns empty list right after cancel() — retry in 50 ms
-    let voices = window.speechSynthesis.getVoices();
-    if (voices.length === 0) {
-        setTimeout(() => {
-            voices = window.speechSynthesis.getVoices();
-            doSpeak(text, getGoogleHindiVoice(voices));
-        }, 50);
-    } else {
-        doSpeak(text, getGoogleHindiVoice(voices));
-    }
+    closeAllSpokenSections();
+    let idx = 0;
+    __ttsSequence = {
+        next: () => {
+            if (!__ttsSequence) return;
+            // Close previous section
+            if (idx > 0) {
+                const prev = queue[idx - 1];
+                if (prev && prev.details) setSectionOpen(prev.details, false);
+            }
+            // Finished
+            if (idx >= queue.length) {
+                closeAllSpokenSections();
+                resetReadAloudBtn();
+                return;
+            }
+            const cur = queue[idx++];
+            if (cur && cur.details) setSectionOpen(cur.details, true);
+
+            const text = (cur && cur.text ? cur.text : '').trim();
+            if (!text) { __ttsSequence.next(); return; }
+
+            // Chrome sometimes returns empty list right after cancel() — retry in 50 ms
+            let voices = window.speechSynthesis.getVoices();
+            const voice = getGoogleHindiVoice(voices);
+            if (voices.length === 0) {
+                setTimeout(() => {
+                    voices = window.speechSynthesis.getVoices();
+                    doSpeak(text, getGoogleHindiVoice(voices));
+                }, 50);
+            } else {
+                doSpeak(text, voice);
+            }
+        }
+    };
+    __ttsSequence.next();
 }
 
 function isReadAloudActive() {
@@ -112,20 +180,32 @@ function initReadAloudBtn() {
     // Clone to remove any stale listeners (safe after AJAX panel swap)
     const fresh = btn.cloneNode(true);
     btn.replaceWith(fresh);
-    document.getElementById('readAloudBtn').addEventListener('click', () => {
+    document.getElementById('readAloudBtn').addEventListener('click', (e) => {
+        e.preventDefault();
         if (isSpeaking) {
             window.speechSynthesis.cancel();
+            closeAllSpokenSections();
             resetReadAloudBtn();
         } else {
             startReading();
         }
     });
+    const det = document.getElementById('readAloudDetails');
+    if (det) {
+        det.addEventListener('toggle', () => {
+            if (!det.open && isSpeaking) {
+                window.speechSynthesis.cancel();
+                resetReadAloudBtn();
+            }
+        });
+    }
 }
 
 // Called by app.js after the right panel is swapped via AJAX
 window.reinitVoiceUI = function () {
     isSpeaking = false;
     if (ttsTimer) { clearInterval(ttsTimer); ttsTimer = null; }
+    setReadAloudDetailsOpen(false);
     initReadAloudBtn();
 };
 

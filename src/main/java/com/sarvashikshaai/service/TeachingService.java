@@ -46,7 +46,7 @@ public class TeachingService {
         if (request.getTopic() == null || request.getTopic().isBlank()) {
             return new TeachingResponse(
                     "Please enter a school-related question.",
-                    null, null, null, null, null, true);
+                    null, null, null, null, null, null, true);
         }
         String mode = request.getClassSessionMode() == null ? "" : request.getClassSessionMode().trim().toLowerCase();
         Long qid = request.getSourceQuestionId();
@@ -61,6 +61,7 @@ public class TeachingService {
                         c.getKeyPointSection(),
                         c.getVideoId(),
                         c.getWikiGifUrl(),
+                        null,
                         false
                 );
             }
@@ -71,12 +72,12 @@ public class TeachingService {
         if (category != OpenAIClient.QueryCategory.LEARNING) {
             return new TeachingResponse(
                     StrictEducationalGuard.refusalMessage(),
-                    null, null, null, null, null, true);
+                    null, null, null, null, null, null, true);
         }
         if (StrictEducationalGuard.isBlocked(request.getTopic())) {
             return new TeachingResponse(
                     StrictEducationalGuard.refusalMessage(),
-                    null, null, null, null, null, true);
+                    null, null, null, null, null, null, true);
         }
 
         String prompt = promptBuilder.buildUnifiedTeachingPrompt(request);
@@ -99,7 +100,7 @@ public class TeachingService {
                 String msg = refusal.isBlank()
                         ? "We can only show educational content. Please ask a school-related question."
                         : refusal;
-                return new TeachingResponse(msg, null, null, null, null, null, true);
+                return new TeachingResponse(msg, null, null, null, null, null, null, true);
             }
 
             String explanationSection = n.path("explanation").asText("").strip();
@@ -130,6 +131,7 @@ public class TeachingService {
                     nullIfEmpty(keyPointSection),
                     videoId,
                     wikiGifUrl,
+                    nullIfEmpty(ytQuery),
                     false);
 
             // Save quiz explanation cache (only if successful and a questionId is provided).
@@ -157,7 +159,7 @@ public class TeachingService {
             log.warn("Unified teaching JSON parse failed: {}", e.getMessage());
             return new TeachingResponse(
                     "We could not read the answer. Please try asking again in simpler words.",
-                    null, null, null, null, null, true);
+                    null, null, null, null, null, null, true);
         }
     }
 

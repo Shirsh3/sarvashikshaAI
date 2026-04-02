@@ -656,8 +656,12 @@ async function loadQuizResults() {
         document.getElementById('reviewTableBody').innerHTML = reviewRows;
     } catch (e) {
         document.getElementById('scoreTitle').textContent = 'Quiz complete';
+        const msg = (e && e.message) ? String(e.message) : 'Could not load results.';
         document.getElementById('reviewTableBody').innerHTML =
-            `<tr><td colspan="6" style="color:#b91c1c;padding:14px;">${escapeHtml(e && e.message ? e.message : 'Could not load results.')}</td></tr>`;
+            `<tr><td colspan="6" style="color:#b91c1c;padding:14px;">
+                Could not load quiz results. Please refresh the page and try again.
+                <div style="margin-top:6px;color:var(--muted);font-size:0.86rem;">${escapeHtml(msg)}</div>
+             </td></tr>`;
     }
 
     updateStudentSelectorVisibility();
@@ -695,12 +699,16 @@ function renderQuestion(idx) {
     const area = document.getElementById('qInputArea');
     let inputMarkup = '';
     if (q.type === 'MCQ') {
-        inputMarkup = `<div class="mcq-options">${q.options.map(opt =>
-            `<button class="mcq-opt" onclick="selectMcq(this,'${esc(opt)}')">${opt}</button>`
-        ).join('')}</div>
+        inputMarkup = `<div class="mcq-options">${q.options.map((opt, i) => {
+            const label = i < 26 ? String.fromCharCode(65 + i) : String(i + 1);
+            return `<button class="mcq-opt" type="button" data-opt-index="${i}" onclick="selectMcq(this, ${i})">
+                        <span style="font-weight:900;margin-right:10px;">Option ${label}</span>
+                        <span>${opt}</span>
+                    </button>`;
+        }).join('')}</div>
         <div style="margin-top:14px;">
-            <button type="button" class="voice-q-btn" id="mcqVoiceBtn" title="Speak your answer (A/B/C/D or option text)">
-                <i class="fa-solid fa-microphone"></i> Voice answer
+            <button type="button" class="voice-q-btn" id="mcqVoiceBtn" title="Speak: Option A / Option B / Option C / Option D">
+                <i class="fa-solid fa-microphone"></i> Voice answer (say Option A/B/C/D)
             </button>
         </div>`;
     } else if (q.type === 'TF') {
@@ -919,7 +927,12 @@ function extractNcertUrlFromText(text) {
     return m ? m[0] : '';
 }
 
-function selectMcq(btn, val) {
+function selectMcq(btn, optIndex) {
+    const q = questions[currentIdx];
+    if (!q || !Array.isArray(q.options)) return;
+    const idx = typeof optIndex === 'number' ? optIndex : parseInt(String(optIndex || '0'), 10);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= q.options.length) return;
+    const val = String(q.options[idx] || '').trim();
     document.querySelectorAll('.mcq-opt').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
     givenAnswers[currentIdx] = val;
@@ -955,7 +968,14 @@ function selectTf(btn, val) {
 }
 function restoreAnswer(q, val) {
     if (q.type === 'MCQ') {
-        document.querySelectorAll('.mcq-opt').forEach(b => { if (b.textContent === val) b.classList.add('selected'); });
+        const target = String(val || '').trim();
+        const targetIdx = Array.isArray(q.options)
+            ? q.options.findIndex(o => String(o || '').trim().toLowerCase() === target.toLowerCase())
+            : -1;
+        document.querySelectorAll('.mcq-opt').forEach(b => {
+            const idx = b && b.dataset ? parseInt(b.dataset.optIndex || '-1', 10) : -1;
+            if (targetIdx >= 0 && idx === targetIdx) b.classList.add('selected');
+        });
     } else if (q.type === 'TF') {
         document.querySelectorAll('.tf-btn').forEach(b => { if (b.dataset && b.textContent.trim() === val) b.classList.add('selected'); });
     }
@@ -1015,17 +1035,32 @@ function buildQuestionReadAloudText() {
     const q = questions[currentIdx];
     const stem = (q && q.text) ? String(q.text).trim() : (document.getElementById('qText')?.textContent || '').trim();
     if (!q) return stem;
+    const selectedVal = Array.isArray(givenAnswers) && currentIdx >= 0
+        ? String(givenAnswers[currentIdx] || '').trim()
+        : '';
+
     if (q.type === 'MCQ' && Array.isArray(q.options) && q.options.length) {
+        // If user already selected an option, read ONLY that option (instead of the full list).
+        if (selectedVal) {
+            const selIdx = q.options.findIndex(o => String(o).trim().toLowerCase() === selectedVal.toLowerCase());
+            if (selIdx >= 0) {
+                const label = selIdx < 26 ? String.fromCharCode(65 + selIdx) : String(selIdx + 1);
+                return stem + '. You selected Option ' + label + ': ' + String(q.options[selIdx]).trim() + '.';
+            }
+        }
+        // Otherwise read the full option list so the student can choose.
         const opts = q.options.map(function (o, i) {
             const label = i < 26 ? String.fromCharCode(65 + i) : String(i + 1);
-            return label + ', ' + String(o).trim();
+            return 'Option ' + label + ', ' + String(o).trim();
         });
         return stem + '. Your options are: ' + opts.join('. ') + '.';
     }
     if (q.type === 'TF') {
+        if (selectedVal) return stem + '. You selected ' + (selectedVal.toLowerCase().includes('true') ? 'True' : 'False') + '.';
         return stem + '. Choose True or False.';
     }
     if (q.type === 'SHORT') {
+        if (selectedVal) return stem + '. Your answer is: ' + selectedVal + '.';
         return stem + '. Type your answer in the box.';
     }
     return stem;
@@ -1052,6 +1087,7 @@ function speakQuestionOnce(text) {
         }, 900);
         return;
     }
+    window.__quizQuestionTtsActive = true;
     const u = new SpeechSynthesisUtterance(text);
     currentQuestionUtterance = u;
     u.lang = 'en-IN';
@@ -1059,6 +1095,7 @@ function speakQuestionOnce(text) {
     u.onend = () => {
         questionSpeechLoopEnabled = false;
         currentQuestionUtterance = null;
+        window.__quizQuestionTtsActive = false;
         setQuestionReadButtonState(false);
     };
     u.onerror = () => {
@@ -1077,6 +1114,7 @@ function stopQuestionSpeech() {
         try { currentQuestionUtterance.onend = null; } catch (_) {}
     }
     currentQuestionUtterance = null;
+    window.__quizQuestionTtsActive = false;
     window.speechSynthesis.cancel();
 }
 
@@ -1225,8 +1263,15 @@ function normalizeVoice(t) {
 }
 
 function setMcqAnswer(val) {
+    const q = questions[currentIdx];
+    const target = String(val || '').trim();
+    let targetIdx = -1;
+    if (q && Array.isArray(q.options) && target) {
+        targetIdx = q.options.findIndex(o => String(o || '').trim().toLowerCase() === target.toLowerCase());
+    }
     document.querySelectorAll('.mcq-opt').forEach(b => {
-        const match = (b.textContent || '').trim() === val;
+        const idx = b && b.dataset ? parseInt(b.dataset.optIndex || '-1', 10) : -1;
+        const match = targetIdx >= 0 && idx === targetIdx;
         b.classList.toggle('selected', match);
     });
     givenAnswers[currentIdx] = val;
@@ -1268,17 +1313,34 @@ function pickMcqOption(q, transcript) {
     const t = normalizeVoice(transcript);
     if (!q || !Array.isArray(q.options)) return null;
 
-    // If options are letters A/B/C/D (common in your quiz generator)
-    const letters = ['a', 'b', 'c', 'd'];
-    for (const L of letters) {
-        const opt = L.toUpperCase();
-        if (q.options.includes(opt) && new RegExp(`\\b${L}\\b`).test(t)) return opt;
+    // Support labels spoken as:
+    // - "Option A"/"Option B"/"Option C"/"Option D"
+    // - "A"/"B"/"C"/"D" (fallback)
+    const lettersToIndex = { a: 0, b: 1, c: 2, d: 3 };
+
+    const m1 = t.match(/\b(?:option|opt|choice)\s*([a-d])\b/);
+    if (m1) {
+        const idx = lettersToIndex[m1[1]];
+        if (Number.isInteger(idx) && idx >= 0 && idx < q.options.length) return q.options[idx];
     }
 
-    // Otherwise try exact match on option text
-    for (const opt of q.options) {
-        const optNorm = normalizeVoice(opt);
-        if (optNorm && (t.includes(optNorm) || optNorm === t)) return opt;
+    const m2 = t.match(/\b([a-d])\s*(?:option|opt|choice)\b/);
+    if (m2) {
+        const idx = lettersToIndex[m2[1]];
+        if (Number.isInteger(idx) && idx >= 0 && idx < q.options.length) return q.options[idx];
+    }
+
+    const m3 = t.match(/\b(?:option|opt|choice)\s*([1-4])\b/);
+    if (m3) {
+        const idx = parseInt(m3[1], 10) - 1;
+        if (idx >= 0 && idx < q.options.length) return q.options[idx];
+    }
+
+    // If the transcript is only a single label: "a" / "b" / "c" / "d" (common on some microphones)
+    const m4 = t.match(/^(a|b|c|d)$/);
+    if (m4) {
+        const idx = lettersToIndex[m4[1]];
+        if (Number.isInteger(idx) && idx >= 0 && idx < q.options.length) return q.options[idx];
     }
     return null;
 }
@@ -1288,24 +1350,42 @@ function startMcqAnswerVoice(idx) {
     if (!SR) { alert('Voice input needs Chrome or Edge.'); return; }
     const q = questions[idx];
 
+    // Toggle: start/stop must be manual.
+    const btn = document.getElementById('mcqVoiceBtn');
+    if (window.__mcqVoiceRec) {
+        try { window.__mcqVoiceRec.stop(); } catch (_) {}
+        return;
+    }
+
     const rec = new SR();
+    window.__mcqVoiceRec = rec;
     rec.lang = ''; // allow browser auto-detect
     rec.interimResults = true;
-    rec.continuous = false;
+    rec.continuous = true;
 
-    rec.onstart = function() { window.__quizAnswerRecording = true; };
+    rec.onstart = function() {
+        window.__quizAnswerRecording = true;
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-stop"></i> Stop voice';
+    };
     rec.onresult = function(e) {
+        // Only act on FINAL results to avoid flicker while speaking.
         let t = '';
         for (let i = e.resultIndex; i < e.results.length; i++) {
-            t += e.results[i][0].transcript;
+            if (e.results[i].isFinal) t += e.results[i][0].transcript;
         }
         const chosen = pickMcqOption(q, t);
-        if (chosen != null) {
-            setMcqAnswer(chosen);
-        }
+        if (chosen != null) setMcqAnswer(chosen);
     };
-    rec.onerror = function() { window.__quizAnswerRecording = false; };
-    rec.onend = function() { window.__quizAnswerRecording = false; };
+    rec.onerror = function() {
+        window.__quizAnswerRecording = false;
+        window.__mcqVoiceRec = null;
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-microphone"></i> Voice answer (say Option A/B/C/D)';
+    };
+    rec.onend = function() {
+        window.__quizAnswerRecording = false;
+        window.__mcqVoiceRec = null;
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-microphone"></i> Voice answer (say Option A/B/C/D)';
+    };
     try { rec.start(); } catch (err) { console.warn(err); }
 }
 

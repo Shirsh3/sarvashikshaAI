@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="${quiz != null ? quiz.title + ' - Results' : 'Quiz Results'}">Quiz Results</title>
+    <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+    <link rel="stylesheet" th:href="@{/css/quiz-results.css(v=${#dates.createNow().time})}"/>
+</head>
+<body class="app-layout">
+<div th:replace="~{fragments/loader :: loader}"></div>
+<div th:replace="~{fragments/shell-teacher :: sidebar('quiz')}"></div>
+
+<main class="layout-main">
+    <div class="qr-page">
+        <div class="qr-topbar">
+            <button type="button" class="qr-back-btn" id="qrBackBtn">
+                <i class="fa-solid fa-arrow-left"></i> Back to Quizzes
+            </button>
+            <div class="qr-title">
+                <h2 class="qr-h2" th:text="${quiz != null ? quiz.title : 'Quiz Results'}">Quiz Results</h2>
+                <div class="qr-sub" th:if="${quiz != null}">
+                    <span th:text="${quiz.grade != null && !quiz.grade.isBlank() ? 'Grade ' + quiz.grade + ' · ' : ''}"></span>
+                    <span th:text="${quiz.topic != null && !quiz.topic.isBlank() ? quiz.topic : quiz.subject}"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="qr-layout" id="qrLayout"
+             th:attr="data-quiz-id=${quiz != null ? quiz.id : ''}, data-quiz-grade=${quiz != null ? quiz.grade : ''}">
+
+            <!-- LEFT: RESULTS TABLE -->
+            <section class="qr-table-section" aria-label="Quiz results table">
+                <div class="qr-table-wrap">
+                    <table class="qr-table">
+                        <thead>
+                        <tr>
+                            <th>Question</th>
+                            <th>Student</th>
+                            <th>Student ID</th>
+                            <th>Answer</th>
+                            <th>Correct</th>
+                            <th>Status</th>
+                            <th class="qr-col-actions">Explain</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${results == null || results.isEmpty()}">
+                            <td colspan="7" class="qr-empty">No responses yet.</td>
+                        </tr>
+                        <tr th:each="r : ${results}"
+                            class="qr-row"
+                            tabindex="0"
+                            th:attr="data-question-id=${r.questionId}">
+                            <td class="qr-q" th:text="${r.questionText}">Question</td>
+                            <td class="qr-student" th:text="${r.studentName}">Student</td>
+                            <td class="qr-student-id" th:text="${r.studentId}">S01</td>
+                            <td class="qr-ans" th:text="${r.answer}">Answer</td>
+                            <td class="qr-correct" th:text="${r.correctAnswer}">Correct</td>
+                            <td class="qr-status">
+                                <span th:classappend="${r.isCorrect} ? 'qr-pill qr-pill-correct' : 'qr-pill qr-pill-wrong'">
+                                    <span th:text="${r.isCorrect} ? 'Correct' : 'Wrong'">Status</span>
+                                </span>
+                            </td>
+                            <td class="qr-actions">
+                                <button type="button" class="qr-explain-btn" aria-label="Explain with AI">
+                                    <i class="fa-solid fa-lightbulb"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- RIGHT: EXPLANATION PANEL -->
+            <aside class="qr-explain-section" aria-label="Explanation panel">
+                <div class="qr-explain-sticky">
+                    <div class="qr-explain-title" id="qrExplainTitle" hidden>
+                        <i class="fa-solid fa-lightbulb" aria-hidden="true"></i> Explanation
+                    </div>
+                    <div class="qr-embed" id="qrEmbedWrap" hidden>
+                        <div th:replace="~{fragments/classroom-embed :: embed}"></div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/monitor-panel :: active}"></div>
+
+<script th:src="@{/js/scenes.js}"></script>
+<script th:src="@{/js/app.js}"></script>
+<script th:src="@{/js/voice.js}"></script>
+<script th:src="@{/js/mic.js}"></script>
+<script th:src="@{/js/monitor.js}"></script>
+<script th:src="@{/js/learning-grade-context.js}"></script>
+<script th:src="@{/js/quiz-results.js(v=${#dates.createNow().time})}"></script>
+</body>
+</html>
+

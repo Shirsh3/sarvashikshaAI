@@ -76,7 +76,7 @@ public class TeacherController {
                     .warn("/explain failed after {} ms: {}", dt, e.getMessage());
             response = new TeachingResponse(
                     "Unable to fetch explanation right now. Please try again.",
-                    null, null, null, null, null, true);
+                    null, null, null, null, null, null, true);
         }
         if ("fetch".equalsIgnoreCase(requestedWith)) {
             model.addAttribute("teachingRequest", request);

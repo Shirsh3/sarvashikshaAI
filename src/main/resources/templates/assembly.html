@@ -211,14 +211,14 @@
     <div class="thought-grid">
         <div class="thought-card">
             <div class="thought-lang">हिन्दी</div>
-            <div class="thought-text" id="thoughtHi" th:text="${thoughtHi}"></div>
+            <div class="thought-text" id="thoughtHi">Loading…</div>
             <button class="read-btn-sm" onclick="readText('thoughtHi', this, 'hi-IN')">
                 <i class="fa-solid fa-volume-high"></i> सुनाओ
             </button>
         </div>
         <div class="thought-card">
             <div class="thought-lang">English</div>
-            <div class="thought-text" id="thoughtEn" th:text="${thoughtEn}"></div>
+            <div class="thought-text" id="thoughtEn">Loading…</div>
             <button class="read-btn-sm" onclick="readText('thoughtEn', this, 'en-IN')">
                 <i class="fa-solid fa-volume-high"></i> Listen
             </button>
@@ -229,14 +229,14 @@
             <div class="thought-meta-item">
                 <span class="thought-meta-label">Word of the day · दिन का शब्द</span>
                 <p class="thought-meta-value">
-                    <span class="word-en" th:text="${wordEnglish}">Word</span>
+                    <span class="word-en" id="wordEnglish">Loading…</span>
                     <span class="word-sep">·</span>
-                    <span class="word-hi" th:text="${wordHindi}">शब्द</span>
+                    <span class="word-hi" id="wordHindi">Loading…</span>
                 </p>
             </div>
             <div class="thought-meta-item">
                 <span class="thought-meta-label">Habit of the day · आदत</span>
-                <p class="thought-meta-value thought-meta-value--habit" th:text="${habit}">Habit</p>
+                <p class="thought-meta-value thought-meta-value--habit" id="thoughtHabit">Loading…</p>
             </div>
         </div>
     </div>
@@ -260,10 +260,6 @@
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 12px;">
                 <button type="button" class="btn-primary" id="assemblyStartBtn" style="padding:8px 12px;border-radius:10px;">
                     <i class="fa-solid fa-play"></i> Start Assembly
-                </button>
-                <button type="button" class="btn-primary" id="assemblyStopBtn"
-                        style="padding:8px 12px;border-radius:10px;background:var(--surface-elevated);color:var(--text-main);border:1px solid var(--border);">
-                    <i class="fa-solid fa-stop"></i> Stop
                 </button>
             </div>
             <div class="assembly-playing-gif">
@@ -543,7 +539,6 @@
         });
 
         const startBtn = document.getElementById('assemblyStartBtn');
-        const stopBtn = document.getElementById('assemblyStopBtn');
 
         if (startBtn) {
             startBtn.addEventListener('click', function () {
@@ -554,17 +549,6 @@
                 const slots = slotsFromDom();
                 const firstSlot = slots.find((s) => s.id === first) || null;
                 showState(first, firstSlot ? firstSlot.title : 'Assembly', firstSlot ? firstSlot.embedError : '', true, seq.join(','));
-            });
-        }
-        if (stopBtn) {
-            stopBtn.addEventListener('click', function () {
-                allowAutoStart = false;
-                try {
-                    if (player && typeof player.pauseVideo === 'function') {
-                        player.pauseVideo();
-                    }
-                } catch (e) {}
-                setPlayingUi(false);
             });
         }
 
@@ -599,6 +583,41 @@
             }
         });
     })();
+</script>
+<script>
+(function () {
+    function setText(id, text) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = text != null && String(text).trim() !== '' ? String(text) : '—';
+    }
+    if (typeof window.showGlobalLoader === 'function') {
+        window.showGlobalLoader('Loading today’s thought…');
+    }
+    fetch('/api/assembly/daily-thought', { credentials: 'same-origin' })
+        .then(function (r) {
+            if (!r.ok) throw new Error('load failed');
+            return r.json();
+        })
+        .then(function (d) {
+            setText('thoughtHi', d.thoughtHi);
+            setText('thoughtEn', d.thoughtEn);
+            setText('wordEnglish', d.wordEnglish);
+            setText('wordHindi', d.wordHindi);
+            setText('thoughtHabit', d.habit);
+        })
+        .catch(function () {
+            setText('thoughtHi', 'Could not load. Try refreshing.');
+            setText('thoughtEn', '');
+            setText('wordEnglish', '');
+            setText('wordHindi', '');
+            setText('thoughtHabit', '');
+        })
+        .finally(function () {
+            if (typeof window.hideGlobalLoader === 'function') {
+                window.hideGlobalLoader();
+            }
+        });
+})();
 </script>
 </body>
 </html>

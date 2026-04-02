@@ -668,8 +668,9 @@ public class QuizService {
         quizRepo.save(quiz);
     }
 
+    @Transactional(readOnly = true)
     public List<QuestionResultRow> getQuizQuestionResults(Long quizId) {
-        return questionResponseRepo.findByQuestion_QuizIdOrderByQuestion_QuestionOrderAsc(quizId).stream()
+        return questionResponseRepo.findForQuizWithQuestionAndStudent(quizId).stream()
                 .map(r -> {
                     String questionType = r.getQuestion() != null && r.getQuestion().getQuestionType() != null
                             ? r.getQuestion().getQuestionType().trim().toUpperCase(Locale.ROOT)

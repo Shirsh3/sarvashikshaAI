@@ -28,8 +28,10 @@
         .att-name { font-weight:700; font-size:0.9rem; }
         .att-sub { color:var(--muted); font-size:0.78rem; }
         .att-search { width: 260px; }
-        .rollcall-overlay { position:fixed; inset:0; background:rgba(15,23,42,0.42); display:none; align-items:center; justify-content:center; z-index:3000; padding:16px; }
-        .rollcall-card { width:min(620px, 96vw); background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px; }
+        /* Keep Roll Call modal aligned with the main pane (moves when sidebar/menu opens).
+           Using `position:absolute` instead of `fixed` prevents the overlay from anchoring to the viewport. */
+        .rollcall-overlay { position:absolute; inset:0; width:100%; height:100%; box-sizing:border-box; background:rgba(15,23,42,0.42); display:none; align-items:center; justify-content:center; z-index:3000; padding:16px; }
+        .rollcall-card { width:min(620px, 96vw); margin:0 auto; box-sizing:border-box; background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px; }
         .rollcall-title { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px; }
         .rollcall-title h3 { margin:0; font-size:1.05rem; }
         .rollcall-meta { color:var(--muted); margin-bottom:12px; text-align:center; }
@@ -58,9 +60,32 @@
             text-align: center;
             color: var(--muted);
         }
+        /* Center column in the main pane (was hugging the left on wide screens) */
+        body.attendance-page.app-layout > .layout-main {
+            align-items: center;
+        }
+        body.attendance-page .att-wrap {
+            width: 100%;
+            max-width: 720px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        body.attendance-page .att-top {
+            justify-content: center;
+            text-align: center;
+        }
+        body.attendance-page .att-top h2 {
+            width: 100%;
+        }
+        body.attendance-page .att-controls {
+            justify-content: center;
+        }
+        body.attendance-page .att-mode-row {
+            justify-content: center;
+        }
     </style>
 </head>
-<body class="app-layout">
+<body class="app-layout attendance-page">
 <div th:replace="~{fragments/loader :: loader}"></div>
 <div th:replace="~{fragments/shell-teacher :: sidebar('attendance')}"></div>
 <main class="layout-main">
@@ -402,6 +427,9 @@ function applyRollCallCompleteUi() {
     clearPromptTimer();
     awaitingVoiceMark = false;
     window.speechSynthesis.cancel();
+    /* Quiet classroom monitor TTS briefly after attendance so it does not overlap / keep "speaking" */
+    window.__monitorSuppressUntil = Date.now() + 12000;
+    try { window.__monitorTtsActive = false; } catch (e) {}
     if (rollCallRecognition) {
         try { rollCallRecognition.stop(); } catch (e) { /* ignore */ }
     }

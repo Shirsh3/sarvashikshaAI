@@ -35,9 +35,12 @@ body {
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
+    line-height: 1.5;
+}
+/* App shell pages (teacher/admin/superadmin) use flex row from style.css — do not force column here */
+body:not(.app-layout) {
     display: flex;
     flex-direction: column;
-    line-height: 1.5;
 }
 
 /* Ensure readable text on light theme (override any light-on-light) */
@@ -63,6 +66,17 @@ body {
 select option { background: var(--surface); color: var(--text); }
 
 /* ── Global page loader (Kider-style) ── */
+body.app-layout > #global-loader {
+    flex: 0 0 auto;
+    /* Fixed loader should always span the viewport; avoid width:0 shrinking. */
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    align-self: stretch;
+}
 #global-loader {
     position: fixed;
     inset: 0;
@@ -77,10 +91,43 @@ select option { background: var(--surface); color: var(--text); }
     pointer-events: auto;
     transition: opacity 0.4s ease, visibility 0.4s ease;
 }
+#global-loader .loader-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    pointer-events: none;
+}
 #global-loader.hide {
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
+}
+#global-loader .loader-logo {
+    height: 56px;
+    width: auto;
+    max-width: min(280px, 70vw);
+    object-fit: contain;
+    opacity: 0.98;
+    filter: drop-shadow(0 6px 18px rgba(0,0,0,0.2));
+}
+#global-loader .loader-brand {
+    font-family: var(--font-heading);
+    font-size: clamp(1.15rem, 3.2vw, 1.45rem);
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+#global-loader .loader-message {
+    margin: 0;
+    max-width: min(320px, 88vw);
+    text-align: center;
+    font-family: var(--font-kid);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+    line-height: 1.35;
 }
 #global-loader .loader-spinner {
     width: 56px;
@@ -90,6 +137,7 @@ select option { background: var(--surface); color: var(--text); }
     border-radius: 50%;
     animation: global-spin 0.8s linear infinite;
     box-shadow: 0 4px 28px rgba(0, 0, 0, 0.25);
+    flex-shrink: 0;
 }
 #global-loader .loader-text {
     position: absolute;
@@ -302,6 +350,86 @@ textarea::placeholder { color: var(--muted); }
 }
 .read-aloud-btn:hover { background: var(--surface2); color: var(--primary); transform: scale(1.03); }
 .read-aloud-btn.speaking { background: #fef2f2; border-color: var(--danger); color: #dc2626; }
+
+/* Read Aloud: expandable hint (opened while speaking, closed when stopped) */
+.read-aloud-details {
+    position: relative;
+    border: none;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+}
+.read-aloud-details > summary {
+    list-style: none;
+    cursor: default;
+    display: inline-flex;
+    pointer-events: none;
+}
+.read-aloud-details > summary::-webkit-details-marker { display: none; }
+.read-aloud-details .read-aloud-btn {
+    pointer-events: auto;
+    cursor: pointer;
+}
+.read-aloud-dropdown {
+    margin-top: 10px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--surface2);
+    background: var(--surface);
+    font-size: 0.86rem;
+    color: var(--muted);
+    line-height: 1.45;
+    max-width: 22rem;
+}
+
+/* Lazy YouTube: text-style control like “Key points”, not a full-width bar */
+.media-visual.video-lazy-wrap {
+    width: auto;
+    max-width: 100%;
+    display: block;
+    margin: 0 0 14px 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    animation: none;
+}
+.video-lazy:has(.yt-wrapper) {
+    /* After inject: iframe is absolutely positioned — inline-block had no in-flow width → 0×0 player. */
+    display: block;
+    width: 100%;
+    max-width: 100%;
+}
+.media-visual.video-lazy-wrap .video-lazy {
+    display: inline-block;
+}
+.media-visual.video-lazy-wrap .video-lazy:has(.yt-wrapper) {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+}
+.btn-load-video {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0 0 3px 0;
+    border: none;
+    border-bottom: 1px dashed var(--primary);
+    border-radius: 0;
+    background: transparent;
+    color: var(--primary);
+    font-family: var(--font-kid);
+    font-size: 0.92rem;
+    font-weight: 700;
+    cursor: pointer;
+    line-height: 1.35;
+}
+.btn-load-video:hover {
+    color: var(--accent2);
+    border-bottom-color: var(--accent2);
+}
+.btn-load-video i { font-size: 1rem; opacity: 0.9; }
 
 /* ── Voice picker ── */
 .voice-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

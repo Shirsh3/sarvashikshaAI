@@ -30,7 +30,9 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/login", "/css/**", "/js/**", "/favicon.svg", "/", "/index.html").permitAll()
+                // Never force-login for error handling or static assets.
+                .requestMatchers("/error", "/error/**").permitAll()
+                .requestMatchers("/login", "/css/**", "/js/**", "/favicon.svg", "/favicon.ico", "/", "/index.html").permitAll()
                 .requestMatchers("/logout").permitAll()
                 .requestMatchers("/api/auth/login", "/api/auth/logout").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/menu").permitAll()

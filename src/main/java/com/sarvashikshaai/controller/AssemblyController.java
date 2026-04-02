@@ -38,13 +38,7 @@ public class AssemblyController {
     @GetMapping
     public String assembly(Model model, HttpServletRequest request) {
 
-        // ── Thought + Word + Habit of the Day ─────────────────────────────────
-        AssemblyService.DailyThought thought = assemblyService.getDailyThought(null);
-        model.addAttribute("thoughtHi", thought.thoughtHi());
-        model.addAttribute("thoughtEn", thought.thoughtEn());
-        model.addAttribute("wordEnglish", thought.wordEnglish());
-        model.addAttribute("wordHindi", thought.wordHindi());
-        model.addAttribute("habit", thought.habit());
+        // ── Thought + Word + Habit: loaded async via GET /api/assembly/daily-thought ──
 
         // ── Static text (from JSON, used internally only) ────────────────────
         AssemblyService.AssemblyContent content = assemblyService.getAssemblyContent();

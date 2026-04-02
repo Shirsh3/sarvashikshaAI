@@ -3,8 +3,12 @@
 <body>
 <th:block th:fragment="loader">
 <div id="global-loader" aria-hidden="true">
-    <div class="loader-spinner"></div>
-    <img class="loader-logo" th:src="@{/favicon.svg}" alt="SarvashikshaAI"/>
+    <div class="loader-inner">
+        <img class="loader-logo" th:src="@{/favicon.svg}" alt="SarvashikshaAI"
+             width="56" height="56" decoding="async" />
+        <p class="loader-message" id="globalLoaderMessage" hidden></p>
+        <div class="loader-spinner" aria-hidden="true"></div>
+    </div>
 </div>
 <div th:replace="~{fragments/projector-toggle :: projectorToggle}"></div>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" crossorigin="anonymous"></script>
@@ -12,6 +16,7 @@
 <script>
 (function(){
     function hideLoader(){
+        if ((window.__globalLoaderDepth || 0) > 0) return;
         var el = document.getElementById('global-loader');
         if (el) el.classList.add('hide');
     }
@@ -21,12 +26,30 @@
 window.showGlobalLoader = function (message) {
     var el = document.getElementById('global-loader');
     if (!el) return;
+    window.__globalLoaderDepth = (window.__globalLoaderDepth || 0) + 1;
+    var msgEl = document.getElementById('globalLoaderMessage');
+    if (msgEl) {
+        if (message) {
+            msgEl.textContent = message;
+            msgEl.hidden = false;
+        } else if ((window.__globalLoaderDepth || 0) === 1) {
+            msgEl.textContent = '';
+            msgEl.hidden = true;
+        }
+    }
     el.classList.remove('hide');
     el.setAttribute('aria-hidden', 'false');
 };
 window.hideGlobalLoader = function () {
     var el = document.getElementById('global-loader');
     if (!el) return;
+    window.__globalLoaderDepth = Math.max(0, (window.__globalLoaderDepth || 0) - 1);
+    if ((window.__globalLoaderDepth || 0) > 0) return;
+    var msgEl = document.getElementById('globalLoaderMessage');
+    if (msgEl) {
+        msgEl.textContent = '';
+        msgEl.hidden = true;
+    }
     el.classList.add('hide');
     el.setAttribute('aria-hidden', 'true');
 };

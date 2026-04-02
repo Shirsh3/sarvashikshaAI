@@ -15,6 +15,28 @@
         var on = localStorage.getItem(KEY) === '1';
         document.documentElement.classList.toggle('projector-friendly', on);
         document.body.classList.toggle('projector-friendly', on);
+        var LS_SIDEBAR_DRAWER = 'sarva.sidebarDrawerOpen';
+        var LS_SIDEBAR_DESKTOP = 'sarva.sidebarCollapsedDesktop';
+        // Projector-friendly mode should not keep the mobile drawer/menu open.
+        // (When sidebar-open is set, it can cover the classroom content.)
+        if (on) {
+            // Mobile drawer state
+            document.body.classList.remove('sidebar-open');
+
+            // Desktop collapse state (desktop sidebar is open by default)
+            document.body.classList.add('sidebar-desktop-collapsed');
+
+            try { localStorage.setItem(LS_SIDEBAR_DRAWER, '0'); } catch (e) {}
+            try { localStorage.setItem(LS_SIDEBAR_DESKTOP, '1'); } catch (e) {}
+
+            var toggle = document.getElementById('sidebarToggle');
+            if (toggle) toggle.setAttribute('aria-expanded', 'false');
+            var backdrop = document.querySelector('.sidebar-backdrop');
+            if (backdrop) backdrop.setAttribute('aria-hidden', 'true');
+        } else {
+            document.body.classList.remove('sidebar-desktop-collapsed');
+            try { localStorage.setItem(LS_SIDEBAR_DESKTOP, '0'); } catch (e) {}
+        }
         var b = document.getElementById('projectorModeBtn');
         if (b) {
             b.setAttribute('aria-pressed', on ? 'true' : 'false');

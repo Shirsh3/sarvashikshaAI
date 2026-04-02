@@ -208,6 +208,18 @@ async function submitForm() {
 }
 
 /**
+ * Injects the YouTube iframe into a .video-lazy wrapper (student-safe, one-time).
+ */
+window.injectLazyYouTubeIframe = function injectLazyYouTubeIframe(wrap) {
+    if (!wrap || wrap.dataset.loaded === '1') return;
+    const id = (wrap.getAttribute('data-videoid') || '').trim();
+    if (!id) return;
+    wrap.innerHTML = '<div class="yt-wrapper"><iframe src="https://www.youtube.com/embed/' + id +
+        '?rel=0&modestbranding=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe></div>';
+    wrap.dataset.loaded = '1';
+};
+
+/**
  * YouTube embed loads only after explicit click (student-safe).
  */
 window.initLazyClassroomVideo = function initLazyClassroomVideo() {
@@ -218,9 +230,7 @@ window.initLazyClassroomVideo = function initLazyClassroomVideo() {
         btn.addEventListener('click', function () {
             const id = wrap.getAttribute('data-videoid');
             if (!id) return;
-            wrap.innerHTML = '<div class="yt-wrapper"><iframe src="https://www.youtube.com/embed/' + id +
-                '?rel=0&modestbranding=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe></div>';
-            wrap.dataset.loaded = '1';
+            if (typeof window.injectLazyYouTubeIframe === 'function') window.injectLazyYouTubeIframe(wrap);
         }, { once: true });
     });
 };
@@ -236,16 +246,18 @@ window.loadYouTubeForCurrentAnswer = async function loadYouTubeForCurrentAnswer(
 
     const existing = (wrap.getAttribute('data-videoid') || '').trim();
     if (existing) {
-        // Let initLazyClassroomVideo handle iframe injection.
-        if (typeof window.initLazyClassroomVideo === 'function') window.initLazyClassroomVideo();
-        const btn = wrap.querySelector('.btn-load-video');
-        if (btn) btn.click();
+        // Do not call btn.click() — it re-runs this handler via inline onclick and can recurse until the button vanishes.
+        if (typeof window.injectLazyYouTubeIframe === 'function') window.injectLazyYouTubeIframe(wrap);
         return;
     }
 
-    const topicSpan = document.querySelector('.topic-badge span:last-child');
-    const q = (topicSpan && topicSpan.textContent) ? topicSpan.textContent.trim() : '';
-    const query = (q || 'classroom concept') + ' explained for students';
+    const pre = (wrap.getAttribute('data-youtube-query') || '').trim();
+    const topicSpan = document.querySelector('.classroom-embed-layout .panel:last-child .topic-badge span:last-child')
+        || document.querySelector('.layout .panel:last-child .topic-badge span:last-child')
+        || document.querySelector('.topic-badge span:last-child');
+    const fallback = (topicSpan && topicSpan.textContent) ? topicSpan.textContent.trim() : '';
+    const base = pre || fallback || 'classroom concept';
+    const query = base.toLowerCase().includes('explained') ? base : (base + ' explained for students');
 
     const btn = wrap.querySelector('.btn-load-video');
     if (btn) {
@@ -257,21 +269,21 @@ window.loadYouTubeForCurrentAnswer = async function loadYouTubeForCurrentAnswer(
     const body = await res.json().catch(() => ({}));
     const vid = body && body.videoId ? String(body.videoId).trim() : '';
     if (!res.ok || body.error || !vid) {
-        if (btn) {
+        if (res.status === 401 && btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-brands fa-youtube"></i> Sign in required';
+        } else if (btn) {
             btn.disabled = false;
             btn.innerHTML = '<i class="fa-brands fa-youtube"></i> Video not found';
+        }
+        if (!res.ok) {
+            try { console.warn('YouTube search failed', res.status, body); } catch (_) {}
         }
         return;
     }
 
     wrap.setAttribute('data-videoid', vid);
-    if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-brands fa-youtube"></i> Load video';
-    }
-    if (typeof window.initLazyClassroomVideo === 'function') window.initLazyClassroomVideo();
-    const btn2 = wrap.querySelector('.btn-load-video');
-    if (btn2) btn2.click();
+    if (typeof window.injectLazyYouTubeIframe === 'function') window.injectLazyYouTubeIframe(wrap);
 };
 
 document.addEventListener('DOMContentLoaded', () => {

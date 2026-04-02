@@ -47,6 +47,15 @@ public class QuizController {
         return "quiz/teacher";
     }
 
+    @GetMapping("/{quizId}/results")
+    public String quizResultsPage(@PathVariable Long quizId, Model model) {
+        QuizEntity quiz = quizService.findById(quizId).orElse(null);
+        if (quiz == null) return "redirect:/quiz/teacher";
+        model.addAttribute("quiz", quiz);
+        model.addAttribute("results", quizService.getQuizQuestionResults(quizId));
+        return "quiz-results";
+    }
+
     // ── Create quiz ───────────────────────────────────────────────────────────
 
     @PostMapping("/create")
@@ -315,7 +324,8 @@ public class QuizController {
             List<QuizService.QuestionResultRow> results = quizService.getQuizQuestionResults(quizId);
             return ResponseEntity.ok(Map.of("results", results));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            log.error("Get quiz results failed for quizId={}: {}", quizId, e.getMessage(), e);
+            return ResponseEntity.badRequest().body(Map.of("error", "Could not load quiz results. Please refresh and try again."));
         }
     }
 

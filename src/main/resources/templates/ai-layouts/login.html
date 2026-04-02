@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>School Portal Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
     <style>
         :root {
             --teacher-color: #10b981;
@@ -137,6 +138,26 @@
         }
         
         .admin-theme input:focus { border-color: var(--admin-color); }
+
+        .password-wrap { position: relative; }
+        .password-wrap input { padding-right: 52px; }
+        .pw-toggle-ai {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            color: #334155;
+            border-radius: 12px;
+            width: 42px;
+            height: 42px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .pw-toggle-ai:hover { border-color: var(--primary-blue); color: var(--primary-blue); }
     </style>
 </head>
 <body>
@@ -157,13 +178,35 @@
         </div>
         <div class="input-group">
             <label>Password</label>
-            <input type="password" id="password" placeholder="Enter your password" required>
+            <div class="password-wrap">
+                <input type="password" id="password" placeholder="Enter your password" required autocomplete="current-password">
+                <button type="button" class="pw-toggle-ai" id="pwToggleBtnAi" aria-label="Show password" title="Show password" onclick="togglePwAi()">
+                    <i class="fa-solid fa-eye" id="pwAiShow"></i>
+                    <i class="fa-solid fa-eye-slash" id="pwAiHide" style="display:none;"></i>
+                </button>
+            </div>
         </div>
         <button type="submit" class="login-submit" id="submitBtn">Launch Classroom</button>
     </form>
 </div>
 
 <script>
+    function togglePwAi() {
+        var input = document.getElementById('password');
+        var btn = document.getElementById('pwToggleBtnAi');
+        var a = document.getElementById('pwAiShow');
+        var b = document.getElementById('pwAiHide');
+        if (!input || !btn) return;
+        var show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        if (a && b) {
+            a.style.display = show ? 'none' : '';
+            b.style.display = show ? '' : 'none';
+        }
+        btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+        btn.setAttribute('title', show ? 'Hide password' : 'Show password');
+    }
+
     function setRole(role) {
         const title = document.getElementById('portalTitle');
         const card = document.getElementById('loginCard');

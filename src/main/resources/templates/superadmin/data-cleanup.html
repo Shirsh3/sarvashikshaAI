@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Super Admin — Data Cleanup</title>
     <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
     <link rel="stylesheet" th:href="@{/css/style.css}"/>
 </head>
 <body class="app-layout admin-console">
@@ -142,10 +143,18 @@
                 <input id="teacherUsername" type="text" placeholder="teacher"
                        style="padding:8px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);"/>
             </label>
-            <label style="display:flex;flex-direction:column;gap:6px;font-size:0.9rem;color:var(--muted);min-width:240px;">
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:0.9rem;color:var(--muted);min-width:240px;position:relative;">
                 New teacher password
-                <input id="teacherPassword" type="password" placeholder="min 6 characters"
-                       style="padding:8px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);"/>
+                <span style="position:relative;display:block;">
+                    <input id="teacherPassword" type="password" placeholder="min 6 characters" autocomplete="new-password"
+                           style="width:100%;box-sizing:border-box;padding:8px 44px 8px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);"/>
+                    <button type="button" id="teacherPwToggle" class="teacher-pw-eye"
+                            aria-label="Show password" title="Show password"
+                            style="position:absolute;right:6px;top:50%;transform:translateY(-50%);border:1px solid var(--border);background:var(--surface);border-radius:8px;width:36px;height:32px;cursor:pointer;color:var(--text);display:flex;align-items:center;justify-content:center;">
+                        <i class="fa-solid fa-eye" id="teacherPwIconShow"></i>
+                        <i class="fa-solid fa-eye-slash" id="teacherPwIconHide" style="display:none;"></i>
+                    </button>
+                </span>
             </label>
             <button class="btn-primary" id="teacherResetBtn"
                     style="border:none;padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:900;">
@@ -304,6 +313,21 @@
         const teacherPassword = document.getElementById('teacherPassword');
         const teacherResetBtn = document.getElementById('teacherResetBtn');
         const teacherResetStatus = document.getElementById('teacherResetStatus');
+        const teacherPwToggle = document.getElementById('teacherPwToggle');
+        const teacherPwIconShow = document.getElementById('teacherPwIconShow');
+        const teacherPwIconHide = document.getElementById('teacherPwIconHide');
+        if (teacherPwToggle && teacherPassword) {
+            teacherPwToggle.addEventListener('click', function () {
+                const show = teacherPassword.type === 'password';
+                teacherPassword.type = show ? 'text' : 'password';
+                if (teacherPwIconShow && teacherPwIconHide) {
+                    teacherPwIconShow.style.display = show ? 'none' : '';
+                    teacherPwIconHide.style.display = show ? '' : 'none';
+                }
+                teacherPwToggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+                teacherPwToggle.setAttribute('title', show ? 'Hide password' : 'Show password');
+            });
+        }
 
         teacherResetBtn.addEventListener('click', async () => {
             const username = (teacherUsername.value || '').trim();

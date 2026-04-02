@@ -12,6 +12,16 @@ import java.util.Optional;
 public interface QuestionResponseRepository extends JpaRepository<QuestionResponseEntity, Long> {
     Optional<QuestionResponseEntity> findByQuestionIdAndStudentId(Long questionId, String studentId);
     List<QuestionResponseEntity> findByQuestion_QuizIdOrderByQuestion_QuestionOrderAsc(Long quizId);
+    
+    @Query("""
+            SELECT r
+            FROM QuestionResponseEntity r
+            JOIN FETCH r.question qq
+            LEFT JOIN FETCH r.student s
+            WHERE qq.quizId = :quizId
+            ORDER BY qq.questionOrder ASC
+            """)
+    List<QuestionResponseEntity> findForQuizWithQuestionAndStudent(@Param("quizId") Long quizId);
     void deleteByQuestion_QuizId(Long quizId);
 
     List<QuestionResponseEntity> findByStudentIdAndAnsweredAtIsNotNullOrderByAnsweredAtAsc(String studentId);

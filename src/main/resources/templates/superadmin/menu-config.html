@@ -76,6 +76,24 @@
             </div>
         </div>
     </div>
+
+    <div style="margin-top:18px;border:1px solid var(--border);border-radius:16px;overflow:hidden;">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface);">
+            <strong>Assembly sequence</strong>
+            <div style="margin-top:6px;font-size:0.86rem;color:var(--muted);font-weight:400;">
+                Drag rows to reorder (National Anthem, Pledge, Morning Prayer, Hindi Prayer). Matches the Assembly page. Save when done.
+            </div>
+        </div>
+        <div style="padding:14px 16px;">
+            <div id="assemblyOrderRowsSa" style="display:flex;flex-direction:column;gap:8px;"></div>
+            <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <button type="button" class="btn-primary" id="assemblyOrderSaveBtn" style="border:none;padding:10px 16px;border-radius:12px;cursor:pointer;font-weight:700;">
+                    Save assembly order
+                </button>
+                <span id="assemblyOrderStatus" style="color:var(--muted);font-size:0.9rem;"></span>
+            </div>
+        </div>
+    </div>
 </main>
 
 <script>
@@ -114,8 +132,11 @@
                 '</tr>';
         }
 
-        function load() {
-            body.innerHTML = '<tr><td colspan=\"7\" style=\"padding:18px 14px;color:var(--muted);\">Loading…</td></tr>';
+        function load(opts) {
+            var showLoading = !opts || opts.showLoading !== false;
+            if (showLoading) {
+                body.innerHTML = '<tr><td colspan=\"7\" style=\"padding:18px 14px;color:var(--muted);\">Loading…</td></tr>';
+            }
             fetch(API, { credentials: 'same-origin' })
                 .then(r => {
                     if (!r.ok) throw new Error('Failed to load menu items');
@@ -156,7 +177,7 @@
                 return r.json().catch(() => ({}));
             }).then(() => {
                 saveStatus.textContent = 'Saved.';
-                load();
+                load({ showLoading: false });
             }).catch(err => {
                 saveStatus.textContent = err && err.message ? err.message : 'Save failed';
             }).finally(() => {
@@ -166,6 +187,124 @@
 
         saveBtn.addEventListener('click', save);
         load();
+
+        (function assemblyOrderSuperAdmin() {
+            const AS_KEYS = ['anthem', 'pledge', 'prayer', 'hindi'];
+            const AS_NAMES = { anthem: 'National Anthem', pledge: 'Pledge', prayer: 'Morning Prayer', hindi: 'Hindi Prayer' };
+            const host = document.getElementById('assemblyOrderRowsSa');
+            const btn = document.getElementById('assemblyOrderSaveBtn');
+            const st = document.getElementById('assemblyOrderStatus');
+            if (!host || !btn) return;
+            let order = AS_KEYS.slice();
+
+            function parseCsv(csv) {
+                const out = [];
+                (String(csv || '').split(',')).forEach(function (p) {
+                    const k = String(p || '').trim().toLowerCase();
+                    if (AS_KEYS.indexOf(k) >= 0 && out.indexOf(k) < 0) out.push(k);
+                });
+                AS_KEYS.forEach(function (k) {
+                    if (out.indexOf(k) < 0) out.push(k);
+                });
+                return out;
+            }
+
+            function render() {
+                host.innerHTML = '';
+                order.forEach(function (key, idx) {
+                    const row = document.createElement('div');
+                    row.setAttribute('draggable', 'true');
+                    row.setAttribute('data-sa-order-idx', String(idx));
+                    row.style.display = 'flex';
+                    row.style.alignItems = 'center';
+                    row.style.gap = '12px';
+                    row.style.padding = '10px 12px';
+                    row.style.border = '1px solid var(--border)';
+                    row.style.borderRadius = '12px';
+                    row.style.background = 'var(--surface)';
+                    row.style.cursor = 'grab';
+                    const grip = document.createElement('span');
+                    grip.innerHTML = '⋮⋮';
+                    grip.setAttribute('aria-hidden', 'true');
+                    grip.style.color = 'var(--muted)';
+                    grip.style.fontWeight = '800';
+                    grip.style.letterSpacing = '-2px';
+                    const lab = document.createElement('span');
+                    lab.style.flex = '1';
+                    lab.style.fontWeight = '600';
+                    lab.textContent = (idx + 1) + ' — ' + (AS_NAMES[key] || key);
+                    row.appendChild(grip);
+                    row.appendChild(lab);
+                    host.appendChild(row);
+                    row.addEventListener('dragstart', function (e) {
+                        try {
+                            e.dataTransfer.setData('text/plain', String(idx));
+                            e.dataTransfer.effectAllowed = 'move';
+                        } catch (err) { /* ignore */ }
+                        row.style.opacity = '0.55';
+                    });
+                    row.addEventListener('dragend', function () {
+                        row.style.opacity = '';
+                    });
+                });
+            }
+
+            host.addEventListener('dragover', function (e) {
+                e.preventDefault();
+                try { e.dataTransfer.dropEffect = 'move'; } catch (err) { /* ignore */ }
+            });
+            host.addEventListener('drop', function (e) {
+                e.preventDefault();
+                const targetRow = e.target && e.target.closest ? e.target.closest('[data-sa-order-idx]') : null;
+                if (!targetRow) return;
+                let fromStr = '';
+                try { fromStr = e.dataTransfer.getData('text/plain'); } catch (err) { /* ignore */ }
+                const from = parseInt(fromStr, 10);
+                const to = parseInt(targetRow.getAttribute('data-sa-order-idx'), 10);
+                if (isNaN(from) || isNaN(to) || from === to) return;
+                const moved = order.splice(from, 1)[0];
+                order.splice(to, 0, moved);
+                render();
+            });
+
+            function loadOrder() {
+                fetch('/api/superadmin/assembly-slot-order', { credentials: 'same-origin' })
+                    .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('load')); })
+                    .then(function (d) {
+                        order = parseCsv(d && d.csv ? d.csv : '');
+                        render();
+                    })
+                    .catch(function () {
+                        order = AS_KEYS.slice();
+                        render();
+                    });
+            }
+
+            btn.addEventListener('click', function () {
+                btn.disabled = true;
+                if (st) st.textContent = 'Saving…';
+                const csv = order.join(',');
+                fetch('/api/superadmin/assembly-slot-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ csv: csv })
+                })
+                    .then(function (r) { if (!r.ok) throw new Error('Save failed'); return r.json(); })
+                    .then(function () {
+                        if (st) st.textContent = 'Saved.';
+                        loadOrder();
+                    })
+                    .catch(function (e) {
+                        if (st) st.textContent = e && e.message ? e.message : 'Save failed';
+                    })
+                    .finally(function () {
+                        btn.disabled = false;
+                    });
+            });
+
+            loadOrder();
+        })();
     })();
 </script>
 </body>

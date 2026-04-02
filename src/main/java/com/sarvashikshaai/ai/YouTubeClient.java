@@ -6,6 +6,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriBuilder;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Component
 public class YouTubeClient {
 
@@ -65,8 +68,8 @@ public class YouTubeClient {
                 YoutubeSearchResponse.YoutubeItem item = response.items.get(0);
                 if (item.id != null) return item.id.videoId;
             }
-        } catch (Exception ignored) {
-            // Video is optional — never fail the main response because of this
+        } catch (Exception e) {
+            log.warn("YouTube Data API search failed (q={}, educationCategory={}): {}", q, educationCategory, e.getMessage());
         }
         return null;
     }
