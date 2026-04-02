@@ -1949,9 +1949,13 @@ body.projector-friendly.app-layout > .layout-main {
     padding: clamp(14px, 2.2vw, 24px) clamp(18px, 3vw, 32px) clamp(28px, 3vw, 40px);
 }
 
-/* Projector mode: hide left navigation chrome (rail + sidebar) to keep content centered */
-html.projector-friendly .app-menu-rail { display: none !important; }
-body.projector-friendly.app-layout > .app-shell { flex: 0 0 0 !important; min-width: 0 !important; max-width: 0 !important; }
+/* Projector mode: hide sidebar but keep narrow menu rail so hamburger stays reachable */
+html.projector-friendly .app-menu-rail { display: flex !important; }
+body.projector-friendly.app-layout > .app-shell {
+    flex: 0 0 var(--menu-rail-width) !important;
+    min-width: var(--menu-rail-width) !important;
+    max-width: var(--menu-rail-width) !important;
+}
 body.projector-friendly.app-layout > .app-shell > .sidebar { display: none !important; }
 body.projector-friendly.app-layout > .layout-main { margin-left: 0 !important; }
 

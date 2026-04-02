@@ -68,6 +68,21 @@
         }
         .read-all-btn:hover { background: #2563eb; }
         .read-all-btn.speaking { animation: pulse 1.2s infinite; }
+        .reading-passage-read-aloud-btn {
+            padding: 6px 14px;
+            font-size: 0.78rem;
+            border-radius: 999px;
+            flex-shrink: 0;
+        }
+        .reading-passage-col-head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .reading-passage-col-head .live-read-label { margin-bottom: 0; }
 
         /* ── Article list (dividers, not boxed cards) ── */
         .news-list {
@@ -171,6 +186,22 @@
         }
         .live-read-preview.is-placeholder {
             color: var(--muted); font-style: italic;
+        }
+
+        /* Class passage: printed text | live transcript */
+        .reading-practice-split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            width: 100%;
+            margin-top: 10px;
+            align-items: start;
+        }
+        @media (max-width: 720px) {
+            .reading-practice-split { grid-template-columns: 1fr; }
+        }
+        .reading-split-passage .news-summary {
+            margin: 0;
         }
 
         .reading-options-row {
@@ -645,10 +676,16 @@
         </button>
     </div>
     <p class="practice-hint" style="margin-top:8px;">Tap <strong>Stop recording</strong> when you finish a segment, then <strong>Evaluate</strong> — we do not send to AI until you tap Evaluate.</p>
-    <div class="live-read-wrap" style="margin-top:12px;">
-        <div class="live-read-label">What you read (from speech)</div>
-        <div class="live-read-preview is-placeholder" id="liveReadPreview-oral"
-             aria-live="polite" aria-relevant="additions text">Your words will appear here as you read.</div>
+    <div class="reading-practice-split" style="margin-top:12px;">
+        <div class="reading-split-passage">
+            <div class="live-read-label" id="oralBookColumnLabel">Your book</div>
+            <div class="live-read-preview is-placeholder" id="oralBookPlaceholder" style="min-height:4.5em;">Read aloud from your physical book — no passage is shown here.</div>
+        </div>
+        <div class="reading-split-transcript">
+            <div class="live-read-label" id="oralLiveTranscriptLabel">What you read (from speech)</div>
+            <div class="live-read-preview is-placeholder" id="liveReadPreview-oral"
+                 aria-live="polite" aria-relevant="additions text">Your words will appear here as you read.</div>
+        </div>
     </div>
     <div class="feedback-panel" id="feedback-oral">
         <div class="score-bar">
@@ -741,9 +778,19 @@
 <!-- Teacher-only: prompt to define/customize the passage (no news or external sources) -->
 <div class="teacher-reading-section" th:if="${isTeacher}">
     <div class="teacher-reading-card">
-        <h3 class="teacher-reading-heading"><i class="fa-solid fa-pen"></i> Choose or paste the passage</h3>
-        <label class="teacher-reading-label">Paste a passage from the textbook, type a prompt, or dictate with the mic</label>
-        <textarea id="readingPromptInput" class="teacher-reading-textarea" placeholder="Example: Generate a passage on Ram Dhari — or paste your full paragraph here." rows="4"></textarea>
+        <h3 class="teacher-reading-heading"><i class="fa-solid fa-pen"></i> Choose or Paste a Passage</h3>
+        <label class="teacher-reading-label">Type, paste, or <strong>Speak to type</strong> — <strong>Submit passage</strong> for AI text, or keep what you pasted.</label>
+        <textarea id="readingPromptInput" class="teacher-reading-textarea" placeholder="Example: a short topic like “photosynthesis for Class 7” — or paste the full paragraph from your book." rows="4"></textarea>
+        <div class="reading-passage-lang-row" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:8px 0 4px;">
+            <label for="readingPassageLanguage" class="teacher-reading-label" style="margin:0;font-size:0.9rem;">Passage language</label>
+            <select id="readingPassageLanguage" title="Used for AI-generated text and for Read Passage Aloud"
+                    style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:0.9rem;background:var(--surface);color:var(--text);max-width:100%;">
+                <option value="English" selected>English</option>
+                <option value="Hindi">Hindi (Devanagari)</option>
+                <option value="Hinglish">Hinglish (Roman script)</option>
+            </select>
+        </div>
+        <p class="teacher-reading-label" style="margin:0 0 6px;font-size:0.8rem;opacity:0.85;"><strong>Passage language</strong> — same for AI and read-aloud.</p>
         <div class="reading-passage-mic-row">
             <button type="button" class="prompt-mic-btn" id="readingPassageMicBtn" onclick="toggleReadingPassageMic()">
                 <i class="fa-solid fa-microphone"></i> Speak to type
@@ -767,8 +814,8 @@
         <button class="read-all-btn" id="readAllBtn" onclick="readAllNews(this)">
             <i class="fa-solid fa-volume-high"></i> Read Passage Aloud
         </button>
-        <span style="font-size:0.8rem; color:#475569;">
-            <i class="fa-solid fa-circle-info"></i> Use your own safe, age-appropriate passages for practice.
+        <span style="font-size:0.78rem; color:#475569;">
+            <i class="fa-solid fa-circle-info"></i> Read-aloud uses <strong>Passage language</strong>.
         </span>
     </div>
 </div>
@@ -783,11 +830,6 @@
             </a>
             <span th:if="${news.url().isBlank()}" th:text="${news.title()}"></span>
         </div>
-
-        <!-- Summary text (stays same colors while recording — no yellow highlight) -->
-        <div class="news-summary"
-             th:id="'summary-' + ${stat.index}"
-             th:text="${news.summary()}"></div>
 
         <th:block th:if="${!news.title().contains('not available')}">
         <div class="reading-practice-unlock-hint">
@@ -823,8 +865,25 @@
                 <i class="fa-solid fa-wand-magic-sparkles"></i> Evaluate now
             </button>
             <p class="practice-hint">Tap <strong>Stop recording</strong> when finished, then <strong>Evaluate now</strong>. Each new <strong>Start reading</strong> begins fresh from the beginning.</p>
-            <div class="live-read-wrap">
-                <div class="live-read-label">What we hear as you read (live)</div>
+        </div>
+        <div class="reading-practice-split">
+            <div class="reading-split-passage">
+                <div class="reading-passage-col-head">
+                    <div class="live-read-label" th:id="'passageColumnLabel-' + ${stat.index}">Passage</div>
+                    <button type="button" class="read-all-btn reading-passage-read-aloud-btn"
+                            th:title="'Read passage in selected Passage language'"
+                            th:attr="data-index=${stat.index}"
+                            onclick="readPassageAloudForIndex(this)">
+                        <i class="fa-solid fa-volume-high"></i>
+                        <span class="reading-passage-read-aloud-label">Read aloud</span>
+                    </button>
+                </div>
+                <div class="news-summary"
+                     th:id="'summary-' + ${stat.index}"
+                     th:text="${news.summary()}"></div>
+            </div>
+            <div class="reading-split-transcript">
+                <div class="live-read-label" th:id="'liveTranscriptLabel-' + ${stat.index}">What we hear as you read (live)</div>
                 <div class="live-read-preview is-placeholder"
                      th:id="'liveReadPreview-' + ${stat.index}"
                      aria-live="polite"
@@ -1103,7 +1162,7 @@ function toggleReadingPassageMic() {
     }
 
     const rec = new SR();
-    rec.lang = '';
+    rec.lang = getReadingPassageSpeechLocale().lang;
     rec.continuous = true;
     rec.interimResults = true;
     readingPassageDictation = rec;
@@ -1351,10 +1410,12 @@ async function applyTeacherPassage() {
 
     try {
         var gradeCtx = (typeof window.getPrepareGradeContext === 'function' && window.getPrepareGradeContext()) || '';
+        const langEl = document.getElementById('readingPassageLanguage');
+        const language = (langEl && String(langEl.value || '').trim()) || 'English';
         const r = await fetch('/reading/generate-passage', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: raw, grade: gradeCtx })
+            body: JSON.stringify({ prompt: raw, grade: gradeCtx, language: language })
         });
         const data = await r.json().catch(() => ({}));
         if (r.ok && data.passage && String(data.passage).trim()) {
@@ -1437,10 +1498,118 @@ function getHindiVoice() {
         || null;
 }
 
+/** BCP-47 + voice hint from teacher “Passage language” (English / Hindi / Hinglish). */
+function getReadingPassageSpeechLocale() {
+    const sel = document.getElementById('readingPassageLanguage');
+    const v = (sel && String(sel.value || '').trim()) || 'English';
+    if (v === 'Hindi') {
+        return { lang: 'hi-IN', preferHindiVoice: true };
+    }
+    if (v === 'Hinglish') {
+        // Roman script: Indian English voice reads mixed Hindi–English smoothly
+        return { lang: 'en-IN', preferHindiVoice: false };
+    }
+    return { lang: 'en-IN', preferHindiVoice: false };
+}
+
+/** Column headings & live-transcript placeholders (matches Passage language). */
+function getReadingPassageUiStrings() {
+    const sel = document.getElementById('readingPassageLanguage');
+    const v = (sel && String(sel.value || '').trim()) || 'English';
+    if (v === 'Hindi') {
+        return {
+            passageColumn: 'पाठ',
+            liveClass: 'पढ़ते समय हम जो सुनते हैं (लाइव)',
+            oralBook: 'आपकी किताब',
+            oralBookPlaceholder: 'अपनी किताब से ज़ोर से पढ़ें — यहाँ पाठ नहीं दिखाया जाता।',
+            oralLive: 'बोल से जो आपने पढ़ा',
+            placeholderIdle: 'आप पढ़ते समय बोली हुई चीज़ें यहाँ दिखेंगी।',
+            placeholderRecording: 'स्पष्ट बोलें — शब्द आपके पढ़ते समय यहाँ दिखेंगे।',
+            placeholderOralIdle: 'पढ़ते समय आपके शब्द यहाँ दिखेंगे।',
+            placeholderOralRecording: 'स्पष्ट पढ़ें — शब्द यहाँ दिखेंगे।',
+            readAloudBtn: 'आवाज़ में सुनें'
+        };
+    }
+    if (v === 'Hinglish') {
+        return {
+            passageColumn: 'Passage',
+            liveClass: 'Live: jab aap padhte ho tab hum kya sunte hain',
+            oralBook: 'Aapki kitab',
+            oralBookPlaceholder: 'Apni physical book se zor se padhain — yahan passage text nahi dikhta.',
+            oralLive: 'Speech se jo aapne padha',
+            placeholderIdle: 'Speech recognition se shabd yahan dikhenge jab aap padhenge.',
+            placeholderRecording: 'Saaf boliye — padhte waqt shabd yahan aayenge.',
+            placeholderOralIdle: 'Jab aap padhenge, yahan shabd dikhenge.',
+            placeholderOralRecording: 'Clear padhiye — shabd yahan aayenge.',
+            readAloudBtn: 'Read aloud'
+        };
+    }
+    return {
+        passageColumn: 'Passage',
+        liveClass: 'What we hear as you read (live)',
+        oralBook: 'Your book',
+        oralBookPlaceholder: 'Read aloud from your physical book — no passage is shown here.',
+        oralLive: 'What you read (from speech)',
+        placeholderIdle: 'Words and punctuation from speech recognition appear here while you read.',
+        placeholderRecording: 'Speak clearly — words and punctuation appear here as you read.',
+        placeholderOralIdle: 'Your words will appear here as you read.',
+        placeholderOralRecording: 'Speak clearly — words appear here as you read.',
+        readAloudBtn: 'Read aloud'
+    };
+}
+
+function syncReadingPassageLanguageUi() {
+    const s = getReadingPassageUiStrings();
+    document.querySelectorAll('[id^="passageColumnLabel-"]').forEach(function (el) { el.textContent = s.passageColumn; });
+    document.querySelectorAll('[id^="liveTranscriptLabel-"]').forEach(function (el) { el.textContent = s.liveClass; });
+    var ob = document.getElementById('oralBookColumnLabel');
+    if (ob) ob.textContent = s.oralBook;
+    var ol = document.getElementById('oralLiveTranscriptLabel');
+    if (ol) ol.textContent = s.oralLive;
+    var op = document.getElementById('oralBookPlaceholder');
+    if (op) op.textContent = s.oralBookPlaceholder;
+    document.querySelectorAll('.reading-passage-read-aloud-label').forEach(function (el) { el.textContent = s.readAloudBtn; });
+
+    document.querySelectorAll('[id^="liveReadPreview-"]').forEach(function (el) {
+        var suffix = (el.id || '').replace('liveReadPreview-', '');
+        var rec = (String(practiceRecordingIdx) === String(suffix) && practiceRecognition != null);
+        refreshLiveReadPreview(suffix, rec);
+    });
+}
+
 function stopSpeaking() {
     window.speechSynthesis.cancel();
-    if (activeBtn) { activeBtn.classList.remove('speaking'); activeBtn.querySelector('i').className = 'fa-solid fa-volume-high'; }
+    if (activeBtn) {
+        activeBtn.classList.remove('speaking');
+        const ic = activeBtn.querySelector('i');
+        if (ic) ic.className = 'fa-solid fa-volume-high';
+    }
     activeSpeech = null; activeBtn = null;
+}
+
+/** Uses Passage language (dropdown) for voice + rate. */
+function speakPassageWithLocale(btn, fullText) {
+    if (!fullText || !String(fullText).trim()) return;
+    const loc = getReadingPassageSpeechLocale();
+    const utter = new SpeechSynthesisUtterance(String(fullText).trim());
+    utter.lang = loc.lang;
+    utter.rate = loc.lang.startsWith('hi') ? 0.82 : 0.88;
+    if (loc.preferHindiVoice) {
+        const hiVoice = getHindiVoice();
+        if (hiVoice) utter.voice = hiVoice;
+    }
+    utter.onend = utter.onerror = () => {
+        btn.classList.remove('speaking');
+        const ic = btn.querySelector('i');
+        if (ic) ic.className = 'fa-solid fa-volume-high';
+        activeSpeech = null; activeBtn = null;
+    };
+    btn.classList.add('speaking');
+    const ic = btn.querySelector('i');
+    if (ic) ic.className = 'fa-solid fa-circle-stop';
+    activeSpeech = utter; activeBtn = btn;
+    window.speechSynthesis.cancel();
+    setTimeout(() => window.speechSynthesis.speak(utter), 80);
 }
 
 function readAllNews(btn) {
@@ -1454,14 +1623,29 @@ function readAllNews(btn) {
         texts.push('Passage ' + (i+1) + '. ' + el.textContent.trim() + '.');
     });
     const fullText = texts.join(' ');
-    const utter = new SpeechSynthesisUtterance(fullText);
-    utter.lang = 'en-IN'; utter.rate = 0.88;
-    utter.onend = utter.onerror = () => { btn.classList.remove('speaking'); btn.querySelector('i').className = 'fa-solid fa-volume-high'; activeSpeech = null; activeBtn = null; };
-    btn.classList.add('speaking');
-    btn.querySelector('i').className = 'fa-solid fa-circle-stop';
-    activeSpeech = utter; activeBtn = btn;
-    window.speechSynthesis.cancel();
-    setTimeout(() => window.speechSynthesis.speak(utter), 80);
+    if (!String(fullText).trim()) {
+        alert('No passage text yet. Submit a passage first.');
+        return;
+    }
+    speakPassageWithLocale(btn, fullText);
+}
+
+function readPassageAloudForIndex(btn) {
+    if (activeSpeech) { stopSpeaking(); return; }
+    if (window.monitorIsPriorityActive && window.monitorIsPriorityActive()) {
+        setTimeout(function () { readPassageAloudForIndex(btn); }, 900);
+        return;
+    }
+    const idx = btn.dataset.index;
+    if (idx === undefined || idx === null) return;
+    const el = document.getElementById('summary-' + idx);
+    if (!el) return;
+    const fullText = el.textContent.trim();
+    if (!fullText) {
+        alert('No passage text yet. Submit a passage first.');
+        return;
+    }
+    speakPassageWithLocale(btn, fullText);
 }
 
 // ── Reading Practice: continuous capture, manual stop, separate Evaluate ──
@@ -1633,14 +1817,16 @@ function refreshLiveReadPreview(idx, isRecording) {
     const el = document.getElementById('liveReadPreview-' + idxKey);
     if (!el) return;
     const raw = (readingTranscripts[idxKey] || '').trim();
+    const s = getReadingPassageUiStrings();
+    const isOral = idxKey === 'oral';
     el.classList.toggle('is-recording', !!isRecording);
     if (raw.length > 0) {
         el.textContent = raw;
         el.classList.remove('is-placeholder');
     } else {
         el.textContent = isRecording
-            ? 'Speak clearly — words and punctuation appear here as you read.'
-            : 'Words and punctuation from speech recognition appear here while you read.';
+            ? (isOral ? s.placeholderOralRecording : s.placeholderRecording)
+            : (isOral ? s.placeholderOralIdle : s.placeholderIdle);
         el.classList.add('is-placeholder');
     }
 }
@@ -1710,7 +1896,7 @@ function togglePracticeReading(btn) {
 
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SR();
-    recognition.lang = 'en-IN';
+    recognition.lang = getReadingPassageSpeechLocale().lang;
     recognition.continuous = true;
     recognition.interimResults = true;
 
@@ -2151,6 +2337,13 @@ document.addEventListener('DOMContentLoaded', function () {
         if (tab2) tab2.click();
     }
     // Search Reading Passage tab removed.
+    syncReadingPassageLanguageUi();
+    var langSel = document.getElementById('readingPassageLanguage');
+    if (langSel) {
+        langSel.addEventListener('change', function () {
+            syncReadingPassageLanguageUi();
+        });
+    }
 });
 window.addEventListener('beforeunload', function (e) {
     var recording = !!readingPassageMicListening || !!practiceRecognition;

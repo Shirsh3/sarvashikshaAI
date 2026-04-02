@@ -38,7 +38,6 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/menu").permitAll()
                 .requestMatchers("/api/superadmin/**").hasRole("SUPER_ADMIN")
                 .requestMatchers("/superadmin/**").hasRole("SUPER_ADMIN")
-                .requestMatchers("/admin/cleanup/**").hasRole("SUPER_ADMIN")
                 .requestMatchers("/api/**").authenticated()
                 .requestMatchers("/teacher/**").hasAnyRole("TEACHER", "ADMIN", "SUPER_ADMIN")
                 .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")

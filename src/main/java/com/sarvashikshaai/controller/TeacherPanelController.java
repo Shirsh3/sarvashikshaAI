@@ -7,6 +7,7 @@ import com.sarvashikshaai.repository.QuestionResponseRepository;
 import com.sarvashikshaai.repository.QuizRepository;
 import com.sarvashikshaai.repository.ReadingFeedbackRepository;
 import com.sarvashikshaai.service.AssemblyConfigService;
+import com.sarvashikshaai.service.LeaderboardService;
 import com.sarvashikshaai.service.StudentCrudService;
 import com.sarvashikshaai.service.ThoughtConfigService;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,7 @@ public class TeacherPanelController {
     private final ReadingFeedbackRepository readingFeedbackRepository;
     private final QuestionResponseRepository questionResponseRepository;
     private final AttendanceRepository attendanceRepository;
+    private final LeaderboardService leaderboardService;
 
     @GetMapping
     public String teacherHome() {
@@ -90,12 +92,19 @@ public class TeacherPanelController {
         long attendancePresent = attendanceRepository.countPresentByDateRangeAndGrade(from, to, gradeFilter);
         int attendancePct = attendanceAll == 0 ? 0 : (int) Math.round((100.0 * attendancePresent) / attendanceAll);
 
-        long points = questionResponseRepository.countAnsweredCorrectBetweenForStudentGrade(fromInst, toInst, gradeFilter);
+        int classMaxStreakDays = 0;
+        try {
+            classMaxStreakDays = leaderboardService.buildLeaderboard(fromInst, toInst).stream()
+                    .mapToInt(LeaderboardService.LeaderboardRow::currentStreakDays)
+                    .max()
+                    .orElse(0);
+        } catch (Exception e) {
+            log.debug("Dashboard streak: {}", e.getMessage());
+        }
 
         model.addAttribute("quizAccuracy", quizAccuracy);
         model.addAttribute("attendancePct", attendancePct);
-        model.addAttribute("studentsPresentCount", attendancePresent);
-        model.addAttribute("points", points);
+        model.addAttribute("classMaxStreakDays", classMaxStreakDays);
         model.addAttribute("recentQuizzes", quizRepository.findAllByOrderByCreatedAtDesc().stream().limit(5).toList());
         model.addAttribute("recentReadings", readingFeedbackRepository.findAll().stream()
                 .sorted((a, b) -> {

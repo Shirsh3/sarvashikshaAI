@@ -15,37 +15,48 @@ public class SuperAdminUserService {
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
 
+    /**
+     * Set username + password for the active account of the given role (Teacher, Admin, or Super Admin).
+     * Does not delete data — only updates credentials (or replaces the user row if the username changes).
+     */
     @Transactional
-    public AppUserEntity resetTeacherCredentials(String newUsername, String newPassword) {
+    public AppUserEntity resetCredentials(UserRole role, String newUsername, String newPassword) {
+        if (role != UserRole.TEACHER && role != UserRole.ADMIN && role != UserRole.SUPER_ADMIN) {
+            throw new IllegalArgumentException("invalid_role");
+        }
         String u = newUsername == null ? "" : newUsername.trim();
-        if (u.isBlank()) throw new IllegalArgumentException("username_required");
-        if (newPassword == null || newPassword.isBlank()) throw new IllegalArgumentException("password_required");
-        if (newPassword.length() < 6) throw new IllegalArgumentException("password_too_short");
+        if (u.isBlank()) {
+            throw new IllegalArgumentException("username_required");
+        }
+        if (newPassword == null || newPassword.isBlank()) {
+            throw new IllegalArgumentException("password_required");
+        }
+        if (newPassword.length() < 6) {
+            throw new IllegalArgumentException("password_too_short");
+        }
 
-        AppUserEntity teacher = appUserRepository.findActiveAnyByRole(UserRole.TEACHER)
-                .orElseThrow(() -> new IllegalStateException("no_active_teacher_found"));
+        AppUserEntity account = appUserRepository.findActiveAnyByRole(role)
+                .orElseThrow(() -> new IllegalStateException("no_active_user_for_role"));
 
-        if (!teacher.getUsername().equals(u) && appUserRepository.findByUsername(u).isPresent()) {
+        if (!account.getUsername().equals(u) && appUserRepository.findByUsername(u).isPresent()) {
             throw new IllegalArgumentException("username_already_exists");
         }
 
         String hash = passwordEncoder.encode(newPassword);
 
-        if (teacher.getUsername().equals(u)) {
-            teacher.setPasswordHash(hash);
-            return appUserRepository.save(teacher);
+        if (account.getUsername().equals(u)) {
+            account.setPasswordHash(hash);
+            return appUserRepository.save(account);
         }
 
-        // Username is the PK; change by creating new row and deleting old.
         AppUserEntity replacement = new AppUserEntity();
         replacement.setUsername(u);
         replacement.setPasswordHash(hash);
-        replacement.setRole(UserRole.TEACHER);
+        replacement.setRole(role);
         replacement.setActive(true);
-        replacement.setCreatedAt(teacher.getCreatedAt());
+        replacement.setCreatedAt(account.getCreatedAt());
 
-        appUserRepository.deleteById(teacher.getUsername());
+        appUserRepository.deleteById(account.getUsername());
         return appUserRepository.save(replacement);
     }
 }
-

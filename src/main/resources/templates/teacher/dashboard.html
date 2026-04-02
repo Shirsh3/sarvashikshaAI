@@ -47,12 +47,8 @@
                     <div class="stat-value" th:text="${attendancePct} + '%'">0%</div>
                 </div>
                 <div class="stat-card" style="border-left-color:var(--warning);">
-                    <h4>Points</h4>
-                    <div class="stat-value" th:text="${points}">0</div>
-                </div>
-                <div class="stat-card" style="border-left-color:var(--secondary);">
-                    <h4>Students present</h4>
-                    <div class="stat-value" th:text="${studentsPresentCount}">0</div>
+                    <h4>Best streak</h4>
+                    <div class="stat-value" th:text="${classMaxStreakDays} + ' days'">0 days</div>
                 </div>
             </div>
     </div>

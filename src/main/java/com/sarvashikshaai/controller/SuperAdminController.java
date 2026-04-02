@@ -15,9 +15,15 @@ public class SuperAdminController {
         return "superadmin/menu-config";
     }
 
+    @GetMapping("/password-reset")
+    public String passwordReset() {
+        return "superadmin/password-reset";
+    }
+
+    /** Old menu URL — data cleanup was removed in favour of password reset only. */
     @GetMapping("/cleanup")
-    public String cleanup() {
-        return "superadmin/data-cleanup";
+    public String cleanupRedirect() {
+        return "redirect:/superadmin/password-reset";
     }
 }
 

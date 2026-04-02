@@ -120,7 +120,10 @@ public class ReadingController {
             return ResponseEntity.badRequest().body(Map.of("error", "prompt is required"));
         }
         String grade = body != null && body.get("grade") != null ? body.get("grade").trim() : "";
-        ReadingEvaluationService.GeneratedReadingPassage gen = evaluationService.generateReadingPassage(prompt, grade.isEmpty() ? null : grade);
+        String language = body != null && body.get("language") != null ? body.get("language").trim() : "";
+        ReadingEvaluationService.GeneratedReadingPassage gen =
+                evaluationService.generateReadingPassage(prompt, grade.isEmpty() ? null : grade,
+                        language.isEmpty() ? null : language);
         return ResponseEntity.ok(Map.of(
                 "title", gen.title() != null ? gen.title() : "Reading passage",
                 "passage", gen.passage() != null ? gen.passage() : prompt));

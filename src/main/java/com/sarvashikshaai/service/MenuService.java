@@ -50,10 +50,10 @@ public class MenuService {
                     "🛡️"
             ));
             base.add(new MenuItemDto(
-                    "superadmin_cleanup",
-                    "Data Cleanup",
-                    "/superadmin/cleanup",
-                    "🧹"
+                    "superadmin_password",
+                    "Password reset",
+                    "/superadmin/password-reset",
+                    "🔑"
             ));
         }
 

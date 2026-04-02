@@ -96,10 +96,17 @@ public class ReadingEvaluationService {
      * if they already pasted a full passage, returns it cleaned lightly.
      */
     public GeneratedReadingPassage generateReadingPassage(String teacherInput) {
-        return generateReadingPassage(teacherInput, null);
+        return generateReadingPassage(teacherInput, null, null);
     }
 
     public GeneratedReadingPassage generateReadingPassage(String teacherInput, String grade) {
+        return generateReadingPassage(teacherInput, grade, null);
+    }
+
+    /**
+     * @param readingLanguageCategory optional teacher choice: Hindi, English, or Hinglish (from UI dropdown); null = auto
+     */
+    public GeneratedReadingPassage generateReadingPassage(String teacherInput, String grade, String readingLanguageCategory) {
         if (teacherInput == null || teacherInput.isBlank()) {
             return new GeneratedReadingPassage("Reading passage", "");
         }
@@ -122,6 +129,29 @@ public class ReadingEvaluationService {
         String gradeLine = (grade == null || grade.isBlank())
                 ? "Not specified — infer age-appropriate reading level from the teacher request."
                 : grade.trim();
+
+        String languageBlock = "";
+        if (readingLanguageCategory != null && !readingLanguageCategory.isBlank()) {
+            String cat = normalizeReadingLanguageCategory(readingLanguageCategory.trim());
+            languageBlock = switch (cat) {
+                case "Hindi" -> """
+
+                        Teacher-selected language: Hindi.
+                        Write BOTH the JSON "title" and "passage" in Hindi using Devanagari script.
+                        """;
+                case "Hinglish" -> """
+
+                        Teacher-selected language: Hinglish (Hindi ideas in Latin letters, mixed with English as in Indian classrooms).
+                        Write BOTH the JSON "title" and "passage" in natural Hinglish using Roman letters only (not Devanagari).
+                        """;
+                default -> """
+
+                        Teacher-selected language: English.
+                        Write BOTH the JSON "title" and "passage" in standard English using Latin script.
+                        """;
+            };
+        }
+
         String promptHead = """
             You help Indian school teachers prepare reading practice for students aged 8-16.
 
@@ -135,27 +165,38 @@ public class ReadingEvaluationService {
 
             Target grade for reading level (vocabulary + sentence length MUST match this band):
             %s
+            %s
 
             Teacher input (verbatim):
 
-            """.formatted(gradeLine);
+            """.formatted(gradeLine, languageBlock);
+        String defaultLangRule = (readingLanguageCategory == null || readingLanguageCategory.isBlank())
+                ? "Use English unless they clearly ask for Hindi (Devanagari script)."
+                : "Follow the teacher-selected language above; do not switch language unless the teacher input explicitly contradicts it.";
+
         String promptTail = """
 
+            Reading comprehension format (mandatory):
+            - The passage is for classroom reading comprehension: it must be a complete, self-contained piece that does not rely on follow-up discussion.
+            - Do NOT address the reader with questions (no "What do you think?", "Why?", "Can you guess?", "Discuss", or any direct question to the student inside the passage).
+            - Do NOT end with rhetorical questions or prompts that invite an oral answer; end with clear statements or a definitive closing sentence.
+            - If the input is already a pasted passage that ends with questions to the reader, rewrite minimally so the text stays informative but remove such questions (keep educational meaning).
+
             Your task:
-            - If the input is mainly a request to create or generate reading material: write an original, factual passage (about 120-220 words unless they specify length) whose difficulty clearly matches the target grade — do NOT use the same complexity for every grade. Use English unless they clearly ask for Hindi (Devanagari script).
+            - If the input is mainly a request to create or generate reading material: write an original, factual passage (about 120-220 words unless they specify length) whose difficulty clearly matches the target grade — do NOT use the same complexity for every grade. %s
             - If the request is allowed but superficial (gossip, ratings, comparisons of looks): write a passage that follows the TRANSFORMATION strategy above inside the passage body (still JSON title + passage).
             - If the input is already a student passage: keep the meaning; fix only obvious spelling or punctuation. Do not replace the whole text with a different topic.
             - If pasted or requested content is unsafe or not suitable for school, output JSON with a short safe educational passage instead (title "Practice passage"); do not reproduce harmful text.
 
             Respond ONLY with valid JSON (no markdown, no code fences):
             {"title":"Short descriptive title","passage":"Full passage text; you may use newline characters inside the string for paragraphs"}
-            """;
+            """.formatted(defaultLangRule);
         String prompt = promptHead + trimmed + promptTail;
 
         try {
             String raw = openAIClient.generateCompletion(prompt);
-            raw = raw.replaceAll("^```(?:json)?\\s*", "").replaceAll("\\s*```$", "").trim();
-            JsonNode n = mapper.readTree(raw);
+            String json = extractFirstJsonObject(unFenceMarkdown(raw));
+            JsonNode n = mapper.readTree(json);
             String title = n.path("title").asText("Reading passage");
             String passage = n.path("passage").asText("").trim();
             if (passage.isBlank()) {
@@ -165,9 +206,88 @@ public class ReadingEvaluationService {
                     title.isBlank() ? "Reading passage" : title,
                     passage);
         } catch (Exception e) {
-            log.error("Reading passage generation failed: {}", e.getMessage());
+            log.warn("Reading passage generation failed: {} — input preview: {}",
+                    e.getMessage(), previewForLog(trimmed, 120));
             return new GeneratedReadingPassage("Reading passage", trimmed);
         }
+    }
+
+    private static String unFenceMarkdown(String raw) {
+        if (raw == null) return "";
+        String s = raw.trim();
+        int fence = s.indexOf("```");
+        if (fence < 0) {
+            return s.replaceFirst("^```(?:json)?\\s*", "").replaceFirst("\\s*```$", "").trim();
+        }
+        int nl = s.indexOf('\n', fence);
+        int contentStart = nl >= 0 ? nl + 1 : fence + 3;
+        int endFence = s.lastIndexOf("```");
+        if (endFence > fence) {
+            return s.substring(contentStart, endFence).trim();
+        }
+        return s.replaceFirst("^```(?:json)?\\s*", "").replaceFirst("\\s*```$", "").trim();
+    }
+
+    /** First top-level JSON object; brace depth ignores strings so passages may contain "}". */
+    private static String extractFirstJsonObject(String s) {
+        if (s == null) return "";
+        String t = s.trim();
+        int start = t.indexOf('{');
+        if (start < 0) return t;
+        int depth = 0;
+        boolean inString = false;
+        boolean escape = false;
+        for (int i = start; i < t.length(); i++) {
+            char c = t.charAt(i);
+            if (escape) {
+                escape = false;
+                continue;
+            }
+            if (inString) {
+                if (c == '\\') {
+                    escape = true;
+                    continue;
+                }
+                if (c == '"') {
+                    inString = false;
+                }
+                continue;
+            }
+            if (c == '"') {
+                inString = true;
+                continue;
+            }
+            if (c == '{') {
+                depth++;
+            } else if (c == '}') {
+                depth--;
+                if (depth == 0) {
+                    return t.substring(start, i + 1);
+                }
+            }
+        }
+        return t.substring(start);
+    }
+
+    private static String normalizeReadingLanguageCategory(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "English";
+        }
+        String s = raw.trim();
+        if (s.equalsIgnoreCase("Hindi")) {
+            return "Hindi";
+        }
+        if (s.equalsIgnoreCase("Hinglish")) {
+            return "Hinglish";
+        }
+        return "English";
+    }
+
+    private static String previewForLog(String text, int max) {
+        if (text == null) return "";
+        String oneLine = text.replaceAll("\\s+", " ").trim();
+        if (oneLine.length() <= max) return oneLine;
+        return oneLine.substring(0, max) + "…";
     }
 
     /** Max characters of original passage sent to the model (book excerpts can be very long). */

@@ -120,9 +120,11 @@ public class LeaderboardService {
                     quizPoints, readingPoints, attendancePoints, answered, acc, streakDays));
         }
 
+        // Do not call .reversed() on the result of .thenComparingLong — it reverses the *entire*
+        // comparator and flips primary sort (lowest total would appear first).
         out.sort(Comparator
                 .comparingLong(LeaderboardRow::totalPoints).reversed()
-                .thenComparingLong(LeaderboardRow::quizPoints).reversed()
+                .thenComparing(Comparator.comparingLong(LeaderboardRow::quizPoints).reversed())
                 .thenComparing(LeaderboardRow::studentName));
 
         int rank = 1;
