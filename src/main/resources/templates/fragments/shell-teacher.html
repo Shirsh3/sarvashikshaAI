@@ -13,7 +13,7 @@
             aria-controls="app-sidebar" aria-expanded="false">☰</button>
 </div>
 <aside class="sidebar" id="app-sidebar" aria-label="Teacher navigation">
-    <a href="/teacher/dashboard" class="sidebar-brand brand-lockup" aria-label="SarvashikshaAI home">
+    <a th:href="${navHomeHref} ?: @{/teacher/dashboard}" class="sidebar-brand brand-lockup" aria-label="SarvashikshaAI home">
         <img src="/img/logo-transparent.png" class="brand-mark" alt="SarvashikshaAI"/>
     </a>
     <nav id="sidebar-nav">

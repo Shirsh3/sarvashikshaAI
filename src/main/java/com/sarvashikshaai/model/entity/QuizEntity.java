@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -45,6 +46,14 @@ public class QuizEntity {
 
     @Column(name = "is_locked", nullable = false)
     private boolean isLocked = false;
+
+    /**
+     * When true, this quiz is for PDF handout / print distribution — it does not show the live "Start" action
+     * and the in-app take view is not available.
+     */
+    @ColumnDefault("false")
+    @Column(name = "handout_only", nullable = false)
+    private boolean handoutOnly = false;
 
     /** Optional OpenAI-generated decorative image URL; reused as watermark for all questions when set. */
     @Column(name = "cover_image_url", length = 1024)

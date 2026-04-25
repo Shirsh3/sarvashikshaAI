@@ -38,11 +38,22 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/menu").permitAll()
                 .requestMatchers("/api/superadmin/**").hasRole("SUPER_ADMIN")
                 .requestMatchers("/superadmin/**").hasRole("SUPER_ADMIN")
+                // Full teacher + admin app (not the QUIZ-bank / PDF handout account)
+                .requestMatchers(
+                        "/teacher/**",
+                        "/admin/**",
+                        "/reading/**",
+                        "/attendance/**",
+                        "/assembly/**",
+                        "/leaderboard",
+                        "/leaderboard/**",
+                        "/explain"
+                ).hasAnyRole("TEACHER", "ADMIN", "SUPER_ADMIN")
+                .requestMatchers("/api/assembly/**", "/api/youtube/**")
+                        .hasAnyRole("TEACHER", "ADMIN", "SUPER_ADMIN")
                 .requestMatchers("/api/**").authenticated()
-                .requestMatchers("/teacher/**").hasAnyRole("TEACHER", "ADMIN", "SUPER_ADMIN")
-                .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
-                .requestMatchers("/reading/api/**").authenticated()
-                // Everything else should require auth (e.g. /quiz/**, /attendance, /reading)
+                // Legacy rule kept for explicit reading API naming (still teacher+ in practice)
+                .requestMatchers("/reading/api/**").hasAnyRole("TEACHER", "ADMIN", "SUPER_ADMIN")
                 .anyRequest().authenticated()
             )
             // CSRF: keep enabled for form POSTs, but allow fetch-based JSON endpoints

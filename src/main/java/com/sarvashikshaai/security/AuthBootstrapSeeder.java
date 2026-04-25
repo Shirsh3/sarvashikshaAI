@@ -41,6 +41,12 @@ public class AuthBootstrapSeeder {
     @Value("${auth.bootstrap.superadmin.password}")
     private String superAdminPassword;
 
+    @Value("${auth.bootstrap.quiz.username:}")
+    private String quizUsername;
+
+    @Value("${auth.bootstrap.quiz.password:}")
+    private String quizPassword;
+
     @jakarta.annotation.PostConstruct
     void seedOnStartup() {
         seedIfMissing();
@@ -52,6 +58,7 @@ public class AuthBootstrapSeeder {
         createIfMissing(teacherUsername, teacherPassword, UserRole.TEACHER);
         createIfMissing(adminUsername, adminPassword, UserRole.ADMIN);
         createIfMissing(superAdminUsername, superAdminPassword, UserRole.SUPER_ADMIN);
+        createIfMissing(quizUsername, quizPassword, UserRole.QUIZ);
     }
 
     private void createIfMissing(String username, String rawPassword, UserRole role) {

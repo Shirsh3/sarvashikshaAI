@@ -36,6 +36,8 @@ public class TeacherController {
         if (isAdmin) return "redirect:/admin";
         boolean isTeacher = auth.getAuthorities().stream().anyMatch(a -> "ROLE_TEACHER".equals(a.getAuthority()));
         if (isTeacher) return "redirect:/teacher/dashboard";
+        boolean isQuiz = auth.getAuthorities().stream().anyMatch(a -> "ROLE_QUIZ".equals(a.getAuthority()));
+        if (isQuiz) return "redirect:/quiz/teacher";
         if (!model.containsAttribute("teachingRequest")) {
             model.addAttribute("teachingRequest", new TeachingRequest());
         }

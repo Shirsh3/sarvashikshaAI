@@ -5,20 +5,27 @@ import com.sarvashikshaai.model.entity.QuizEntity;
 import com.sarvashikshaai.service.FileExtractionService;
 import com.sarvashikshaai.service.QuizService;
 import com.sarvashikshaai.service.StudentListService;
+import com.sarvashikshaai.service.QuizPdfExportService;
 import com.sarvashikshaai.service.UrlContentService;
 import com.sarvashikshaai.repository.GradeRefRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.net.URI;
+import java.util.ArrayList;
 
 @Controller
 @RequestMapping("/quiz")
@@ -35,16 +42,53 @@ public class QuizController {
     private final GradeRefRepository        gradeRefRepository;
     private final ObjectMapper              objectMapper;
     private final OpenAIClient              openAIClient;
+    private final QuizPdfExportService     quizPdfExportService;
     // ── Teacher dashboard ─────────────────────────────────────────────────────
 
     @GetMapping("/teacher")
-    public String teacherDashboard(Model model,
-            @RequestParam(required = false) String grade) {
-        model.addAttribute("quizList",     quizService.listAll());
+    public String teacherDashboard(
+            Model model,
+            @RequestParam(required = false) String grade,
+            Authentication authentication) {
+        boolean quizOnlyUser = isQuizOnly(authentication);
+        model.addAttribute("quizList", quizService.listAll());
         model.addAttribute("studentList",  studentListService.getStudents());
         model.addAttribute("prefillGrade", grade != null ? grade.trim() : "");
         model.addAttribute("gradeOptions", gradeRefRepository.findAllByOrderBySortOrderAsc());
+        model.addAttribute("quizOnlyUser", quizOnlyUser);
+        model.addAttribute("ncertUrlEnabled", false);
+        if (quizOnlyUser) {
+            model.addAttribute("navHomeHref", "/quiz/teacher");
+        }
         return "quiz/teacher";
+    }
+
+    private static boolean isQuizOnly(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_QUIZ".equals(a.getAuthority()));
+    }
+
+    /**
+     * Quiz-bank user only: allow MCQ, SHORT, TF, LONG and comma-separated mixes. Teachers stay MCQ-only in controller.
+     */
+    private static String sanitizeQuizUserTypes(String raw) {
+        if (raw == null) {
+            return "MCQ";
+        }
+        String t = raw.trim().toUpperCase(Locale.ROOT).replace(" ", "");
+        if (t.isEmpty()) {
+            return "MCQ";
+        }
+        if (t.length() > 80) {
+            t = t.substring(0, 80);
+        }
+        if (!t.matches("^[A-Z0-9,._-]+$")) {
+            return "MCQ";
+        }
+        return t;
     }
 
     @GetMapping("/{quizId}/results")
@@ -64,13 +108,99 @@ public class QuizController {
             @RequestParam String topic,
             @RequestParam(defaultValue = "") String grade,
             @RequestParam(defaultValue = "") String description,
-            @RequestParam String questionsJson) {
+            @RequestParam String questionsJson,
+            @RequestParam(defaultValue = "false") String handoutOnly,
+            Authentication authentication) {
         try {
-            QuizEntity saved = quizService.save(topic, grade, description, questionsJson);
+            boolean ho = "true".equalsIgnoreCase(handoutOnly) || "1".equals(handoutOnly);
+            if (isQuizOnly(authentication)) {
+                ho = true;
+            }
+            QuizEntity saved = quizService.save(topic, grade, description, questionsJson, ho);
             return ResponseEntity.ok(Map.of("id", saved.getId(), "title", saved.getTitle(), "count", saved.getQuestionCount()));
         } catch (Exception e) {
             log.error("Save quiz failed: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping(value = "/{quizId}/export-answers.pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> exportQuizPdfAnswers(@PathVariable Long quizId) {
+        return buildPdfResponse(quizId, QuizPdfExportService.ExportMode.ANSWERS, "answers");
+    }
+
+    @GetMapping(value = "/{quizId}/export-explanations.pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> exportQuizPdfExplanations(@PathVariable Long quizId) {
+        return buildPdfResponse(quizId, QuizPdfExportService.ExportMode.EXPLANATIONS, "explanations");
+    }
+
+    // Temporary export for NCERT tab (no DB save)
+    @PostMapping(value = "/ncert/export-answers.pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> exportNcertTempAnswersPdf(
+            @RequestParam(defaultValue = "NCERT Quiz") String title,
+            @RequestParam(defaultValue = "") String description,
+            @RequestParam String questionsJson,
+            Authentication authentication) {
+        if (!isQuizOnly(authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        byte[] pdf = quizPdfExportService.buildPdfBytesFromQuestionsJson(title, description, questionsJson, QuizPdfExportService.ExportMode.ANSWERS);
+        if (pdf == null || pdf.length == 0) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.status(HttpStatus.OK)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"ncert-quiz-answers.pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
+    @PostMapping(value = "/ncert/export-explanations.pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> exportNcertTempExplanationsPdf(
+            @RequestParam(defaultValue = "NCERT Quiz") String title,
+            @RequestParam(defaultValue = "") String description,
+            @RequestParam String questionsJson,
+            Authentication authentication) {
+        if (!isQuizOnly(authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        byte[] pdf = quizPdfExportService.buildPdfBytesFromQuestionsJson(title, description, questionsJson, QuizPdfExportService.ExportMode.EXPLANATIONS);
+        if (pdf == null || pdf.length == 0) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.status(HttpStatus.OK)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"ncert-quiz-explanations.pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
+    /** @deprecated use {@link #exportQuizPdfAnswers(Long)} */
+    @GetMapping(value = "/{quizId}/export.pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> exportQuizPdfLegacy(@PathVariable Long quizId) {
+        return exportQuizPdfAnswers(quizId);
+    }
+
+    private ResponseEntity<byte[]> buildPdfResponse(long quizId, QuizPdfExportService.ExportMode mode, String suffix) {
+        try {
+            byte[] pdf = quizPdfExportService.buildPdfBytes(quizId, mode);
+            if (pdf == null || pdf.length == 0) {
+                log.warn("PDF export: quizId={} mode={} -> NOT_FOUND (no bytes)", quizId, mode);
+                return ResponseEntity.notFound().build();
+            }
+            log.info("PDF export: quizId={} mode={} bytes={}", quizId, mode, pdf.length);
+            return ResponseEntity.status(HttpStatus.OK)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"quiz-" + quizId + "-" + suffix + ".pdf\"")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (IllegalStateException e) {
+            // Use a clear message instead of disguising as 404
+            String msg = e.getMessage() != null ? e.getMessage() : "PDF export not supported.";
+            log.warn("PDF export unsupported: quizId={} mode={} msg={}", quizId, mode, msg);
+            return ResponseEntity.badRequest()
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body(msg.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            log.error("PDF export failed: quizId={} mode={} err={}", quizId, mode, e.getMessage(), e);
+            return ResponseEntity.notFound().build();
         }
     }
 
@@ -87,9 +217,15 @@ public class QuizController {
             @RequestParam(defaultValue = "MCQ") String types,
             @RequestParam(defaultValue = "AUTO") String language,
             @RequestParam(defaultValue = "AUTO") String difficulty,
-            @RequestPart(value = "file", required = false) MultipartFile file) {
+            @RequestPart(value = "file", required = false) MultipartFile file,
+            Authentication authentication) {
 
         try {
+            sourceUrl = normalizeNcertHttpToHttps(sourceUrl);
+            boolean quizOnly = isQuizOnly(authentication);
+            boolean includePerQuestionExplanations = quizOnly;
+            String resolvedTypes = quizOnly ? sanitizeQuizUserTypes(types) : "MCQ";
+
             boolean hasUrl = sourceUrl != null && !sourceUrl.trim().isEmpty();
             boolean hasFile = file != null && !file.isEmpty();
             if (hasUrl && hasFile) {
@@ -112,7 +248,6 @@ public class QuizController {
                     safetyWarning = "Some content was filtered. Generated classroom-safe questions.";
                 }
             }
-            String resolvedTypes = "MCQ"; // enforce MCQ-only quiz generation
             String sourceExtracted = "";
             boolean hasValidNcertSource = false;
             StringBuilder contextBuilder = new StringBuilder();
@@ -139,6 +274,11 @@ public class QuizController {
                     hasValidNcertSource = true;
                     String urlHint = "NCERT Source URL:\n" + sourceUrl.trim();
                     contextText = contextText.isEmpty() ? urlHint : contextText + "\n\n" + urlHint;
+                    String extracted = urlContentService.extractContextFromUrl(sourceUrl.trim());
+                    if (extracted != null && !extracted.isBlank()) {
+                        contextText = contextText + "\n\n" + extracted;
+                        sourceExtracted = extracted;
+                    }
                 }
             }
 
@@ -180,6 +320,7 @@ public class QuizController {
                             resolvedTypes,
                             language,
                             difficulty,
+                            includePerQuestionExplanations,
                             imageDataUri
                     );
                     if (gen.error() != null && !gen.error().isBlank()) {
@@ -220,7 +361,7 @@ public class QuizController {
                         "error", "Topic is required for strict quiz generation."
                 ));
             }
-            String json = quizService.generateQuestionsJson(topicText, contextText, effectiveCount, resolvedTypes, language, difficulty, gradeText);
+            String json = quizService.generateQuestionsJson(topicText, contextText, effectiveCount, resolvedTypes, language, difficulty, gradeText, includePerQuestionExplanations);
             return ResponseEntity.ok(Map.of(
                     "questionsJson", json != null ? json : "[]",
                     "topic", topicText,
@@ -232,6 +373,110 @@ public class QuizController {
             log.error("AI generate questions failed", e);
             return ResponseEntity.ok(Map.of("questionsJson", "[]", "error", e.getMessage() != null ? e.getMessage() : "Generation failed. Please try again."));
         }
+    }
+
+    // ── NCERT page-window quiz (ROLE_QUIZ only) ──────────────────────────────
+
+    @PostMapping("/ncert/resolve")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> resolveNcertPdf(
+            @RequestParam(defaultValue = "") String sourceUrl,
+            Authentication authentication) {
+        if (!isQuizOnly(authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Forbidden"));
+        }
+        String normalized = normalizeNcertHttpToHttps(sourceUrl);
+        if (!isStrictNcertSelectorUrl(normalized)) {
+            return ResponseEntity.ok(Map.of("error", "Please paste a valid NCERT link like https://ncert.nic.in/textbook.php?leph1=3-8"));
+        }
+        List<String> pdfLinks = urlContentService.resolvePdfLinksFromUrl(normalized);
+        if (pdfLinks.isEmpty()) {
+            return ResponseEntity.ok(Map.of("error", "Could not resolve any NCERT PDF from this link. Try another chapter link."));
+        }
+        String resolvedTitle = urlContentService.resolveNcertPageTitle(normalized);
+        String pdfUrl = pdfLinks.get(0);
+        byte[] pdfBytes = urlContentService.fetchPdfBytes(pdfUrl);
+        int totalPages = extractor.countPdfPages(pdfBytes);
+        if (totalPages <= 0) {
+            return ResponseEntity.ok(Map.of(
+                    "pdfUrl", pdfUrl,
+                    "totalPages", 0,
+                    "title", resolvedTitle,
+                    "warning", "Could not read PDF page count (download/extraction issue). You can still try generating."
+            ));
+        }
+        return ResponseEntity.ok(Map.of(
+                "pdfUrl", pdfUrl,
+                "totalPages", totalPages,
+                "title", resolvedTitle
+        ));
+    }
+
+    @PostMapping("/ncert/generate")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> generateNcertPageWindow(
+            @RequestParam(defaultValue = "") String sourceUrl,
+            @RequestParam(defaultValue = "") String pdfUrl,
+            @RequestParam(defaultValue = "1") int startPage,
+            @RequestParam(defaultValue = "5") int pageWindow,
+            @RequestParam(defaultValue = "5") int count,
+            @RequestParam(defaultValue = "MCQ") String types,
+            @RequestParam(defaultValue = "AUTO") String language,
+            @RequestParam(defaultValue = "AUTO") String difficulty,
+            Authentication authentication) {
+        if (!isQuizOnly(authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Forbidden"));
+        }
+        String normalized = normalizeNcertHttpToHttps(sourceUrl);
+        if (!isStrictNcertSelectorUrl(normalized)) {
+            return ResponseEntity.ok(Map.of("error", "Invalid NCERT link."));
+        }
+        if (pdfUrl == null || pdfUrl.isBlank()) {
+            return ResponseEntity.ok(Map.of("error", "PDF not resolved. Click Load first."));
+        }
+        int window = Math.max(1, Math.min(pageWindow, 10));
+        int effectiveCount = Math.max(1, Math.min(count, 10));
+        int s = Math.max(1, startPage);
+        int e = s + window - 1;
+        byte[] pdfBytes = urlContentService.fetchPdfBytes(pdfUrl.trim());
+        if (pdfBytes.length == 0) {
+            return ResponseEntity.ok(Map.of("error", "Could not download the NCERT PDF. Please try again."));
+        }
+        log.info("NCERT generate: pdfBytes={}KB url={}", Math.max(1, pdfBytes.length / 1024), pdfUrl.trim());
+        int total = extractor.countPdfPages(pdfBytes);
+        if (total > 0 && s > total) {
+            return ResponseEntity.ok(Map.of("error", "Start page is beyond the end of the PDF.", "totalPages", total));
+        }
+        String pageText = extractor.extractPdfTextPages(pdfBytes, s, e, 20000);
+        if (pageText == null || pageText.isBlank()) {
+            return ResponseEntity.ok(Map.of("error", "No readable text found in these pages. Try a different page range."));
+        }
+        log.info("NCERT generate: pages {}-{} extractedChars={}", s, e, pageText.length());
+        String context = "NCERT Source URL:\n" + normalized + "\n\n"
+                + "NCERT PDF:\n" + pdfUrl.trim() + "\n"
+                + "Pages: " + s + "-" + e + "\n\n"
+                + pageText;
+        String questionsJson = quizService.generateQuestionsJsonFromContentOnly(
+                context,
+                effectiveCount,
+                types,
+                language,
+                difficulty,
+                true
+        );
+        log.info("NCERT generate: questionsJsonLen={}", questionsJson == null ? 0 : questionsJson.length());
+        String inferredTopic = "";
+        try {
+            QuizService.InferredQuizMeta meta = quizService.inferQuizMetaFromContext(pageText);
+            inferredTopic = meta != null ? meta.topic() : "";
+        } catch (Exception ignored) {}
+        return ResponseEntity.ok(Map.of(
+                "questionsJson", questionsJson != null ? questionsJson : "[]",
+                "startPage", s,
+                "endPage", e,
+                "totalPages", total,
+                "topic", inferredTopic != null ? inferredTopic : ""
+        ));
     }
 
     // ── Delete quiz ───────────────────────────────────────────────────────────
@@ -332,6 +577,21 @@ public class QuizController {
     /**
      * Allow only NCERT textbook selector URLs, e.g. {@code https://ncert.nic.in/textbook.php?leph1=2-8}.
      */
+    /** Browsers sometimes copy http:// — our allowlist requires https. */
+    private static String normalizeNcertHttpToHttps(String sourceUrl) {
+        if (sourceUrl == null) {
+            return "";
+        }
+        String t = sourceUrl.trim();
+        if (t.isEmpty()) {
+            return t;
+        }
+        if (t.length() > 7 && t.regionMatches(true, 0, "http://", 0, 7) && t.toLowerCase(Locale.ROOT).contains("ncert.nic.in")) {
+            return "https" + t.substring(4);
+        }
+        return t;
+    }
+
     private boolean isStrictNcertSelectorUrl(String sourceUrl) {
         if (sourceUrl == null || sourceUrl.isBlank()) return false;
         String trimmed = sourceUrl.trim();

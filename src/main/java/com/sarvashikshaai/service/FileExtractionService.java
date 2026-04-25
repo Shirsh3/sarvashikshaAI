@@ -19,7 +19,10 @@ import java.util.Base64;
 @Slf4j
 public class FileExtractionService {
 
-    private static final long MAX_BYTES = 5 * 1024 * 1024L; // 5 MB
+    // Upload safety limit (user file uploads / screenshots)
+    private static final long MAX_UPLOAD_BYTES = 5 * 1024 * 1024L; // 5 MB
+    // Remote NCERT PDFs can be larger; allow a higher ceiling for page-window extraction.
+    private static final long MAX_REMOTE_PDF_BYTES = 25L * 1024 * 1024L; // 25 MB
 
     public enum FileType { PDF, IMAGE, UNSUPPORTED }
 
@@ -38,7 +41,7 @@ public class FileExtractionService {
      */
     public String extractPdfText(MultipartFile file) {
         if (file == null || file.isEmpty()) return "";
-        if (file.getSize() > MAX_BYTES) return "[File too large — maximum 5 MB]";
+        if (file.getSize() > MAX_UPLOAD_BYTES) return "[File too large — maximum 5 MB]";
         try {
             return extractPdfText(file.getBytes());
         } catch (Exception e) {
@@ -52,7 +55,7 @@ public class FileExtractionService {
      */
     public String extractPdfText(byte[] pdfBytes) {
         if (pdfBytes == null || pdfBytes.length == 0) return "";
-        if (pdfBytes.length > MAX_BYTES) return "[File too large — maximum 5 MB]";
+        if (pdfBytes.length > MAX_REMOTE_PDF_BYTES) return "[PDF too large to process]";
         try (PDDocument doc = Loader.loadPDF(pdfBytes)) {
             PDFTextStripper stripper = new PDFTextStripper();
             String text = stripper.getText(doc).trim();
@@ -64,13 +67,53 @@ public class FileExtractionService {
         }
     }
 
+    /** Page count for a PDF (for page-window UI). Returns 0 on failure. */
+    public int countPdfPages(byte[] pdfBytes) {
+        if (pdfBytes == null || pdfBytes.length == 0) return 0;
+        if (pdfBytes.length > MAX_REMOTE_PDF_BYTES) return 0;
+        try (PDDocument doc = Loader.loadPDF(pdfBytes)) {
+            return doc.getNumberOfPages();
+        } catch (Exception e) {
+            log.error("PDF page count failed: {}", e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Extract text from a page range (1-indexed, inclusive). Returns empty string on failure.
+     * This is intentionally not truncated to 6k; caller decides their own cap.
+     */
+    public String extractPdfTextPages(byte[] pdfBytes, int startPage, int endPage, int maxChars) {
+        if (pdfBytes == null || pdfBytes.length == 0) return "";
+        if (pdfBytes.length > MAX_REMOTE_PDF_BYTES) return "";
+        int s = Math.max(1, startPage);
+        int e = Math.max(s, endPage);
+        try (PDDocument doc = Loader.loadPDF(pdfBytes)) {
+            int total = doc.getNumberOfPages();
+            if (total <= 0) return "";
+            if (s > total) return "";
+            if (e > total) e = total;
+            PDFTextStripper stripper = new PDFTextStripper();
+            stripper.setStartPage(s);
+            stripper.setEndPage(e);
+            String text = stripper.getText(doc).trim();
+            if (maxChars > 0 && text.length() > maxChars) {
+                return text.substring(0, maxChars) + "...[truncated]";
+            }
+            return text;
+        } catch (Exception e1) {
+            log.error("PDF page-range extraction failed: {}", e1.getMessage());
+            return "";
+        }
+    }
+
     /**
      * For image uploads: encode as a base64 data URI suitable for OpenAI Vision.
      * Returns null on failure.
      */
     public String encodeImageToBase64(MultipartFile file) {
         if (file == null || file.isEmpty()) return null;
-        if (file.getSize() > MAX_BYTES) return null;
+        if (file.getSize() > MAX_UPLOAD_BYTES) return null;
         try {
             String mime    = file.getContentType() != null ? file.getContentType() : "image/jpeg";
             String encoded = Base64.getEncoder().encodeToString(file.getBytes());

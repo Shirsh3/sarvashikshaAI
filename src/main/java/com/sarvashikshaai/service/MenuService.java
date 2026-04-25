@@ -24,6 +24,12 @@ public class MenuService {
         if (role == null) {
             return List.of();
         }
+        if (role == UserRole.QUIZ) {
+            return menuItemRepository.findAllByEnabledTeacherTrueOrderBySortOrderAsc().stream()
+                    .filter(e -> "quiz".equalsIgnoreCase(e.getKey()))
+                    .map(this::toDto)
+                    .collect(Collectors.toList());
+        }
 
         List<MenuItemEntity> rows;
         if (role == UserRole.ADMIN) {
@@ -73,6 +79,7 @@ public class MenuService {
             if (authority.equals("ROLE_ADMIN")) return UserRole.ADMIN;
             if (authority.equals("ROLE_TEACHER")) return UserRole.TEACHER;
             if (authority.equals("ROLE_SUPER_ADMIN")) return UserRole.SUPER_ADMIN;
+            if (authority.equals("ROLE_QUIZ")) return UserRole.QUIZ;
         }
         return null;
     }

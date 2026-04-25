@@ -27,23 +27,27 @@ public class QuizQuestionEntity {
     @Column(name = "question_type", nullable = false, length = 20)
     private String questionType;
 
-    @Column(name = "question_text", nullable = false, length = 2000)
+    @Column(name = "question_text", nullable = false, length = 6000)
     private String questionText;
 
-    @Column(name = "option_a", length = 1000)
+    @Column(name = "option_a", length = 2000)
     private String optionA;
 
-    @Column(name = "option_b", length = 1000)
+    @Column(name = "option_b", length = 2000)
     private String optionB;
 
-    @Column(name = "option_c", length = 1000)
+    @Column(name = "option_c", length = 2000)
     private String optionC;
 
-    @Column(name = "option_d", length = 1000)
+    @Column(name = "option_d", length = 2000)
     private String optionD;
 
-    @Column(name = "correct_answer", nullable = false, length = 500)
+    @Column(name = "correct_answer", nullable = false, length = 2000)
     private String correctAnswer;
+
+    /** Short teaching note (from AI) for printable "explanations" PDF. */
+    @Column(name = "answer_explanation", length = 6000)
+    private String answerExplanation;
 
     @Column(name = "marks", nullable = false)
     private Integer marks = 1;

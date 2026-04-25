@@ -63,7 +63,7 @@
         .sub { color:var(--muted); font-size:0.95rem; margin-bottom:24px; }
 
         /* Tabs — class names kept for JS compatibility */
-        .stab { /* legacy alias */ }
+        .stab { display: inline-flex; }
 
         /* Quiz list */
         .quiz-card {
@@ -171,7 +171,7 @@
         @keyframes spin { to { transform:rotate(360deg); } }
     </style>
 </head>
-<body class="app-layout">
+<body class="app-layout" th:attr="data-quiz-only=${quizOnlyUser}">
 <div th:replace="~{fragments/loader :: loader}"></div>
 <div th:replace="~{fragments/shell-teacher :: sidebar('quiz')}"></div>
 
@@ -188,6 +188,7 @@
     <div class="tab-row" role="tablist">
         <button type="button" class="tab-link active stab" onclick="showTab('list',this)">Saved Quizzes</button>
         <button type="button" class="tab-link stab" onclick="showTab('create',this)">AI Quiz Generator</button>
+        <button th:if="${quizOnlyUser}" type="button" class="tab-link stab" onclick="showTab('ncert',this)">NCERT Quiz</button>
     </div>
 
     <!-- ── Saved quizzes list ── -->
@@ -218,6 +219,15 @@
             <div class="quiz-actions">
                 <a th:href="@{/quiz/take/{id}(id=${quiz.id})}" class="btn-take" th:attr="data-id=${quiz.id}">
                     <i class="fa-solid fa-play"></i> Start
+                </a>
+                <a th:if="${quizOnlyUser}" th:href="@{/quiz/{id}/export-answers.pdf(id=${quiz.id})}" class="btn-results"
+                   onclick="return downloadPdfFriendly(event, this);" title="Worksheet + answer key">
+                    <i class="fa-solid fa-file-pdf"></i> PDF (answers)
+                </a>
+                <a th:if="${quizOnlyUser}" th:href="@{/quiz/{id}/export-explanations.pdf(id=${quiz.id})}" class="btn-results"
+                   onclick="return downloadPdfFriendly(event, this);"
+                   style="background:rgba(16,185,129,0.12);color:#10b981;border-color:rgba(16,185,129,0.3);" title="Correct answers + teaching notes (when available)">
+                    <i class="fa-solid fa-file-pdf"></i> PDF (explanations)
                 </a>
                 <a class="btn-results" th:href="@{/quiz/{id}/results(id=${quiz.id})}">
                     <i class="fa-solid fa-chart-column"></i> Results
@@ -258,6 +268,7 @@
                     <select id="languageInput">
                         <option value="ENGLISH" selected>English</option>
                         <option value="HINDI">Hindi</option>
+                        <option value="SANSKRIT">Sanskrit</option>
                     </select>
                 </div>
                 <div class="form-group" style="flex:1; min-width:140px;">
@@ -287,7 +298,6 @@
                     </div>
                 </div>
             </div>
-            <!-- NCERT URL hidden from UI; empty string sent — backend unchanged -->
             <input type="hidden" id="sourceUrlInput" value=""/>
             <!-- File upload -->
             <div style="margin-top:10px;">
@@ -325,6 +335,96 @@
         </button>
     </div>
 
+    <!-- ── NCERT quiz panel (quiz user only) ── -->
+    <div th:if="${quizOnlyUser}" id="tabNcert" class="bank-section" style="display:none;">
+        <div class="gen-section">
+            <h3><i class="fa-solid fa-book"></i> NCERT Quiz (page window)</h3>
+
+            <div class="form-row" style="margin-bottom:14px;">
+                <div class="form-group" style="flex:1 1 100%; min-width:0; width:100%; max-width:100%;">
+                    <label>NCERT chapter link</label>
+                    <textarea id="ncertUrlInput" rows="3" style="width:100%;min-height:4.1rem;box-sizing:border-box;resize:vertical;"
+                              placeholder="https://ncert.nic.in/textbook.php?leph1=3-8"></textarea>
+                    <div style="font-size:0.75rem;color:var(--muted);margin-top:6px;">
+                        Paste a full <strong>ncert.nic.in</strong> <code>textbook.php?…</code> chapter link. Then click <strong>Load</strong>.
+                    </div>
+                    <div style="font-size:0.75rem;color:var(--muted);margin-top:6px;">
+                        Quick access:
+                        <a href="https://ncert.nic.in/textbook.php" target="_blank" rel="noopener"
+                           style="color:var(--primary);text-decoration:none;font-weight:850;">
+                            Open NCERT Textbooks PDF page
+                        </a>
+                    </div>
+                    <div style="font-size:0.75rem;color:var(--muted);margin-top:6px;">
+                        Tip: If you see a “page count” warning, you can still click <strong>Generate</strong>—we’ll extract text from the selected window.
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row" style="margin-bottom:14px;">
+                <div class="form-group" style="flex:1; min-width:180px;">
+                    <label>Language</label>
+                    <select id="ncertLanguageInput">
+                        <option value="ENGLISH" selected>English</option>
+                        <option value="HINDI">Hindi</option>
+                        <option value="SANSKRIT">Sanskrit</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex:1; min-width:240px;">
+                    <label>Question types</label>
+                    <select id="ncertTypesInput" style="width:100%;">
+                        <option value="MCQ" selected>MCQ only</option>
+                        <option value="SHORT">Short answer only</option>
+                        <option value="TF">True / False only</option>
+                        <option value="LONG">Long only</option>
+                        <option value="MCQ,SHORT">Mixed — MCQ + Short</option>
+                        <option value="MCQ,SHORT,TF">Mixed — MCQ + Short + T/F</option>
+                        <option value="MCQ,SHORT,TF,LONG">Mixed — All</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="gen-row" style="justify-content:center;">
+                <button class="gen-btn" id="ncertLoadBtn" type="button" onclick="ncertLoad()">
+                    <i class="fa-solid fa-link"></i> Load
+                </button>
+            </div>
+
+            <div id="ncertMetaBox" style="display:none;margin-top:14px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface);">
+                <div style="font-size:0.85rem;color:var(--muted);font-weight:750;margin-bottom:6px;">Chapter</div>
+                <div style="font-size:0.95rem;font-weight:850;line-height:1.25;">
+                    <span id="ncertResolvedTitle">-</span>
+                </div>
+                <div style="height:10px;"></div>
+                <div style="font-size:0.85rem;color:var(--muted);font-weight:750;margin-bottom:6px;">Resolved PDF</div>
+                <div style="font-size:0.9rem;font-weight:750;word-break:break-all;">
+                    <a id="ncertPdfLink" href="#" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:none;"></a>
+                </div>
+                <div style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                    <div style="font-size:0.85rem;color:var(--muted);font-weight:750;">
+                        Total pages: <span id="ncertTotalPages">-</span>
+                    </div>
+                    <div style="font-size:0.85rem;color:var(--muted);font-weight:750;">
+                        Next window: <span id="ncertNextWindow">1–5</span>
+                    </div>
+                </div>
+                <div style="margin-top:12px;display:flex;justify-content:center;">
+                    <button class="gen-btn" id="ncertNextBtn" type="button" onclick="ncertGenerateNext()" disabled>
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Generate 5 questions (Next 5 pages)
+                    </button>
+                </div>
+                <div id="ncertAppendHint" style="display:none;margin-top:10px;font-size:0.82rem;color:var(--muted);font-weight:800;text-align:center;"></div>
+                <div id="ncertWarn" style="display:none;margin-top:10px;font-size:0.82rem;color:#b45309;font-weight:700;"></div>
+            </div>
+        </div>
+
+        <div class="q-editor" id="qEditorNcert"></div>
+
+        <button class="save-quiz-btn" id="saveQuizBtnNcert" onclick="saveQuizFromNcert()" style="margin-top:20px;" disabled>
+            <i class="fa-solid fa-floppy-disk"></i> Save Quiz
+        </button>
+    </div>
+
 </div>
 
 </main>
@@ -344,6 +444,233 @@ let questionsAiLocked = false;
 let quizGenFileData = null;
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5 MB
 
+// ── NCERT tab state (quiz user only) ────────────────────────────────────────
+let ncertQuestions = [];
+const ncertState = {
+    sourceUrl: '',
+    pdfUrl: '',
+    title: '',
+    totalPages: 0,
+    nextStart: 1,
+    windowSize: 5,
+    types: 'MCQ',
+    language: 'ENGLISH',
+    difficulty: 'AUTO',
+};
+
+function escapeHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+function ncertSetBusy(isBusy) {
+    const loadBtn = document.getElementById('ncertLoadBtn');
+    const nextBtn = document.getElementById('ncertNextBtn');
+    if (loadBtn) loadBtn.disabled = isBusy;
+    if (nextBtn) nextBtn.disabled = isBusy || !ncertState.pdfUrl;
+    if (nextBtn) {
+        nextBtn.dataset.label = nextBtn.dataset.label || nextBtn.innerHTML;
+        nextBtn.innerHTML = isBusy ? '<span class="spinner"></span> Generating…' : (nextBtn.dataset.label || nextBtn.innerHTML);
+    }
+}
+
+function ncertUpdateUi() {
+    const meta = document.getElementById('ncertMetaBox');
+    const pdfA = document.getElementById('ncertPdfLink');
+    const titleEl = document.getElementById('ncertResolvedTitle');
+    const total = document.getElementById('ncertTotalPages');
+    const nextW = document.getElementById('ncertNextWindow');
+    if (meta) meta.style.display = ncertState.pdfUrl ? '' : 'none';
+    if (pdfA) {
+        pdfA.textContent = ncertState.pdfUrl || '';
+        pdfA.href = ncertState.pdfUrl || '#';
+    }
+    if (titleEl) titleEl.textContent = ncertState.title ? ncertState.title : '-';
+    if (total) total.textContent = ncertState.totalPages ? String(ncertState.totalPages) : '-';
+    if (nextW) {
+        const s = ncertState.nextStart;
+        const rawE = s + ncertState.windowSize - 1;
+        const e = (ncertState.totalPages && ncertState.totalPages > 0)
+                ? Math.min(rawE, ncertState.totalPages)
+                : rawE;
+        if (ncertState.totalPages && ncertState.totalPages > 0 && s > ncertState.totalPages) {
+            nextW.textContent = '—';
+        } else {
+            nextW.textContent = s + '–' + e;
+        }
+    }
+    const nextBtn = document.getElementById('ncertNextBtn');
+    if (nextBtn) {
+        const hasMore = ncertState.totalPages > 0 ? (ncertState.nextStart <= ncertState.totalPages) : true;
+        nextBtn.disabled = !ncertState.pdfUrl || !hasMore;
+        nextBtn.innerHTML = hasMore
+                ? '<i class="fa-solid fa-wand-magic-sparkles"></i> Generate 5 questions (Next 5 pages)'
+                : '<i class="fa-solid fa-circle-check"></i> All pages done';
+    }
+}
+
+function renderQuestionsNcert() {
+    const host = document.getElementById('qEditorNcert');
+    if (!host) return;
+    host.innerHTML = '';
+    for (let i = 0; i < ncertQuestions.length; i++) {
+        const q = ncertQuestions[i] || {};
+        const div = document.createElement('div');
+        div.className = 'q-item';
+        const type = (q.type || 'MCQ');
+        const text = (q.text || '').toString();
+        const opts = Array.isArray(q.options) ? q.options : [];
+        const ans = (q.answer || '').toString();
+        div.innerHTML = `
+          <div class="q-header">
+            <span class="q-num">Q${i + 1}</span>
+            <span class="q-type-badge">${escapeHtml(type)}</span>
+          </div>
+          <div style="font-weight:750;line-height:1.35;">${escapeHtml(text)}</div>
+          ${opts.length ? `<div class="q-options">${opts.map(o => `<div style="padding:8px 10px;border:1px solid var(--surface2);border-radius:10px;background:var(--surface);">${escapeHtml(String(o))}</div>`).join('')}</div>` : ''}
+          <div style="margin-top:8px;font-size:0.82rem;color:var(--muted);font-weight:700;">Answer: <span style="color:var(--text);font-weight:800;">${escapeHtml(ans)}</span></div>
+        `;
+        host.appendChild(div);
+    }
+}
+
+async function ncertLoad() {
+    const url = (document.getElementById('ncertUrlInput')?.value || '').trim();
+    if (!url) { alert('Paste an NCERT chapter link first.'); return; }
+    ncertState.types = (document.getElementById('ncertTypesInput')?.value || 'MCQ').trim();
+    ncertState.language = (document.getElementById('ncertLanguageInput')?.value || 'ENGLISH').trim();
+    ncertSetBusy(true);
+    const warn = document.getElementById('ncertWarn');
+    if (warn) { warn.style.display = 'none'; warn.textContent = ''; }
+    try {
+        const fd = new FormData();
+        fd.append('sourceUrl', url);
+        const r = await fetch('/quiz/ncert/resolve', { method:'POST', body: fd });
+        const d = await r.json();
+        if (!r.ok || d.error) { alert(d.error || 'Could not load NCERT link.'); return; }
+        ncertState.sourceUrl = url;
+        ncertState.pdfUrl = d.pdfUrl || '';
+        ncertState.title = (d.title || '').toString().trim();
+        ncertState.totalPages = Number(d.totalPages || 0);
+        ncertState.nextStart = 1;
+        // Hide save until at least one batch is generated
+        const sb = document.getElementById('saveQuizBtnNcert');
+        if (sb) sb.disabled = true;
+        if (d.warning && warn) {
+            warn.textContent = d.warning;
+            warn.style.display = 'block';
+        }
+        ncertQuestions = [];
+        renderQuestionsNcert();
+        updateSaveButton();
+        ncertUpdateUi();
+    } catch (e) {
+        alert('NCERT load failed. Please try again.');
+    } finally {
+        ncertSetBusy(false);
+    }
+}
+
+async function ncertGenerateNext() {
+    if (!ncertState.pdfUrl) { alert('Click Load first.'); return; }
+    const hadExisting = ncertQuestions.length > 0;
+    const prevLen = ncertQuestions.length;
+    ncertSetBusy(true);
+    const s = ncertState.nextStart;
+    const hint = document.getElementById('ncertAppendHint');
+    if (hint) {
+        hint.textContent = hadExisting
+                ? `Appending next set… (already have ${prevLen} questions)`
+                : 'Generating first set…';
+        hint.style.display = 'block';
+    }
+    if (window.showGlobalLoader) {
+        window.showGlobalLoader(hadExisting ? 'Appending next set of questions…' : 'Generating questions…');
+    }
+    try {
+        // Allow changing language/types between batches
+        ncertState.types = (document.getElementById('ncertTypesInput')?.value || ncertState.types || 'MCQ').trim();
+        ncertState.language = (document.getElementById('ncertLanguageInput')?.value || ncertState.language || 'ENGLISH').trim();
+        const fd = new FormData();
+        fd.append('sourceUrl', ncertState.sourceUrl);
+        fd.append('pdfUrl', ncertState.pdfUrl);
+        fd.append('startPage', String(s));
+        fd.append('pageWindow', String(ncertState.windowSize));
+        fd.append('count', '5');
+        fd.append('types', ncertState.types);
+        fd.append('language', ncertState.language);
+        fd.append('difficulty', ncertState.difficulty);
+        const r = await fetch('/quiz/ncert/generate', { method:'POST', body: fd });
+        const d = await r.json();
+        if (!r.ok || d.error) { alert(d.error || 'Generation failed.'); return; }
+        const arr = JSON.parse(d.questionsJson || '[]');
+        if (!Array.isArray(arr) || arr.length === 0) { alert('No questions generated. Try next window.'); return; }
+        ncertQuestions = ncertQuestions.concat(arr);
+        renderQuestionsNcert();
+        updateSaveButton();
+        const sb = document.getElementById('saveQuizBtnNcert');
+        if (sb) sb.disabled = ncertQuestions.length === 0;
+        // Update topic immediately on first generate (and later if backend provides a better one)
+        if ((d.topic || '').trim()) {
+            ncertState.title = String(d.topic).trim();
+            ncertUpdateUi();
+        }
+        // Scroll to the newly appended questions so it's obvious they were added
+        const host = document.getElementById('qEditorNcert');
+        if (host) {
+            const kids = host.querySelectorAll('.q-item');
+            const idx = Math.max(0, prevLen);
+            const target = kids[idx] || kids[kids.length - 1];
+            if (target && target.scrollIntoView) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            }
+        }
+        ncertState.nextStart = s + ncertState.windowSize;
+        if (typeof d.totalPages === 'number' && d.totalPages > 0) {
+            ncertState.totalPages = d.totalPages;
+        }
+        if (ncertState.totalPages && ncertState.totalPages > 0 && ncertState.nextStart > ncertState.totalPages) {
+            ncertState.nextStart = ncertState.totalPages + 1;
+        }
+        ncertUpdateUi();
+    } catch (e) {
+        alert('Generation failed. Please try again.');
+    } finally {
+        if (hint) hint.style.display = 'none';
+        if (window.hideGlobalLoader) window.hideGlobalLoader();
+        ncertSetBusy(false);
+    }
+}
+
+async function saveQuizFromNcert() {
+    if (!ncertQuestions.length) return;
+    const btn = document.getElementById('saveQuizBtnNcert');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Saving…'; }
+    try {
+        const fd = new FormData();
+        const topic = (ncertState.title || '').trim() || 'NCERT Quiz';
+        fd.append('topic', topic);
+        fd.append('grade', '');
+        const usedEnd = Math.max(0, ncertState.nextStart - 1);
+        fd.append('description', `${topic}\nNCERT: ${ncertState.sourceUrl} (pages 1-${usedEnd})`);
+        fd.append('questionsJson', JSON.stringify(ncertQuestions));
+        fd.append('handoutOnly', 'true');
+        const r = await fetch('/quiz/create', { method:'POST', body: fd });
+        const d = await r.json();
+        if (!r.ok || d.error) { alert(d.error || 'Save failed.'); }
+        else { window.location.href = '/quiz/teacher'; }
+    } catch (e) {
+        alert('Save failed. Please try again.');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Quiz'; }
+    }
+}
+
+function ncertWireDownloadButtons() {
+    // NCERT tab uses Save Quiz (no direct PDF export here).
+}
+
 function toggleQuizLockUi() {
     const note = document.getElementById('quizAiLockedNote');
     const addBtn = document.getElementById('addMcqBtn');
@@ -356,12 +683,54 @@ function updateSaveButton() {
     if (btn) btn.disabled = questions.length === 0;
 }
 
+async function downloadPdfFriendly(ev, el) {
+    try {
+        if (ev) ev.preventDefault();
+        const url = el && el.getAttribute ? (el.getAttribute('href') || '') : '';
+        if (!url) return false;
+        if (window.showGlobalLoader) window.showGlobalLoader('Preparing PDF…');
+        const r = await fetch(url, { method: 'GET' });
+        const ct = (r.headers.get('content-type') || '').toLowerCase();
+        if (!r.ok || !ct.includes('application/pdf')) {
+            let msg = '';
+            try { msg = await r.text(); } catch (_) { msg = ''; }
+            msg = (msg || '').trim();
+            if (!msg) msg = 'PDF download failed. Please try again.';
+            alert(msg);
+            return false;
+        }
+        const blob = await r.blob();
+        const cd = r.headers.get('content-disposition') || '';
+        let filename = '';
+        const m = /filename="([^"]+)"/i.exec(cd);
+        if (m && m[1]) filename = m[1];
+        if (!filename) filename = 'quiz.pdf';
+        const a = document.createElement('a');
+        const objUrl = URL.createObjectURL(blob);
+        a.href = objUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(objUrl), 1000);
+        return false;
+    } catch (e) {
+        alert('PDF download failed. Please try again.');
+        return false;
+    } finally {
+        if (window.hideGlobalLoader) window.hideGlobalLoader();
+    }
+}
+
 function showTab(tab, el) {
     document.querySelectorAll('.tab-link').forEach(t => t.classList.remove('active'));
     if (el) el.classList.add('active');
-    document.getElementById('tabList').style.display   = tab === 'list'   ? '' : 'none';
+    const listEl = document.getElementById('tabList');
+    if (listEl) listEl.style.display = tab === 'list' ? '' : 'none';
     const createEl = document.getElementById('tabCreate');
-    createEl.className = tab === 'create' ? 'create-panel visible bank-section' : 'create-panel bank-section';
+    if (createEl) createEl.className = tab === 'create' ? 'create-panel visible bank-section' : 'create-panel bank-section';
+    const ncertEl = document.getElementById('tabNcert');
+    if (ncertEl) ncertEl.style.display = tab === 'ncert' ? '' : 'none';
     if (tab === 'create') updateSaveButton();
 }
 
@@ -370,6 +739,8 @@ function showCreateQuizTab() {
     const target = links.length > 1 ? links[1] : links[0];
     showTab('create', target);
 }
+
+// NCERT export buttons removed (NCERT uses Save Quiz).
 
 function handleQuizFileChange(input) {
     const file = input.files[0];
@@ -481,7 +852,10 @@ async function aiGenerate() {
     const topic = document.getElementById('quizGenTopicInput').value.trim();
     const grade = document.getElementById('gradeInput').value.trim();
     const description = document.getElementById('descriptionInput').value.trim();
-    const sourceUrl = document.getElementById('sourceUrlInput').value.trim();
+    const suEl = document.getElementById('sourceUrlInput');
+    const sourceUrl = suEl && suEl.value
+        ? suEl.value.replace(/\r?\n/g, '').replace(/^\s+|\s+$/g, '').trim()
+        : '';
     const requestedCount = parseInt(document.getElementById('countInput').value.trim() || '5', 10);
     const count = String(Math.max(1, Math.min(Number.isFinite(requestedCount) ? requestedCount : 5, 15)));
     const language = document.getElementById('languageInput').value.trim() || 'ENGLISH';
@@ -751,6 +1125,9 @@ async function saveQuiz() {
     fd.append('grade',         grade);
     fd.append('description',   description);
     fd.append('questionsJson', JSON.stringify(questions));
+    const quizOnly = document.body.getAttribute('data-quiz-only') === 'true';
+    const handoutOnly = quizOnly;
+    fd.append('handoutOnly', handoutOnly ? 'true' : 'false');
 
     try {
         const r = await fetch('/quiz/create', { method:'POST', body: fd });

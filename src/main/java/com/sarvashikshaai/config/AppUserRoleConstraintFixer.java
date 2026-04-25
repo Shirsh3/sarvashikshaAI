@@ -29,7 +29,7 @@ public class AppUserRoleConstraintFixer {
             jdbcTemplate.execute("ALTER TABLE app_users DROP CONSTRAINT IF EXISTS app_users_role_check");
             jdbcTemplate.execute(
                     "ALTER TABLE app_users ADD CONSTRAINT app_users_role_check " +
-                            "CHECK (role IN ('TEACHER','ADMIN','SUPER_ADMIN'))"
+                            "CHECK (role IN ('TEACHER','ADMIN','SUPER_ADMIN','QUIZ'))"
             );
         } catch (Exception ignored) {
             // H2 or existing schema may not match; don't block app startup.

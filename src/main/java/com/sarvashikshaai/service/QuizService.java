@@ -60,6 +60,11 @@ public class QuizService {
     }
 
     public QuizEntity save(String topic, String grade, String description, String questionsJson) {
+        return save(topic, grade, description, questionsJson, false);
+    }
+
+    @Transactional
+    public QuizEntity save(String topic, String grade, String description, String questionsJson, boolean handoutOnly) {
         List<QuestionData> questions = parseQuestions(questionsJson);
         int count = questions.size();
         String cleanTopic = topic != null ? topic.trim() : "";
@@ -69,23 +74,25 @@ public class QuizService {
         String title = cleanGrade.isBlank()
                 ? "Quiz: " + cleanTopic
                 : "Quiz (Grade " + cleanGrade + "): " + cleanTopic;
-        QuizEntity quiz = quizRepo.save(new QuizEntity(
+        QuizEntity quiz = new QuizEntity(
                 title,
                 cleanTopic,        // subject (legacy)
                 cleanTopic,        // topic
                 cleanGrade,
                 cleanDescription,
                 count
-        ));
+        );
+        quiz.setHandoutOnly(handoutOnly);
+        QuizEntity saved = quizRepo.save(quiz);
         if (quizCoverImageEnabled) {
             openAIClient.generateQuizCoverImageUrl(cleanTopic, cleanGrade).ifPresent(url -> {
-                quiz.setCoverImageUrl(url);
-                quizRepo.save(quiz);
+                saved.setCoverImageUrl(url);
+                quizRepo.save(saved);
             });
         }
-        String quizCover = quiz.getCoverImageUrl();
-        saveQuestions(quiz.getId(), questions, quizCover);
-        return quiz;
+        String quizCover = saved.getCoverImageUrl();
+        saveQuestions(saved.getId(), questions, quizCover);
+        return saved;
     }
 
     public List<QuestionData> getQuestionsByQuiz(Long quizId) {
@@ -101,6 +108,7 @@ public class QuizService {
                         q.getQuestionText(),
                         buildOptions(q),
                         q.getCorrectAnswer(),
+                        q.getAnswerExplanation(),
                         resolveWatermarkForDisplay(q, quizCover)
                 ))
                 .toList();
@@ -127,17 +135,139 @@ public class QuizService {
     // ── AI question generation ────────────────────────────────────────────────
 
     private String buildTypeInstruction(String questionTypes, int count) {
-        if ("SHORT".equalsIgnoreCase(questionTypes)) {
+        if (questionTypes == null) {
+            questionTypes = "";
+        }
+        String one = questionTypes.trim();
+        if ("SHORT".equalsIgnoreCase(one)) {
             return "ALL " + count + " questions MUST be type SHORT (Short Answer). Do NOT generate any MCQ or True/False. Every item in the JSON array must have \"type\":\"SHORT\" with \"text\" and \"answer\" only (no options).";
         }
-        if ("MCQ".equalsIgnoreCase(questionTypes)) {
-            return "ALL " + count + " questions MUST be type MCQ (Multiple Choice). Each must have exactly 4 options and an answer matching one option. Do NOT generate True/False or Short Answer.";
+        if ("MCQ".equalsIgnoreCase(one)) {
+            return "ALL " + count + " questions MUST be type MCQ (Multiple Choice). "
+                    + "EVERY object in the JSON array MUST have exactly \\\"type\\\":\\\"MCQ\\\". "
+                    + "It is an error to output any item with type SHORT, LONG, TF, or any value other than MCQ. "
+                    + "Each item must have exactly 4 string options and answer equal to one option verbatim.";
         }
-        if ("TF".equalsIgnoreCase(questionTypes)) {
+        if ("TF".equalsIgnoreCase(one)) {
             return "ALL " + count + " questions MUST be type TF (True/False). Each answer must be exactly \"True\" or \"False\". Do NOT generate MCQ or Short Answer.";
         }
-        // Mixed: e.g. "MCQ, TF" or "MCQ, TF, SHORT"
-        return "Use ONLY these types (as a mix across the " + count + " questions): " + questionTypes + ". Do NOT default to all MCQ. Include a variety of the requested types.";
+        if ("LONG".equalsIgnoreCase(one)) {
+            return "ALL " + count + " questions MUST be type LONG (long / constructed response). " +
+                    "Use \"type\":\"LONG\" with a multi-sentence or bullet-point model \"answer\" (marking points). " +
+                    "No MCQ options field.";
+        }
+        // Mixed: e.g. "MCQ, TF" or "MCQ, TF, SHORT, LONG"
+        return "Use ONLY these types (as a mix across the " + count + " questions): " + one + ". " +
+                "Do NOT default to all MCQ. Include a variety of the requested types. " +
+                "For LONG, use no options array; give a model answer with marking points.";
+    }
+
+    /**
+     * When the teacher selected a single type, show only that JSON shape — listing SHORT/TF/LONG
+     * examples alongside MCQ causes the model to mix types despite instructions.
+     */
+    private String buildTypeJsonFormatInstructions(String questionTypes, int count, boolean includePerQuestionExplanations) {
+        String exTail = includePerQuestionExplanations
+                ? ", \"explanation\": \"1-3 short teacher-facing sentences only\""
+                : "";
+        String raw = questionTypes == null ? "" : questionTypes.trim();
+        if (raw.isEmpty()) {
+            raw = "MCQ";
+        }
+        if (!raw.contains(",") && !raw.contains("，")) {
+            String only = raw.replaceAll("\\s", "").toUpperCase(Locale.ROOT);
+            if ("MCQ".equals(only)) {
+                return "JSON shape — repeat for all " + count + " items. Forbidden types: SHORT, LONG, TF.\n"
+                        + "{\"type\":\"MCQ\", \"text\":\"...\", \"options\":[\"...\",\"...\",\"...\",\"...\"], "
+                        + "\"answer\":\"must equal one of the four options\" " + exTail + " }";
+            }
+            if ("SHORT".equals(only)) {
+                return "JSON shape — repeat for all " + count + " items. Do not use MCQ, LONG, or TF.\n"
+                        + "{\"type\":\"SHORT\", \"text\":\"...\", \"answer\":\"...\" " + exTail + " }";
+            }
+            if ("TF".equals(only)) {
+                return "JSON shape — repeat for all " + count + " items. Do not use MCQ, SHORT, or LONG.\n"
+                        + "{\"type\":\"TF\", \"text\":\"...\", \"answer\":\"...\" " + exTail
+                        + " } — the answer value must be exactly the string True or the string False.";
+            }
+            if ("LONG".equals(only)) {
+                return "JSON shape — repeat for all " + count + " items. Do not use MCQ, SHORT, or TF.\n"
+                        + "{\"type\":\"LONG\", \"text\":\"...\", \"answer\":\"...\" " + exTail + " }";
+            }
+        }
+        String longEx = includePerQuestionExplanations
+                ? "{\"type\":\"LONG\", \"text\":\"...\", \"answer\":\"...\", \"explanation\":\"...\"}"
+                : "{\"type\":\"LONG\", \"text\":\"...\", \"answer\":\"...\"}";
+        return "Each array item may use one of these shapes; match the type mix the teacher asked for:\n"
+                + "SHORT: {\"type\":\"SHORT\", \"text\":\"...\", \"answer\":\"...\" " + exTail + " }\n"
+                + "TF: {\"type\":\"TF\", \"text\":\"...\", \"answer\":\"...\" " + exTail + " }\n"
+                + "MCQ: {\"type\":\"MCQ\", \"text\":\"...\", \"options\":[\"A\",\"B\",\"C\",\"D\"], \"answer\":\"...\" " + exTail + " }\n"
+                + "LONG: " + longEx;
+    }
+
+    /** When a single type is selected, do not list other types' field rules in the prompt. */
+    private String buildTypeFieldRules(String questionTypes) {
+        String raw = questionTypes == null ? "" : questionTypes.trim();
+        if (raw.isEmpty()) {
+            raw = "MCQ";
+        }
+        if (!raw.contains(",") && !raw.contains("，")) {
+            String only = raw.replaceAll("\\s", "").toUpperCase(Locale.ROOT);
+            if ("MCQ".equals(only)) {
+                return "- MCQ: exactly 4 options, answer must match one option";
+            }
+            if ("SHORT".equals(only)) {
+                return "- SHORT: no options; answer is a short phrase (1-6 words)";
+            }
+            if ("TF".equals(only)) {
+                return "- TF: answer must be exactly \"True\" or \"False\"";
+            }
+            if ("LONG".equals(only)) {
+                return "- LONG: no options; \"answer\" = model marking response";
+            }
+        }
+        return """
+                - SHORT: no options; answer is a short phrase (1-6 words)
+                - TF: answer must be exactly "True" or "False"
+                - MCQ: exactly 4 options, answer must match one option
+                - LONG: no options; "answer" = model marking response""";
+    }
+
+    /**
+     * When the teacher selected a single question type, drop any array elements with a different
+     * {@code type} (models sometimes still emit SHORT/LONG in MCQ-only runs).
+     */
+    private String filterToSingleTypeIfNeeded(String questionsJson, String questionTypes) {
+        String tRaw = questionTypes == null ? "" : questionTypes.trim();
+        if (tRaw.isEmpty()) {
+            tRaw = "MCQ";
+        }
+        if (tRaw.contains(",") || tRaw.contains("，")) {
+            return questionsJson;
+        }
+        String only = tRaw.replaceAll("\\s", "").toUpperCase(Locale.ROOT);
+        if (!"MCQ".equals(only) && !"SHORT".equals(only) && !"TF".equals(only) && !"LONG".equals(only)) {
+            return questionsJson;
+        }
+        try {
+            JsonNode root = mapper.readTree(questionsJson);
+            if (root == null || !root.isArray()) {
+                return questionsJson;
+            }
+            var out = mapper.createArrayNode();
+            for (JsonNode n : root) {
+                String elType = n.path("type").asText("").replaceAll("\\s", "").toUpperCase(Locale.ROOT);
+                if (elType.equals(only)) {
+                    out.add(n);
+                }
+            }
+            if (out.size() < root.size()) {
+                log.warn("Dropped {} off-type questions (request was {} only)", root.size() - out.size(), only);
+            }
+            return mapper.writeValueAsString(out);
+        } catch (Exception e) {
+            return questionsJson;
+        }
     }
 
     private String difficultyInstruction(String difficulty) {
@@ -182,10 +312,13 @@ public class QuizService {
     }
 
     public String generateQuestionsJson(String topic, String supportingContext, int count, String questionTypes, String languagePreference, String difficulty, String grade) {
+        return generateQuestionsJson(topic, supportingContext, count, questionTypes, languagePreference, difficulty, grade, false);
+    }
+
+    public String generateQuestionsJson(String topic, String supportingContext, int count, String questionTypes, String languagePreference, String difficulty, String grade, boolean includePerQuestionExplanations) {
         if (topic == null || topic.isBlank()) {
             return "[]";
         }
-        String classifyInput = (topic == null ? "" : topic) + "\n" + (supportingContext == null ? "" : supportingContext);
         if (StrictEducationalGuard.isBlocked(topic)) {
             return "[]";
         }
@@ -195,7 +328,7 @@ public class QuizService {
         String gradeParam = grade == null ? "" : grade.trim();
         int safeCount = Math.max(1, Math.min(count, 15));
         if (safeCount <= 10) {
-            return generateQuestionsJsonSingle(topic, supportingContext, safeCount, questionTypes, languagePreference, difficulty, gradeParam);
+            return generateQuestionsJsonSingle(topic, supportingContext, safeCount, questionTypes, languagePreference, difficulty, gradeParam, includePerQuestionExplanations);
         }
         // Large counts hallucinate more often in one-shot generation; generate in bounded batches.
         int remaining = safeCount;
@@ -204,7 +337,7 @@ public class QuizService {
         try {
             while (remaining > 0) {
                 int current = Math.min(batchSize, remaining);
-                String batchRaw = generateQuestionsJsonSingle(topic, supportingContext, current, questionTypes, languagePreference, difficulty, gradeParam);
+                String batchRaw = generateQuestionsJsonSingle(topic, supportingContext, current, questionTypes, languagePreference, difficulty, gradeParam, includePerQuestionExplanations);
                 JsonNode arr = mapper.readTree(batchRaw);
                 if (arr != null && arr.isArray()) {
                     for (JsonNode n : arr) merged.add(n);
@@ -221,7 +354,101 @@ public class QuizService {
         }
     }
 
-    private String generateQuestionsJsonSingle(String topic, String supportingContext, int count, String questionTypes, String languagePreference, String difficulty, String grade) {
+    /**
+     * NCERT/page-window mode: generate questions ONLY from extracted content (no topic required).
+     * This intentionally avoids the "canonical topic" lock, because the UI provides only content.
+     */
+    public String generateQuestionsJsonFromContentOnly(String supportingContext, int count, String questionTypes, String languagePreference, String difficulty, boolean includePerQuestionExplanations) {
+        if (supportingContext == null || supportingContext.isBlank()) {
+            return "[]";
+        }
+        // NOTE: Do NOT apply StrictEducationalGuard to extracted textbook content (e.g. NCERT).
+        // The guard is intended for raw user queries; extracted passages can contain words that
+        // accidentally match non-educational heuristics, which would incorrectly block quizzes.
+        int safeCount = Math.max(1, Math.min(count, 15));
+        String typeInstruction = buildTypeInstruction(questionTypes == null ? "MCQ" : questionTypes.trim(), safeCount);
+        String languageRule = languageInstruction(languagePreference, false);
+        String difficultyRule = difficultyInstruction(difficulty);
+        String cleanContext = supportingContext == null ? "" : supportingContext.trim();
+        String contextForPrompt = cleanContext.length() > 12000 ? cleanContext.substring(0, 12000) : cleanContext;
+        String explanationBlock = includePerQuestionExplanations
+                ? """
+            TEACHER-FACING: Every object MUST also include: "explanation": "1-3 short sentences (why the answer is correct, or the key idea for marking). Not for the student handout in-class."
+            """
+                : "";
+        String explanationRules = includePerQuestionExplanations
+                ? "- Every item MUST include a non-empty \"explanation\" string."
+                : "";
+        String typeFormat = buildTypeJsonFormatInstructions(questionTypes, safeCount, includePerQuestionExplanations);
+        String typeFieldRules = buildTypeFieldRules(questionTypes);
+
+        String basePrompt = """
+            You are an experienced school teacher in India.
+
+            """ + EDUCATIONAL_ONLY_QUIZ + """
+
+            """ + EducationalRedirectionPolicy.PROMPT_BLOCK + """
+
+            Extracted textbook content (ONLY source of truth — do not invent facts beyond it):
+            %s
+
+            Generate exactly %d quiz questions grounded ONLY in the extracted content above.
+
+            CRITICAL - QUESTION TYPES (you must follow this exactly):
+            %s
+
+            %s
+
+            Respond ONLY with a valid JSON array, no markdown, no extra text.
+            %s
+
+            Rules:
+            %s
+            %s
+            - Language: %s
+            - Difficulty setting: %s
+            """.formatted(
+                contextForPrompt,
+                safeCount,
+                typeInstruction,
+                explanationBlock,
+                typeFormat,
+                typeFieldRules,
+                explanationRules,
+                languageRule,
+                difficultyRule
+        );
+
+        String[] attempts = new String[] {
+                basePrompt,
+                basePrompt + "\n\nIf the extracted content is short or narrative, ask comprehension/vocabulary questions from the same content. "
+                        + "Do NOT refuse. Still output exactly " + safeCount + " questions.\n"
+        };
+
+        for (int attempt = 0; attempt < attempts.length; attempt++) {
+            try {
+                String raw = openAIClient.generateQuizCompletion(attempts[attempt]);
+                if (raw == null) continue;
+                raw = raw.replaceAll("^```(?:json)?\\s*", "").replaceAll("\\s*```$", "").trim();
+                if (raw.isEmpty()) continue;
+                JsonNode parsed = mapper.readTree(raw);
+                if (parsed == null || !parsed.isArray()) {
+                    log.warn("AI content-only quiz generation returned non-array JSON (attempt {}); dropping.", attempt + 1);
+                    continue;
+                }
+                if (parsed.isEmpty()) {
+                    log.warn("AI content-only quiz generation returned empty array (attempt {}).", attempt + 1);
+                    continue;
+                }
+                return filterToSingleTypeIfNeeded(raw, questionTypes);
+            } catch (Exception e) {
+                log.error("AI content-only quiz generation failed (attempt {}): {}", attempt + 1, e.getMessage());
+            }
+        }
+        return "[]";
+    }
+
+    private String generateQuestionsJsonSingle(String topic, String supportingContext, int count, String questionTypes, String languagePreference, String difficulty, String grade, boolean includePerQuestionExplanations) {
         String typeInstruction = buildTypeInstruction(questionTypes.trim(), count);
         String languageRule = languageInstruction(languagePreference, false);
         String difficultyRule = difficultyInstruction(difficulty);
@@ -229,6 +456,16 @@ public class QuizService {
         String cleanTopic = topic == null ? "" : topic.trim();
         String cleanContext = supportingContext == null ? "" : supportingContext.trim();
         String contextForPrompt = cleanContext.length() > 6000 ? cleanContext.substring(0, 6000) : cleanContext;
+        String explanationBlock = includePerQuestionExplanations
+                ? """
+            TEACHER-FACING: Every object MUST also include: "explanation": "1-3 short sentences (why the answer is correct, or the key idea for marking). Not for the student handout in-class."
+            """
+                : "";
+        String explanationRules = includePerQuestionExplanations
+                ? "- Every item MUST include a non-empty \"explanation\" string."
+                : "";
+        String typeFormat = buildTypeJsonFormatInstructions(questionTypes, count, includePerQuestionExplanations);
+        String typeFieldRules = buildTypeFieldRules(questionTypes);
         String prompt = """
             You are an experienced school teacher in India.
 
@@ -249,30 +486,34 @@ public class QuizService {
             CRITICAL - QUESTION TYPES (you must follow this exactly):
             %s
 
+            %s
+
             Respond ONLY with a valid JSON array, no markdown, no extra text.
-            For SHORT type use this format only (no "options" field):
-            {"type":"SHORT", "text":"Question?", "answer":"Expected short answer"}
-            For TF type: {"type":"TF", "text":"Statement.", "answer":"True"} or answer "False"
-            For MCQ type: {"type":"MCQ", "text":"Question?", "options":["A","B","C","D"], "answer":"A"}
+            %s
 
             Rules:
-            - SHORT: no options array; answer is a short phrase (1-6 words)
-            - TF: answer must be exactly "True" or "False"
-            - MCQ: exactly 4 options, answer must match one option exactly
+            %s
+            %s
             - Be STRICTLY grounded in the canonical topic and supporting context. Do not invent names, years, numbers, or facts not present or commonly taught basics.
             - If supporting context is limited, ask easier concept/comprehension questions within the same canonical topic.
             - Language: %s
             - Difficulty setting: %s
-            """.formatted(cleanTopic, contextForPrompt, gradeRule, count, typeInstruction, languageRule, difficultyRule);
+            """.formatted(
+                cleanTopic, contextForPrompt, gradeRule, count, typeInstruction, explanationBlock,
+                typeFormat, typeFieldRules, explanationRules, languageRule, difficultyRule);
 
         try {
             String raw = openAIClient.generateQuizCompletion(prompt);
             if (raw == null) return "[]";
             raw = raw.replaceAll("^```(?:json)?\\s*", "").replaceAll("\\s*```$", "").trim();
             if (raw.isEmpty()) return "[]";
-            // Validate it's a JSON array
-            mapper.readTree(raw);
-            return raw;
+            // Validate it's a JSON array (models sometimes respond with an object despite instructions)
+            JsonNode parsed = mapper.readTree(raw);
+            if (parsed == null || !parsed.isArray()) {
+                log.warn("AI quiz generation returned non-array JSON; dropping.");
+                return "[]";
+            }
+            return filterToSingleTypeIfNeeded(raw, questionTypes);
         } catch (Exception e) {
             log.error("AI question generation failed: {}", e.getMessage());
             return "[]";
@@ -286,10 +527,14 @@ public class QuizService {
     public record GeneratedImageQuiz(String topic, String grade, String description, String questionsJson, String error) {}
 
     public GeneratedImageQuiz generateQuestionsFromImage(String topic, String grade, String description, int count, String questionTypes, String languagePreference, String imageDataUri) {
-        return generateQuestionsFromImage(topic, grade, description, count, questionTypes, languagePreference, "AUTO", imageDataUri);
+        return generateQuestionsFromImage(topic, grade, description, count, questionTypes, languagePreference, "AUTO", false, imageDataUri);
     }
 
     public GeneratedImageQuiz generateQuestionsFromImage(String topic, String grade, String description, int count, String questionTypes, String languagePreference, String difficulty, String imageDataUri) {
+        return generateQuestionsFromImage(topic, grade, description, count, questionTypes, languagePreference, difficulty, false, imageDataUri);
+    }
+
+    public GeneratedImageQuiz generateQuestionsFromImage(String topic, String grade, String description, int count, String questionTypes, String languagePreference, String difficulty, boolean includePerQuestionExplanations, String imageDataUri) {
         String combinedHints = (topic == null ? "" : topic) + " " + (description == null ? "" : description);
         if (StrictEducationalGuard.isBlocked(combinedHints)) {
             return new GeneratedImageQuiz("", "", "", "[]", StrictEducationalGuard.refusalMessage());
@@ -300,6 +545,11 @@ public class QuizService {
         String difficultyRule = difficultyInstruction(difficulty);
         String gradeHint = grade == null ? "" : grade.trim();
         String gradeRule = gradeBandInstruction(gradeHint);
+        String exImg = includePerQuestionExplanations
+                ? "Each questionsJson object MUST also include: \"explanation\": \"1-3 teacher-facing sentences (why the answer is correct; marking hint).\".\n"
+                : "";
+        String typeFormat = buildTypeJsonFormatInstructions(questionTypes, safeCount, includePerQuestionExplanations);
+        String typeFieldRules = buildTypeFieldRules(questionTypes);
         String prompt = """
             You are an experienced school teacher in India.
 
@@ -321,6 +571,7 @@ public class QuizService {
             CRITICAL - QUESTION TYPES (you must follow this exactly):
             %s
 
+            %s
             First decide if the screenshot is educational/classroom content.
             - If NOT educational, do not generate any questions.
             - Return educational=false and a short refusal reason.
@@ -336,10 +587,7 @@ public class QuizService {
               "questionsJson": [ ... ]
             }
 
-            For SHORT type use this format only (no "options" field):
-            {"type":"SHORT", "text":"Question?", "answer":"Expected short answer"}
-            For TF type: {"type":"TF", "text":"Statement.", "answer":"True"} or answer "False"
-            For MCQ type: {"type":"MCQ", "text":"Question?", "options":["A","B","C","D"], "answer":"A"}
+            %s
 
             Rules:
             - Questions must be clearly grounded in the image content.
@@ -347,9 +595,7 @@ public class QuizService {
             - If ANY visible screenshot text is in Devanagari, generate ALL questions, options, and answers in Hindi only (no English mix).
             - If screenshot text is clearly English only, generate in English unless teacher selected Hindi.
             - If image text is unclear, create safe foundational questions from the closest visible topic.
-            - SHORT: no options array; answer is a short phrase (1-6 words)
-            - TF: answer must be exactly "True" or "False"
-            - MCQ: exactly 4 options, answer must match one option exactly
+            %s
             - Language: %s
             - Difficulty setting: %s
             """.formatted(
@@ -359,6 +605,9 @@ public class QuizService {
                 safeCount,
                 gradeRule,
                 typeInstruction,
+                exImg,
+                typeFormat,
+                typeFieldRules,
                 languageRule,
                 difficultyRule
         );
@@ -381,6 +630,7 @@ public class QuizService {
             String questionsJson = (questions != null && questions.isArray())
                     ? mapper.writeValueAsString(questions)
                     : "[]";
+            questionsJson = filterToSingleTypeIfNeeded(questionsJson, questionTypes);
             String inferredTopic = n.path("topic").asText("");
             String inferredGrade = n.path("grade").asText("");
             String inferredDescription = n.path("description").asText("");
@@ -485,10 +735,9 @@ public class QuizService {
         if (contextText == null || contextText.isBlank()) {
             return new InferredQuizMeta("", "", "");
         }
-        if (openAIClient.classifyUserQuery(contextText) != OpenAIClient.QueryCategory.LEARNING) {
-            return new InferredQuizMeta("", "", "");
-        }
-        if (StrictEducationalGuard.isBlocked(contextText)) {
+        // Be permissive here: this is only metadata inference (topic/grade/description),
+        // and overly-strict gating (especially for non-English scripts) causes empty titles in UI.
+        if (openAIClient.classifyUserQuery(contextText) == OpenAIClient.QueryCategory.UNSAFE) {
             return new InferredQuizMeta("", "", "");
         }
         String prompt = """
@@ -543,7 +792,8 @@ public class QuizService {
             String explanation
     ) {}
 
-    public record QuestionData(Long id, String type, String text, List<String> options, String answer, String watermarkUrl) {}
+    public record QuestionData(
+            Long id, String type, String text, List<String> options, String answer, String explanation, String watermarkUrl) {}
 
     private List<QuestionData> parseQuestions(String questionsJson) {
         List<QuestionData> out = new ArrayList<>();
@@ -555,6 +805,10 @@ public class QuizService {
                 String type = n.path("type").asText("").trim().toUpperCase(Locale.ROOT);
                 String text = n.path("text").asText("").trim();
                 String answer = n.path("answer").asText("").trim();
+                String expl = n.path("explanation").asText("").trim();
+                if (expl.length() > 2000) {
+                    expl = expl.substring(0, 2000);
+                }
                 List<String> options = new ArrayList<>();
                 if ("MCQ".equals(type) && n.path("options").isArray()) {
                     for (JsonNode o : n.path("options")) {
@@ -562,7 +816,7 @@ public class QuizService {
                     }
                 }
                 String wm = n.path("watermarkUrl").asText("").trim();
-                out.add(new QuestionData(null, type, text, options, answer, wm.isEmpty() ? null : wm));
+                out.add(new QuestionData(null, type, text, options, answer, expl.isEmpty() ? null : expl, wm.isEmpty() ? null : wm));
             }
             return out;
         } catch (Exception e) {
@@ -582,11 +836,12 @@ public class QuizService {
             e.setQuestionType(q.type() == null ? "" : q.type().trim().toUpperCase(Locale.ROOT));
             e.setQuestionText(q.text() == null ? "" : q.text().trim());
             List<String> opts = q.options() == null ? List.of() : q.options();
-            e.setOptionA(opts.size() > 0 ? opts.get(0) : null);
-            e.setOptionB(opts.size() > 1 ? opts.get(1) : null);
-            e.setOptionC(opts.size() > 2 ? opts.get(2) : null);
-            e.setOptionD(opts.size() > 3 ? opts.get(3) : null);
+            e.setOptionA(opts.size() > 0 ? (opts.get(0) == null ? null : opts.get(0).trim()) : null);
+            e.setOptionB(opts.size() > 1 ? (opts.get(1) == null ? null : opts.get(1).trim()) : null);
+            e.setOptionC(opts.size() > 2 ? (opts.get(2) == null ? null : opts.get(2).trim()) : null);
+            e.setOptionD(opts.size() > 3 ? (opts.get(3) == null ? null : opts.get(3).trim()) : null);
             e.setCorrectAnswer(q.answer() == null ? "" : q.answer().trim());
+            e.setAnswerExplanation(q.explanation() == null || q.explanation().isBlank() ? null : q.explanation().trim());
             e.setMarks(1);
             String wm = q.watermarkUrl();
             if (wm == null || wm.isBlank()) {
@@ -726,6 +981,9 @@ public class QuizService {
         }
         if ("ENGLISH".equals(p)) {
             return "Generate all questions/options/answers in simple English.";
+        }
+        if ("SANSKRIT".equals(p)) {
+            return "Generate all questions/options/answers in simple Sanskrit (Devanagari script). Use clear, student-friendly Sanskrit (avoid very complex compounds).";
         }
         if (imageFlow) {
             return "AUTO: First inspect screenshot text script. If any Devanagari text appears, force Hindi output for every field; otherwise use English.";

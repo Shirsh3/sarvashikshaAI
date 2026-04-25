@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Tag("openai-live")
 class NcertUrlQuizGenerationLiveTest {
 
-    private static final String NCERT_URL = "https://ncert.nic.in/textbook.php?leph1=2-8";
+    private static final String NCERT_URL = "https://ncert.nic.in/textbook.php?leph1=3-8";
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Autowired
@@ -27,6 +27,23 @@ class NcertUrlQuizGenerationLiveTest {
 
     @Autowired
     private QuizService quizService;
+
+    @Test
+    void extractAndPrintNcertPdfText_onlyWhenEnabled() {
+        Assumptions.assumeTrue(Boolean.getBoolean("runNcertLive"), "Skipping live test: set -DrunNcertLive=true");
+
+        String extracted = urlContentService.extractContextFromUrl(NCERT_URL);
+        assertThat(extracted)
+                .as("Expected extracted content from NCERT URL")
+                .isNotBlank();
+
+        String preview = extracted.length() > 2000 ? extracted.substring(0, 2000) + "\n...[truncated preview]" : extracted;
+        System.out.println("\n=== NCERT URL (EXTRACTION PREVIEW) ===");
+        System.out.println(NCERT_URL);
+        System.out.println("=== EXTRACTED TEXT (first ~2000 chars) ===");
+        System.out.println(preview);
+        System.out.println("=== END ===\n");
+    }
 
     @Test
     void generateAndPrintQuestionsFromNcertUrl() throws Exception {
