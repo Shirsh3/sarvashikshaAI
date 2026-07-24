@@ -1,4 +1,4 @@
-# SarvashikshaAI
+# SarvashikshaAII
 
 SarvashikshaAI is a local Spring Boot + Thymeleaf web application that helps NGO teachers explain topics to students (grades 1–12) using a projector.  
 Teachers enter a topic and grade; the system calls OpenAI (`gpt-4o-mini`) to generate a child-friendly explanation.
