@@ -14,7 +14,7 @@ Teachers enter a topic and grade; the system calls OpenAI (`gpt-4o-mini`) to gen
 
 The repo uses **placeholder** config (no secrets committed). Provide secrets in one of these ways:
 
-1. **Option A — Local properties file (recommended)**  
+ **Option A — Local properties file (recommended)**  
    Copy `src/main/resources/application-local.properties.example` to `src/main/resources/application-local.properties`, fill in your keys, then run with the `local` profile:
 
    ```bash
@@ -23,24 +23,24 @@ The repo uses **placeholder** config (no secrets committed). Provide secrets in 
 
    `application-local.properties` is gitignored; never commit it.
 
-2. **Option B — Environment variables**  
+ **Option B — Environment variables**  
    Set `OPENAI_API_KEY`, `YOUTUBE_DATAKEY`, and the Google OAuth vars (see `application-prod.properties` or [docs/DEPLOY_RAILWAY.md](docs/DEPLOY_RAILWAY.md)), then:
 
    ```bash
    mvn spring-boot:run
    ```
 
-3. **Run the application** from the project root (if using Option B, no profile needed):
+ **Run the application** from the project root (if using Option B, no profile needed):
 
    ```bash
    mvn spring-boot:run
    ```
 
-3. **Open the UI** in your browser:
+**Open the UI** in your browser:
 
    - Go to: `http://localhost:8080`
 
-3. **Use in the classroom**
+ **Use in the classroom**
 
    - Type a topic (e.g. “What is a fraction?”).
    - Select the student grade (1–12).
