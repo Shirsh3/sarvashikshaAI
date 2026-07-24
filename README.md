@@ -40,7 +40,7 @@ The repo uses **placeholder** config (no secrets committed). Provide secrets in 
 
    - Go to: `http://localhost:8080`
 
-4. **Use in the classroom**
+3. **Use in the classroom**
 
    - Type a topic (e.g. “What is a fraction?”).
    - Select the student grade (1–12).
