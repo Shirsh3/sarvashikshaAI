@@ -36,6 +36,8 @@ public class SecurityConfig {
                 .requestMatchers("/logout").permitAll()
                 .requestMatchers("/api/auth/login", "/api/auth/logout").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/menu").permitAll()
+                // Personal assistant / Alexa skill (no JWT; keep HTTPS + signature verify for prod)
+                .requestMatchers("/alexa", "/api/v1/ask", "/api/v1/health").permitAll()
                 .requestMatchers("/api/superadmin/**").hasRole("SUPER_ADMIN")
                 .requestMatchers("/superadmin/**").hasRole("SUPER_ADMIN")
                 // Full teacher + admin app (not the QUIZ-bank / PDF handout account)
@@ -62,6 +64,7 @@ public class SecurityConfig {
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 .ignoringRequestMatchers(
                     "/api/**",
+                    "/alexa",
                     "/explain",
                     "/assembly/regenerate",
                     "/reading/feedback",
