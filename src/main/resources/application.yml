@@ -1,0 +1,18 @@
+server:
+  # Render sets PORT; fall back to 8080 locally
+  port: ${PORT:8080}
+
+openai:
+  # Set via env — never commit a real key
+  api-key: ${OPENAI_API_KEY:}
+  model: ${OPENAI_MODEL:gpt-4o-mini}
+  base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+
+spring:
+  application:
+    name: sarvashiksha-ai
+
+logging:
+  level:
+    root: INFO
+    ai.sarvasiksha: INFO

@@ -1,1 +1,45 @@
+# Sarvasiksha AI
 
+Personal voice/assistant API (Spring Boot) for Alexa and other clients.
+
+## REST API
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/v1/health` | Liveness + whether OpenAI key is configured |
+| POST | `/api/v1/ask` | Ask assistant (simple JSON) |
+| POST | `/alexa` | Alexa Custom Skill endpoint |
+
+Alexa setup: `docs/alexa-setup.md`.
+
+### Ask example
+
+```bash
+export OPENAI_API_KEY='your-key'   # never commit this
+java -jar target/sarvashiksha-ai-0.0.1-SNAPSHOT.jar --server.port=8090
+
+curl -sS -X POST http://localhost:8090/api/v1/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"What is photosynthesis?","locale":"en-IN"}'
+```
+
+## Local run
+
+```bash
+export OPENAI_API_KEY=...
+mvn -DskipTests package
+java -jar target/sarvashiksha-ai-0.0.1-SNAPSHOT.jar --server.port=8090
+```
+
+Or: `./scripts/run-local.sh /path/to/.crds`
+
+## Render
+
+- Build: `mvn -DskipTests package`
+- Start: `java -jar target/sarvashiksha-ai-0.0.1-SNAPSHOT.jar`
+- Env: `OPENAI_API_KEY` (required), optional `OPENAI_MODEL`, `SERVER_PORT` (Render sets `PORT` — map if needed)
+
+## Security
+
+- OpenAI key via `OPENAI_API_KEY` only; never commit keys.
+- `.env` / `*.crds` are gitignored.

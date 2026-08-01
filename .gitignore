@@ -1,0 +1,17 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+*.crds
+local.properties
+
+# Build
+target/
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+*.log
+.DS_Store
