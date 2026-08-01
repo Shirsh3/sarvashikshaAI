@@ -28,12 +28,12 @@ public class AlexaController {
     private static final String SYSTEM_HINT = """
             You are Sarvasiksha AI, a helpful personal voice assistant.
             Answer clearly for an adult user.
-            Keep answers short enough to speak aloud (about 2-4 short sentences) unless they ask for more detail.
+            Default: answer in 2-4 short sentences suitable for speech.
+            If the user asks for more detail, a longer explanation, or "in detail", you may answer more fully.
             Reply in Hindi if the question is in Hindi; otherwise use clear English.
-            Use prior turns in this conversation for follow-up questions (e.g. "explain that", "make it shorter").
+            Use prior turns in this conversation for follow-ups (e.g. "explain that", "make it shorter").
             """;
 
-    /** Keep last N messages (user+assistant pairs) inside Alexa session size limits. */
     private static final int MAX_HISTORY_MESSAGES = 12;
 
     private final OpenAIClient openAIClient;
@@ -59,14 +59,16 @@ public class AlexaController {
 
         String type = body.path("request").path("type").asText("");
         String locale = body.path("request").path("locale").asText("en-IN");
-        List<OpenAiMessage> history = readHistory(body.path("session").path("attributes"));
+        boolean newSession = body.path("session").path("new").asBoolean(false);
+        JsonNode attributes = body.path("session").path("attributes");
+        List<OpenAiMessage> history = newSession ? new ArrayList<>() : readHistory(attributes);
+        String lastAnswer = newSession ? "" : textAttr(attributes, "lastAnswer");
 
         if ("LaunchRequest".equals(type)) {
-            // Fresh chat when skill opens
-            return ResponseEntity.ok(alexaSpeak(
-                    "Hi. I am Sarvasiksha AI. What can I help you with?",
-                    false,
-                    List.of()));
+            String welcome = newSession || history.isEmpty()
+                    ? "Welcome. I am Sarvasiksha AI. What would you like to talk about today?"
+                    : "Welcome back. What would you like to talk about today?";
+            return ResponseEntity.ok(alexaSpeak(welcome, false, List.of(), ""));
         }
 
         if ("SessionEndedRequest".equals(type)) {
@@ -80,46 +82,87 @@ public class AlexaController {
 
         if ("IntentRequest".equals(type)) {
             String intentName = body.path("request").path("intent").path("name").asText("");
+
             if ("AMAZON.StopIntent".equals(intentName) || "AMAZON.CancelIntent".equals(intentName)) {
-                return ResponseEntity.ok(alexaSpeak("Goodbye.", true, List.of()));
+                return ResponseEntity.ok(alexaSpeak("Okay. Goodbye.", true, List.of(), ""));
             }
             if ("AMAZON.HelpIntent".equals(intentName)) {
                 return ResponseEntity.ok(alexaSpeak(
-                        "Ask me anything. For follow-ups, just ask again while I am still open. Say stop to finish.",
+                        "Say ask, then your question. For follow-ups, keep asking while I am open. "
+                                + "Say repeat that to hear my last answer, or stop to finish.",
                         false,
-                        history));
+                        history,
+                        lastAnswer));
+            }
+            if ("AMAZON.RepeatIntent".equals(intentName)) {
+                if (lastAnswer == null || lastAnswer.isBlank()) {
+                    return ResponseEntity.ok(alexaSpeak(
+                            "I do not have a previous answer yet. Ask me something first.",
+                            false,
+                            history,
+                            lastAnswer));
+                }
+                return ResponseEntity.ok(alexaSpeak(lastAnswer, false, history, lastAnswer));
+            }
+            if ("AMAZON.FallbackIntent".equals(intentName)) {
+                // Alexa does not always send the raw utterance; guide the user.
+                return ResponseEntity.ok(alexaSpeak(
+                        "I did not catch that as a command. Please say ask, then your question. "
+                                + "For example: ask why is the sky blue.",
+                        false,
+                        history,
+                        lastAnswer));
             }
 
             String question = extractQuestion(body);
             if (question == null || question.isBlank()) {
                 return ResponseEntity.ok(alexaSpeak(
-                        "I did not catch the question. Please ask again.",
+                        "I did not catch the question. Please say ask, then try again.",
                         false,
-                        history));
+                        history,
+                        lastAnswer));
             }
-            try {
-                List<OpenAiMessage> messages = new ArrayList<>();
-                messages.add(new OpenAiMessage("system", SYSTEM_HINT + "\nLocale hint: " + locale));
-                messages.addAll(history);
-                messages.add(new OpenAiMessage("user", question.trim()));
-
-                String answer = openAIClient.generateChatCompletion(messages);
-
-                List<OpenAiMessage> updated = new ArrayList<>(history);
-                updated.add(new OpenAiMessage("user", question.trim()));
-                updated.add(new OpenAiMessage("assistant", answer));
-                updated = trimHistory(updated);
-
-                return ResponseEntity.ok(alexaSpeak(answer, false, updated));
-            } catch (Exception e) {
-                return ResponseEntity.ok(alexaSpeak(
-                        "Sorry, I could not answer right now. Please try again.",
-                        false,
-                        history));
-            }
+            return ResponseEntity.ok(answerQuestion(question.trim(), locale, history));
         }
 
-        return ResponseEntity.ok(alexaSpeak("Sorry, I did not understand that.", false, history));
+        return ResponseEntity.ok(alexaSpeak(
+                "Sorry, I did not understand that. Please say ask, then your question.",
+                false,
+                history,
+                lastAnswer));
+    }
+
+    private Map<String, Object> answerQuestion(String question, String locale, List<OpenAiMessage> history) {
+        try {
+            List<OpenAiMessage> messages = new ArrayList<>();
+            messages.add(new OpenAiMessage("system", SYSTEM_HINT + "\nLocale hint: " + locale));
+            messages.addAll(history);
+            messages.add(new OpenAiMessage("user", question));
+
+            String answer = openAIClient.generateChatCompletion(messages);
+
+            List<OpenAiMessage> updated = new ArrayList<>(history);
+            updated.add(new OpenAiMessage("user", question));
+            updated.add(new OpenAiMessage("assistant", answer));
+            updated = trimHistory(updated);
+
+            return alexaSpeak(answer, false, updated, answer);
+        } catch (Exception e) {
+            return alexaSpeak(
+                    "I am having trouble reaching the AI right now. Please try again.",
+                    false,
+                    history,
+                    historyLastAssistant(history));
+        }
+    }
+
+    private static String historyLastAssistant(List<OpenAiMessage> history) {
+        for (int i = history.size() - 1; i >= 0; i--) {
+            if ("assistant".equals(history.get(i).role())) {
+                return history.get(i).content();
+            }
+        }
+        return "";
     }
 
     private List<OpenAiMessage> readHistory(JsonNode attributes) {
@@ -145,6 +188,13 @@ public class AlexaController {
         } catch (Exception e) {
             return new ArrayList<>();
         }
+    }
+
+    private static String textAttr(JsonNode attributes, String key) {
+        if (attributes == null || attributes.isMissingNode() || !attributes.hasNonNull(key)) {
+            return "";
+        }
+        return attributes.path(key).asText("");
     }
 
     private static List<OpenAiMessage> trimHistory(List<OpenAiMessage> history) {
@@ -177,12 +227,18 @@ public class AlexaController {
         return null;
     }
 
-    private Map<String, Object> alexaSpeak(String text, boolean endSession, List<OpenAiMessage> history) {
+    private Map<String, Object> alexaSpeak(
+            String text,
+            boolean endSession,
+            List<OpenAiMessage> history,
+            String lastAnswer
+    ) {
         Map<String, Object> root = new LinkedHashMap<>();
         root.put("version", "1.0");
         if (!endSession) {
             Map<String, Object> attrs = new LinkedHashMap<>();
             attrs.put("historyJson", historyToJson(history == null ? List.of() : history));
+            attrs.put("lastAnswer", lastAnswer == null ? "" : lastAnswer);
             root.put("sessionAttributes", attrs);
         }
         Map<String, Object> response = new LinkedHashMap<>();
@@ -191,12 +247,11 @@ public class AlexaController {
         speech.put("text", text);
         response.put("outputSpeech", speech);
         response.put("shouldEndSession", endSession);
-        // Keep mic open for follow-ups when session continues
         if (!endSession) {
             Map<String, Object> reprompt = new LinkedHashMap<>();
             Map<String, Object> repromptSpeech = new LinkedHashMap<>();
             repromptSpeech.put("type", "PlainText");
-            repromptSpeech.put("text", "Anything else?");
+            repromptSpeech.put("text", "Anything else you would like to know?");
             reprompt.put("outputSpeech", repromptSpeech);
             response.put("reprompt", reprompt);
         }
