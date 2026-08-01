@@ -144,6 +144,35 @@ public class OpenAIClient {
     }
 
     /**
+     * Multi-turn chat using the teaching model (Alexa personal assistant sessions).
+     */
+    public String generateChatCompletion(List<OpenAiMessage> messages) {
+        if (messages == null || messages.isEmpty()) {
+            throw new IllegalArgumentException("messages required");
+        }
+        OpenAiChatRequest request = new OpenAiChatRequest(
+                teachingModel,
+                messages,
+                STRICT_TEMPERATURE,
+                STRICT_TOP_P
+        );
+
+        OpenAiChatResponse response = webClient.post()
+                .uri("/chat/completions")
+                .bodyValue(request)
+                .retrieve()
+                .bodyToMono(OpenAiChatResponse.class)
+                .onErrorResume(ex -> Mono.error(new IllegalStateException("Failed to call OpenAI API", ex)))
+                .block();
+
+        if (response == null || response.choices == null || response.choices.isEmpty()) {
+            throw new IllegalStateException("OpenAI API returned no choices");
+        }
+
+        return response.choices.get(0).message.content().trim();
+    }
+
+    /**
      * OpenAI Images API — educational quiz cover. Empty if the API fails or returns no URL.
      */
     public Optional<String> generateQuizCoverImageUrl(String topic, String grade) {

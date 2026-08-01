@@ -58,6 +58,14 @@ Alexa skill endpoint URL (no API key header):
 3. Endpoint HTTPS → `https://<host>/alexa`
 4. Copy skill id into `ASSISTANT_SECURITY_ALEXA_SKILL_ID` on Render → redeploy
 
+## Conversation memory
+
+`/alexa` keeps chat context in Alexa `sessionAttributes.historyJson` for the open session.
+
+- Follow-ups like “explain that” / “make it shorter” work **without** saying open again.
+- Opening the skill again, or saying **stop** / **cancel**, starts a fresh chat.
+- History is capped to the last ~12 messages (session size limits).
+
 ## Next hardening (optional)
 
 Amazon also recommends verifying **Signature** + **SignatureCertChainUrl** on every `/alexa` request so forged posts are rejected even if someone guesses the skill id. Skill-id check alone is a good MVP; add signature verification before public launch.
