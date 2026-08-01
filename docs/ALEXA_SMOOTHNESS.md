@@ -23,12 +23,12 @@ Then **Save Model → Build skill**.
 ASSISTANT_SECURITY_ENABLED=true
 ASSISTANT_SECURITY_API_KEY=...
 ASSISTANT_SECURITY_ALEXA_SKILL_ID=amzn1.ask.skill....
-ASSISTANT_SECURITY_ALEXA_VERIFY_SIGNATURES=true
 ```
 
-With verify signatures **true**, only Amazon-signed requests hit `/alexa` (curl without headers will fail — expected).
+`POST /alexa` **always** verifies Amazon signatures (no flag). Curl without Alexa headers will fail — use the Alexa Test console / device.
 
-## Optional next
+## Optional next (later)
 - SSML pauses  
 - Rate limiting  
 - Privacy policy page before publish  
+- Metrics / structured logging of session.new + latency 

@@ -36,13 +36,6 @@ public class AssistantSecurityProperties {
      */
     private String alexaSkillId = "";
 
-    /**
-     * Verify Amazon {@code Signature} / {@code SignatureCertChainUrl} on {@code POST /alexa}.
-     * Enable in production ({@code ASSISTANT_SECURITY_ALEXA_VERIFY_SIGNATURES=true}).
-     * Keep false for local curl tests without Alexa headers.
-     */
-    private boolean alexaVerifySignatures = false;
-
     public boolean isEnabled() {
         return enabled;
     }
@@ -73,13 +66,5 @@ public class AssistantSecurityProperties {
 
     public boolean alexaSkillIdConfigured() {
         return alexaSkillId != null && !alexaSkillId.isBlank();
-    }
-
-    public boolean isAlexaVerifySignatures() {
-        return alexaVerifySignatures;
-    }
-
-    public void setAlexaVerifySignatures(boolean alexaVerifySignatures) {
-        this.alexaVerifySignatures = alexaVerifySignatures;
     }
 }

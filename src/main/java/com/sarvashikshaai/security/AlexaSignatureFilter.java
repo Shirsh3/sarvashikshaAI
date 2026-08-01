@@ -1,6 +1,5 @@
 package com.sarvashikshaai.security;
 
-import com.sarvashikshaai.config.AssistantSecurityProperties;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,17 +13,15 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 /**
- * Verifies Amazon request signatures on {@code POST /alexa} when enabled.
+ * Always verifies Amazon request signatures on {@code POST /alexa}.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 15)
 public class AlexaSignatureFilter extends OncePerRequestFilter {
 
-    private final AssistantSecurityProperties properties;
     private final AlexaSignatureVerifier verifier;
 
-    public AlexaSignatureFilter(AssistantSecurityProperties properties, AlexaSignatureVerifier verifier) {
-        this.properties = properties;
+    public AlexaSignatureFilter(AlexaSignatureVerifier verifier) {
         this.verifier = verifier;
     }
 
@@ -39,11 +36,6 @@ public class AlexaSignatureFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
-        if (!properties.isEnabled() || !properties.isAlexaVerifySignatures()) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         CachedBodyHttpServletRequest wrapped = new CachedBodyHttpServletRequest(request);
         try {
             verifier.verify(
