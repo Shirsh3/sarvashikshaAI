@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Class PDFs — SarvaSikshaAI</title>
+    <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+    <style>
+        .mat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 18px 20px;
+            margin-bottom: 1.25rem;
+        }
+        .mat-card h3 { margin: 0 0 8px; font-size: 1.05rem; }
+        .mat-lead { margin: 0 0 14px; color: var(--text-muted); font-size: 0.9rem; line-height: 1.45; }
+        .mat-form { display: grid; gap: 12px; max-width: 560px; }
+        .mat-form label { font-size: 0.85rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px; }
+        .mat-form input, .mat-form select {
+            width: 100%; font: inherit; padding: 8px 12px; border-radius: 10px;
+            border: 1px solid var(--border); background: var(--surface-elevated); color: var(--text);
+        }
+        .mat-form .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        @media (max-width: 640px) { .mat-form .row { grid-template-columns: 1fr; } }
+        .btn-primary {
+            display: inline-flex; align-items: center; gap: 8px; border: none; cursor: pointer;
+            background: var(--primary); color: #fff; font-weight: 700; padding: 10px 16px; border-radius: 10px;
+        }
+        .flash-ok { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; padding: 10px 12px; border-radius: 10px; margin-bottom: 12px; }
+        .flash-err { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; padding: 10px 12px; border-radius: 10px; margin-bottom: 12px; }
+        table.mat-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        table.mat-table th, table.mat-table td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+        table.mat-table th { color: var(--text-muted); font-size: 0.8rem; }
+        .badge {
+            display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;
+        }
+        .badge-ready { background: #d1fae5; color: #065f46; }
+        .badge-pending, .badge-indexing { background: #fef3c7; color: #92400e; }
+        .badge-failed { background: #fee2e2; color: #991b1b; }
+        .mat-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+        .mat-actions form { display: inline; }
+        .mat-actions button {
+            font: inherit; font-size: 0.8rem; padding: 6px 10px; border-radius: 8px;
+            border: 1px solid var(--border); background: var(--surface-elevated); cursor: pointer;
+        }
+        .mat-index-banner {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid #fde68a;
+            background: #fffbeb;
+            color: #92400e;
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+        .mat-index-banner.is-visible { display: flex; }
+        .mat-index-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(146, 64, 14, 0.25);
+            border-top-color: #92400e;
+            border-radius: 50%;
+            animation: mat-spin 0.7s linear infinite;
+            flex: 0 0 auto;
+        }
+        @keyframes mat-spin { to { transform: rotate(360deg); } }
+        .badge-indexing-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .badge-indexing-wrap .mat-index-spinner {
+            width: 12px;
+            height: 12px;
+            border-width: 2px;
+        }
+    </style>
+</head>
+<body class="app-layout">
+<div th:replace="~{fragments/loader :: loader}"></div>
+<div th:replace="~{fragments/shell-teacher :: sidebar('materials')}"></div>
+<main class="layout-main">
+    <div class="layout-header">
+        <div>
+            <h2>Class PDFs</h2>
+            <p class="layout-lead">Upload a PDF per grade. We create embeddings so Explain can use the chapter text.</p>
+        </div>
+    </div>
+
+    <div th:if="${success}" class="flash-ok" th:text="${success}"></div>
+    <div th:if="${error}" class="flash-err" th:text="${error}"></div>
+
+    <div id="matIndexBanner" class="mat-index-banner" role="status" aria-live="polite">
+        <span class="mat-index-spinner" aria-hidden="true"></span>
+        <span id="matIndexBannerText">Indexing embeddings…</span>
+    </div>
+
+    <section class="mat-card">
+        <h3>Upload PDF</h3>
+        <p class="mat-lead">Upload chapter PDFs. Text PDFs index fast; scanned pages use OCR (slower, uses more API). Indexing runs in the background.</p>
+        <form class="mat-form" id="matUploadForm" th:action="@{/teacher/materials/upload}" method="post" enctype="multipart/form-data">
+            <div class="row">
+                <div>
+                    <label for="grade">Grade</label>
+                    <select id="grade" name="grade" required>
+                        <option value="">Select grade</option>
+                        <option th:each="g : ${gradeOptions}" th:value="${g.code}" th:text="${g.label}"
+                                th:selected="${filterGrade == g.code}">Grade</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="subject">Subject</label>
+                    <select id="subject" name="subject">
+                        <option value="GENERAL">General</option>
+                        <option value="ENGLISH">English</option>
+                        <option value="HINDI">Hindi</option>
+                        <option value="MATH">Math</option>
+                        <option value="SCIENCE">Science</option>
+                        <option value="PHYSICS">Physics</option>
+                        <option value="CHEMISTRY">Chemistry</option>
+                        <option value="BIOLOGY">Biology</option>
+                        <option value="HISTORY">History</option>
+                        <option value="GEOGRAPHY">Geography</option>
+                        <option value="CIVICS">Civics</option>
+                        <option value="SOCIAL">Social Studies</option>
+                        <option value="EVS">EVS</option>
+                        <option value="COMPUTER">Computer</option>
+                        <option value="SANSKRIT">Sanskrit</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label for="title">Title (optional)</label>
+                <input id="title" name="title" type="text" maxlength="300" placeholder="e.g. Class 8 Science Ch 1"/>
+            </div>
+            <div>
+                <label for="file">PDF file</label>
+                <input id="file" name="file" type="file" accept="application/pdf,.pdf" required/>
+            </div>
+            <div>
+                <button type="submit" class="btn-primary" id="matUploadBtn">Upload &amp; index</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="mat-card">
+        <h3>Materials</h3>
+        <form method="get" th:action="@{/teacher/materials}" style="margin-bottom:12px;display:flex;gap:10px;align-items:end;flex-wrap:wrap;">
+            <div>
+                <label for="filterGrade" style="font-size:0.85rem;font-weight:700;color:var(--text-muted);">Filter grade</label>
+                <select id="filterGrade" name="grade" style="display:block;padding:8px 12px;border-radius:10px;border:1px solid var(--border);">
+                    <option value="">All</option>
+                    <option th:each="g : ${gradeOptions}" th:value="${g.code}" th:text="${g.label}"
+                            th:selected="${filterGrade == g.code}">Grade</option>
+                </select>
+            </div>
+            <button type="submit" style="padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface-elevated);cursor:pointer;">Apply</button>
+        </form>
+
+        <div th:if="${#lists.isEmpty(materials)}" style="color:var(--text-muted);">No materials yet.</div>
+        <table class="mat-table" id="matTable" th:if="${!#lists.isEmpty(materials)}">
+            <thead>
+            <tr>
+                <th>Title</th>
+                <th>Grade</th>
+                <th>Subject</th>
+                <th>Status</th>
+                <th>Chunks</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="m : ${materials}" th:attr="data-material-id=${m.id},data-status=${m.status}">
+                <td>
+                    <div th:text="${m.title}">Title</div>
+                    <div style="font-size:0.75rem;color:var(--text-muted);" th:text="${m.originalFilename}"></div>
+                    <div th:if="${m.errorMessage}" class="mat-err" style="font-size:0.75rem;color:#991b1b;margin-top:4px;" th:text="${m.errorMessage}"></div>
+                </td>
+                <td th:text="${m.grade}">8</td>
+                <td th:text="${m.subject}">GENERAL</td>
+                <td class="mat-status-cell">
+                    <span class="badge-indexing-wrap">
+                        <span class="mat-index-spinner" th:if="${m.status == 'PENDING' or m.status == 'INDEXING'}" aria-hidden="true"></span>
+                        <span class="badge"
+                              th:classappend="${m.status == 'READY'} ? ' badge-ready' : (${m.status == 'FAILED'} ? ' badge-failed' : ' badge-indexing')"
+                              th:text="${m.status}">PENDING</span>
+                    </span>
+                </td>
+                <td class="mat-chunks" th:text="${m.chunkCount}">0</td>
+                <td class="mat-actions">
+                    <form th:action="@{|/teacher/materials/${m.id}/reindex|}" method="post">
+                        <input type="hidden" name="grade" th:value="${filterGrade}"/>
+                        <button type="submit">Re-index</button>
+                    </form>
+                    <form th:action="@{|/teacher/materials/${m.id}/delete|}" method="post"
+                          onsubmit="return confirm('Delete this material and its embeddings?');">
+                        <input type="hidden" name="grade" th:value="${filterGrade}"/>
+                        <button type="submit">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+</main>
+<script th:src="@{/js/app.js}"></script>
+<script th:inline="javascript">
+(function materialsIndexPoll() {
+    var filterGrade = /*[[${filterGrade}]]*/ '';
+    var banner = document.getElementById('matIndexBanner');
+    var bannerText = document.getElementById('matIndexBannerText');
+    var uploadForm = document.getElementById('matUploadForm');
+    var hadIndexing = false;
+    var timer = null;
+    var POLL_MS = 3000;
+
+    function statusUrl() {
+        var q = filterGrade ? ('?grade=' + encodeURIComponent(filterGrade)) : '';
+        return '/teacher/materials/api/status' + q;
+    }
+
+    function setBanner(on, count) {
+        if (!banner) return;
+        if (on) {
+            banner.classList.add('is-visible');
+            if (bannerText) {
+                bannerText.textContent = count === 1
+                    ? 'Indexing 1 PDF… this page will refresh when ready.'
+                    : ('Indexing ' + count + ' PDFs… this page will refresh when ready.');
+            }
+        } else {
+            banner.classList.remove('is-visible');
+        }
+    }
+
+    function badgeClass(status) {
+        if (status === 'READY') return 'badge badge-ready';
+        if (status === 'FAILED') return 'badge badge-failed';
+        return 'badge badge-indexing';
+    }
+
+    function updateRow(row, item) {
+        row.setAttribute('data-status', item.status || '');
+        var statusCell = row.querySelector('.mat-status-cell');
+        if (statusCell) {
+            var busy = item.status === 'PENDING' || item.status === 'INDEXING';
+            statusCell.innerHTML = '<span class="badge-indexing-wrap">'
+                + (busy ? '<span class="mat-index-spinner" aria-hidden="true"></span>' : '')
+                + '<span class="' + badgeClass(item.status) + '">' + (item.status || '') + '</span></span>';
+        }
+        var chunks = row.querySelector('.mat-chunks');
+        if (chunks && item.chunkCount != null) chunks.textContent = String(item.chunkCount);
+        var err = row.querySelector('.mat-err');
+        if (item.errorMessage) {
+            if (!err) {
+                var titleTd = row.querySelector('td');
+                if (titleTd) {
+                    err = document.createElement('div');
+                    err.className = 'mat-err';
+                    err.style.cssText = 'font-size:0.75rem;color:#991b1b;margin-top:4px;';
+                    titleTd.appendChild(err);
+                }
+            }
+            if (err) err.textContent = item.errorMessage;
+        } else if (err) {
+            err.remove();
+        }
+    }
+
+    function poll() {
+        fetch(statusUrl(), { credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (data) {
+                if (!data) return;
+                var indexing = !!data.indexing;
+                var count = data.indexingCount || 0;
+                setBanner(indexing, count);
+
+                (data.materials || []).forEach(function (item) {
+                    var row = document.querySelector('tr[data-material-id="' + item.id + '"]');
+                    if (row) updateRow(row, item);
+                });
+
+                if (indexing) {
+                    hadIndexing = true;
+                } else if (hadIndexing) {
+                    // Finished indexing — soft reload to sync flash/list cleanly
+                    window.location.reload();
+                }
+            })
+            .catch(function () { /* ignore transient */ });
+    }
+
+    function startPolling() {
+        if (timer) return;
+        poll();
+        timer = setInterval(poll, POLL_MS);
+    }
+
+    // If page already has indexing rows, start immediately
+    if (document.querySelector('tr[data-status="PENDING"], tr[data-status="INDEXING"]')) {
+        hadIndexing = true;
+        startPolling();
+    } else {
+        // Still poll lightly after upload redirect / reindex
+        startPolling();
+    }
+
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', function () {
+            if (typeof window.showGlobalLoader === 'function') {
+                window.showGlobalLoader('Uploading PDF…');
+            }
+            setBanner(true, 1);
+            hadIndexing = true;
+        });
+    }
+
+    document.querySelectorAll('.mat-actions form').forEach(function (f) {
+        f.addEventListener('submit', function () {
+            var action = f.getAttribute('action') || '';
+            if (action.indexOf('/reindex') >= 0) {
+                setBanner(true, 1);
+                hadIndexing = true;
+                startPolling();
+            }
+        });
+    });
+})();
+</script>
+</body>
+</html>

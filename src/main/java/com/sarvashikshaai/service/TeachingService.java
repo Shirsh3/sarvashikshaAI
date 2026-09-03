@@ -7,14 +7,19 @@ import com.sarvashikshaai.ai.PromptBuilder;
 import com.sarvashikshaai.ai.StrictEducationalGuard;
 import com.sarvashikshaai.ai.WikipediaClient;
 import com.sarvashikshaai.ai.YouTubeClient;
+import com.sarvashikshaai.model.ConversationContext;
 import com.sarvashikshaai.model.TeachingRequest;
 import com.sarvashikshaai.model.TeachingResponse;
+import com.sarvashikshaai.model.entity.LearningConversationEntity;
 import com.sarvashikshaai.model.entity.QuizExplanationCacheEntity;
 import com.sarvashikshaai.repository.QuizExplanationCacheRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -27,19 +32,31 @@ public class TeachingService {
     private final WikipediaClient wikipediaClient;
     private final ObjectMapper objectMapper;
     private final QuizExplanationCacheRepository quizExplainCacheRepo;
+    private final EmbeddingSearchService embeddingSearchService;
+    private final LearningConversationService learningConversationService;
+
+    @Value("${sarva.learning.rag-top-k:5}")
+    private int learningRagTopK;
+
+    @Value("${sarva.learning.min-rag-score:0.42}")
+    private double learningMinRagScore;
 
     public TeachingService(PromptBuilder promptBuilder,
                            OpenAIClient openAIClient,
                            YouTubeClient youTubeClient,
                            WikipediaClient wikipediaClient,
                            ObjectMapper objectMapper,
-                           QuizExplanationCacheRepository quizExplainCacheRepo) {
+                           QuizExplanationCacheRepository quizExplainCacheRepo,
+                           EmbeddingSearchService embeddingSearchService,
+                           LearningConversationService learningConversationService) {
         this.promptBuilder = promptBuilder;
         this.openAIClient = openAIClient;
         this.youTubeClient = youTubeClient;
         this.wikipediaClient = wikipediaClient;
         this.objectMapper = objectMapper;
         this.quizExplainCacheRepo = quizExplainCacheRepo;
+        this.embeddingSearchService = embeddingSearchService;
+        this.learningConversationService = learningConversationService;
     }
 
     public TeachingResponse generateExplanation(TeachingRequest request) {
@@ -80,7 +97,51 @@ public class TeachingService {
                     null, null, null, null, null, null, true);
         }
 
-        String prompt = promptBuilder.buildUnifiedTeachingPrompt(request);
+        LearningConversationEntity conversation = null;
+        ConversationContext conversationContext = null;
+        if (request.isLearningMode()) {
+            conversation = learningConversationService.getOrCreateActive(
+                    new LearningConversationService.Scope(
+                            request.getTeacherUsername(),
+                            request.getPrepareGrade(),
+                            request.getPrepareSubject(),
+                            request.getPrepareMaterialId(),
+                            request.getChapterTitle(),
+                            request.getLanguage(),
+                            request.getExplanationLevel()
+                    ));
+            conversationContext = learningConversationService.buildContext(conversation);
+        }
+
+        String ragQuery = request.getTopic();
+        if (conversationContext != null) {
+            ragQuery = learningConversationService.retrievalQuery(request.getTopic(), conversationContext);
+        }
+
+        String ragContext = "";
+        int sourcesUsed = 0;
+        try {
+            var hits = embeddingSearchService.search(
+                    ragQuery,
+                    request.getPrepareGrade(),
+                    request.getPrepareSubject(),
+                    request.getPrepareMaterialId(),
+                    request.isLearningMode() ? Math.max(1, learningRagTopK) : 5);
+            // Learning + selected chapter: refuse out-of-textbook topics with the same educational-only gate UX.
+            if (request.isLearningMode()
+                    && request.getPrepareMaterialId() != null
+                    && !TextbookCoverageGate.isCovered(request.getTopic(), hits, learningMinRagScore)) {
+                return new TeachingResponse(
+                        StrictEducationalGuard.notInSelectedChapterMessage(),
+                        null, null, null, null, null, null, true);
+            }
+            sourcesUsed = hits.size();
+            ragContext = embeddingSearchService.formatContext(hits);
+        } catch (Exception e) {
+            log.warn("RAG retrieval skipped: {}", e.getMessage());
+        }
+
+        String prompt = promptBuilder.buildUnifiedTeachingPrompt(request, ragContext, conversationContext);
         String llmRaw;
         try {
             llmRaw = openAIClient.generateTeachingCompletion(prompt);
@@ -110,12 +171,12 @@ public class TeachingService {
             if (ytQuery == null || ytQuery.isBlank()) {
                 ytQuery = request.getTopic().trim() + " explained for students";
             }
+            List<String> followUps = parseFollowUps(n.path("followUps"));
 
             String displayRaw = buildDisplayRaw(explanationSection, exampleSection, keyPointSection);
 
             String videoId = null;
             String wikiGifUrl = null;
-            // Only fetch YouTube when explicitly requested (click-to-load flow).
             if (request.isIncludeVideo()) {
                 videoId = youTubeClient.fetchVideoId(ytQuery);
             }
@@ -133,8 +194,26 @@ public class TeachingService {
                     wikiGifUrl,
                     nullIfEmpty(ytQuery),
                     false);
+            resp.setFollowUpSuggestions(followUps);
+            resp.setSourcesUsed(sourcesUsed);
+            if (sourcesUsed > 0) {
+                String chapter = request.getChapterTitle();
+                resp.setSourceNote(chapter != null && !chapter.isBlank()
+                        ? "Based on your textbook · " + sourcesUsed + " section"
+                        + (sourcesUsed == 1 ? "" : "s") + " used"
+                        : sourcesUsed + " textbook section" + (sourcesUsed == 1 ? "" : "s") + " used");
+            }
 
-            // Save quiz explanation cache (only if successful and a questionId is provided).
+            if (conversation != null) {
+                String assistantForMemory = buildDisplayRaw(
+                        explanationSection,
+                        exampleSection,
+                        keyPointSection);
+                if (assistantForMemory.isBlank()) assistantForMemory = displayRaw;
+                learningConversationService.appendTurn(conversation, request.getTopic(), truncate(assistantForMemory, 4000));
+                resp.setConversationId(conversation.getId());
+            }
+
             if ("quiz".equals(mode) && qid != null) {
                 try {
                     QuizExplanationCacheEntity e = quizExplainCacheRepo.findByQuestionId(qid)
@@ -161,6 +240,22 @@ public class TeachingService {
                     "We could not read the answer. Please try asking again in simpler words.",
                     null, null, null, null, null, null, true);
         }
+    }
+
+    private static List<String> parseFollowUps(JsonNode node) {
+        List<String> out = new ArrayList<>();
+        if (node != null && node.isArray()) {
+            for (JsonNode item : node) {
+                String t = item.asText("").strip();
+                if (!t.isEmpty() && out.size() < 6) out.add(t);
+            }
+        }
+        return out;
+    }
+
+    private static String truncate(String s, int max) {
+        if (s == null) return "";
+        return s.length() <= max ? s : s.substring(0, max) + "…";
     }
 
     private static String nullIfEmpty(String s) {

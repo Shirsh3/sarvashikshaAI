@@ -16,18 +16,24 @@ public final class StrictEducationalGuard {
             Pattern.CASE_INSENSITIVE
     );
 
+    /** Looks / body / figure questions about people (incl. typos like "figurre"). */
+    private static final Pattern LOOKS_OR_FIGURE = Pattern.compile(
+            "(\\bfigur+e?\\b|\\blooks\\b|\\bappearance\\b|\\bphysique\\b|\\bbody\\s+shape\\b|\\battractiveness\\b|\\bbeauty\\b)",
+            Pattern.CASE_INSENSITIVE
+    );
+
+    private static final Pattern PERSON_OR_CELEBRITY = Pattern.compile(
+            "(\\bactress\\b|\\bactor\\b|\\bcelebrity\\b|\\bstar\\b|\\bbollywood\\b|\\bhollywood\\b|\\bgirl\\b|\\bboy\\b|\\bwoman\\b|\\bman\\b|\\brai\\b|\\bkapoor\\b|\\bkhan\\b)",
+            Pattern.CASE_INSENSITIVE
+    );
+
     private static final Pattern GOSSIP = Pattern.compile(
-            "(\\bgossip\\b|\\baffair\\b|\\bbreakup\\b|\\bdating\\b|\\bscandal\\b|\\bcontroversy\\b|\\bcelebrity\\s+news\\b|\\bhollywood\\s+gossip\\b|\\bbollywood\\s+gossip\\b)",
+            "(\\bgossip\\b|\\baffair\\b|\\bbreakup\\b|\\bdating\\b|\\bscandal\\b|\\bcontroversy\\b|\\bcelebrity\\s+news\\b|\\bfilm\\s+gossip\\b|\\bbollywood\\s+gossip\\b)",
             Pattern.CASE_INSENSITIVE
     );
 
     private static final Pattern ROMANTIC_ATTRACTION = Pattern.compile(
             "(\\bcrush\\b|\\bfalling\\s+in\\s+love\\b|\\bin\\s+love\\b|\\bromantic\\b|\\bromance\\b|\\bhow\\s+to\\s+impress\\s+(a|my)\\s+(boy|girl)\\b|\\brelationship\\s+advice\\b)",
-            Pattern.CASE_INSENSITIVE
-    );
-
-    private static final Pattern EDUCATIONAL_HINTS = Pattern.compile(
-            "(\\bgrade\\b|\\bclass\\b|\\bchapter\\b|\\blesson\\b|\\bquestion\\b|\\bexplain\\b|\\bquiz\\b|\\bmcq\\b|\\btrue\\s*/?\\s*false\\b|\\bshort\\s+answer\\b|\\bscience\\b|\\bmath\\b|\\bmathematics\\b|\\bbiology\\b|\\bchemistry\\b|\\bphysics\\b|\\bhistory\\b|\\bgeography\\b|\\bgrammar\\b|\\bvocabulary\\b|\\bncert\\b|\\bpassage\\b|\\breading\\b)",
             Pattern.CASE_INSENSITIVE
     );
 
@@ -43,12 +49,13 @@ public final class StrictEducationalGuard {
         String t = input.trim().toLowerCase(Locale.ROOT);
         boolean looksNonEducational = RATE_PEOPLE.matcher(t).find()
                 || GOSSIP.matcher(t).find()
-                || ROMANTIC_ATTRACTION.matcher(t).find();
-        boolean looksEducational = EDUCATIONAL_HINTS.matcher(t).find();
-        if (looksNonEducational && !looksEducational) {
+                || ROMANTIC_ATTRACTION.matcher(t).find()
+                || (LOOKS_OR_FIGURE.matcher(t).find() && PERSON_OR_CELEBRITY.matcher(t).find())
+                || (LOOKS_OR_FIGURE.matcher(t).find() && t.matches("(?s).*\\b(aishwarya|katrina|deepika|priyanka|alia|shraddha|anushka)\\b.*"));
+        if (looksNonEducational) {
             return IntentType.NON_EDUCATIONAL;
         }
-        return looksNonEducational ? IntentType.NON_EDUCATIONAL : IntentType.EDUCATIONAL;
+        return IntentType.EDUCATIONAL;
     }
 
     public static boolean isBlocked(String input) {
@@ -57,5 +64,12 @@ public final class StrictEducationalGuard {
 
     public static String refusalMessage() {
         return "Only educational classroom content is allowed. Please ask a school-related question or topic.";
+    }
+
+    /** Same UX gate when Learning has a selected chapter but the ask is outside that PDF. */
+    public static String notInSelectedChapterMessage() {
+        return "Only educational classroom content from the selected chapter is allowed. "
+                + "This topic was not found in your selected textbook. "
+                + "Please ask about something from this chapter.";
     }
 }

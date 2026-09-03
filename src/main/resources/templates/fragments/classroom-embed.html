@@ -20,10 +20,17 @@
                 <div class="mic-status" id="micStatus">Tap the mic and ask your question</div>
             </div>
             <p id="prepareGradeEmbedHint" class="prepare-grade-embed-hint" style="display:none;margin:0 0 10px;font-size:0.82rem;color:var(--text-muted);"></p>
-            <form id="explainForm" method="post" th:attr="action=@{/explain}">
+            <p id="learningSourceNote" class="learning-source-note" style="display:none;margin:0 0 10px;font-size:0.8rem;color:var(--text-muted);"></p>
+            <form id="explainForm" method="post" th:attr="action=@{/explain}" data-learning-mode="false">
                 <input type="hidden" name="classSessionMode" id="inputClassSessionMode" value="live"/>
                 <input type="hidden" name="prepareFocus" id="inputPrepareFocus" value="revision"/>
                 <input type="hidden" name="prepareGrade" id="inputPrepareGrade" value="" autocomplete="off"/>
+                <input type="hidden" name="prepareSubject" id="inputPrepareSubject" value="" autocomplete="off"/>
+                <input type="hidden" name="prepareMaterialId" id="inputPrepareMaterialId" value="" autocomplete="off"/>
+                <input type="hidden" name="learningConversationId" id="inputLearningConversationId" value="" autocomplete="off"/>
+                <input type="hidden" name="chapterTitle" id="inputChapterTitle" value="" autocomplete="off"/>
+                <input type="hidden" name="language" id="inputLanguage" value="auto" autocomplete="off"/>
+                <input type="hidden" name="explanationLevel" id="inputExplanationLevel" value="simple" autocomplete="off"/>
                 <input type="hidden" name="sourceQuestionId" id="inputSourceQuestionId" value=""/>
                 <input type="hidden" name="includeVideo" id="inputIncludeVideo" value="false"/>
                 <textarea id="topicInput" name="topic" rows="5"
@@ -36,7 +43,8 @@
                     </button>
                 </div>
             </form>
-            <div class="followup-hint"></div>
+            <div class="followup-hint" id="followupHint"></div>
+            <div class="followup-chips" id="followupChips" aria-label="Follow-up questions"></div>
         </div>
         <div class="panel">
             <div class="thinking-dots" id="thinkingDots" style="display:none;">

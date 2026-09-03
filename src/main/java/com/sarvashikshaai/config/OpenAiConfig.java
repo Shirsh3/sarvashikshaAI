@@ -8,6 +8,7 @@ import org.springframework.web.reactive.function.client.ClientRequest;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
+import io.netty.resolver.DefaultAddressResolverGroup;
 import reactor.netty.http.client.HttpClient;
 
 import java.time.Duration;
@@ -44,11 +45,14 @@ public class OpenAiConfig {
 
         long timeout = responseTimeoutSeconds <= 0 ? 60 : responseTimeoutSeconds;
         HttpClient httpClient = HttpClient.create()
-                .responseTimeout(Duration.ofSeconds(timeout));
+                // Prefer JVM/OS DNS — Netty's resolver sometimes fails in local sandboxes.
+                .resolver(DefaultAddressResolverGroup.INSTANCE)
+                .responseTimeout(Duration.ofSeconds(Math.max(timeout, 120)));
 
         return WebClient.builder()
                 .baseUrl(apiBaseUrl)
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .codecs(c -> c.defaultCodecs().maxInMemorySize(16 * 1024 * 1024))
                 .defaultHeader("Authorization", "Bearer " + apiKey)
                 .defaultHeader("Content-Type", "application/json")
                 .filter(logReqRes())

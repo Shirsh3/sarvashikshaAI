@@ -24,5 +24,12 @@ BEGIN
   END LOOP;
 END $$;
 
-ALTER TABLE question_responses
-    ADD CONSTRAINT uq_question_responses_question_student UNIQUE (question_id, student_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'uq_question_responses_question_student'
+  ) THEN
+    ALTER TABLE question_responses
+      ADD CONSTRAINT uq_question_responses_question_student UNIQUE (question_id, student_id);
+  END IF;
+END $$;

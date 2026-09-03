@@ -76,7 +76,8 @@ public class SecurityConfig {
                     // (403 / redirect to login) on first student save.
                     "/teacher/students/save",
                     "/teacher/students/delete",
-                    "/teacher/assembly/save"
+                    "/teacher/assembly/save",
+                    "/teacher/materials/**"
                 )
             );
 

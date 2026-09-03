@@ -27,22 +27,22 @@ public class MenuItemBootstrapSeeder implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        if (repo.count() > 0) return;
+        if (repo.count() == 0) {
+            seedAll();
+        }
+        // Ensure newer items exist on existing DBs
+        ensureItem("materials", "Class PDFs", "/teacher/materials", "📄", 45, true, true);
+    }
 
+    private void seedAll() {
         List<MenuItemEntity> items = new ArrayList<>();
 
-        // Sort order roughly matches the previous hardcoded lists.
-        // Note: disabled items for a role are filtered out before ordering,
-        // so we can use a single sortOrder space to satisfy both roles.
         int t = 0;
-
-        // Admin-only (appear first in admin sidebar)
         items.add(item("admin_overview", "Overview", "/admin", "📊", t++, false, true));
         items.add(item("admin_analytics", "Student analytics", "/admin/analytics", "📈", t++, false, true));
-
-        // Teacher + Admin shared
         items.add(item("teacher_dashboard", "Dashboard", "/teacher/dashboard", "📊", t++, true, true));
         items.add(item("learning", "Learning", "/teacher/learning", "📚", t++, true, true));
+        items.add(item("materials", "Class PDFs", "/teacher/materials", "📄", t++, true, true));
         items.add(item("reading", "Reading", "/reading", "📖", t++, true, true));
         items.add(item("quiz", "Quiz", "/quiz/teacher", "❓", t++, true, true));
         items.add(item("attendance", "Attendance", "/attendance", "✅", t++, true, true));
@@ -51,6 +51,19 @@ public class MenuItemBootstrapSeeder implements ApplicationRunner {
         items.add(item("students", "Students", "/teacher/setup", "⚙️", t++, true, true));
 
         repo.saveAll(items);
+    }
+
+    private void ensureItem(
+            String key,
+            String label,
+            String href,
+            String icon,
+            int sortOrder,
+            boolean enabledTeacher,
+            boolean enabledAdmin
+    ) {
+        if (repo.findByKey(key).isPresent()) return;
+        repo.save(item(key, label, href, icon, sortOrder, enabledTeacher, enabledAdmin));
     }
 
     private static MenuItemEntity item(
@@ -65,4 +78,3 @@ public class MenuItemBootstrapSeeder implements ApplicationRunner {
         return new MenuItemEntity(key, label, href, icon, sortOrder, enabledTeacher, enabledAdmin);
     }
 }
-

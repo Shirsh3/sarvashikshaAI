@@ -33,3 +33,7 @@ logs/
 *.winmd
 *.exe
 *.mdc
+
+# OpenAI personal key file (never commit)
+personal-token
+**/personal-token

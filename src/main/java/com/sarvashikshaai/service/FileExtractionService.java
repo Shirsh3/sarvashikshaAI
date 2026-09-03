@@ -3,11 +3,18 @@ package com.sarvashikshaai.service;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.ImageType;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 
 /**
  * Extracts usable content from an uploaded file.
@@ -105,6 +112,67 @@ public class FileExtractionService {
             log.error("PDF page-range extraction failed: {}", e1.getMessage());
             return "";
         }
+    }
+
+    /**
+     * Render PDF pages to JPEG data-URIs for Vision OCR (scanned textbooks).
+     * Scales pages down so OpenAI Vision accepts them. Page numbers are 1-indexed.
+     */
+    public List<String> renderPdfPagesAsPngDataUris(byte[] pdfBytes, int startPage, int endPage, int maxPages, float dpi) {
+        List<String> out = new ArrayList<>();
+        if (pdfBytes == null || pdfBytes.length == 0) return out;
+        if (pdfBytes.length > MAX_REMOTE_PDF_BYTES) return out;
+        int s = Math.max(1, startPage);
+        int e = Math.max(s, endPage);
+        int limit = Math.max(1, maxPages);
+        try (PDDocument doc = Loader.loadPDF(pdfBytes)) {
+            int total = doc.getNumberOfPages();
+            if (total <= 0) return out;
+            if (s > total) return out;
+            if (e > total) e = total;
+            PDFRenderer renderer = new PDFRenderer(doc);
+            float useDpi = dpi <= 0 ? 100f : Math.min(dpi, 120f);
+            for (int page = s; page <= e && out.size() < limit; page++) {
+                BufferedImage image = renderer.renderImageWithDPI(page - 1, useDpi, ImageType.RGB);
+                image = scaleDown(image, 1280);
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                // JPEG is much smaller than PNG for textbook scans
+                javax.imageio.ImageWriter writer = ImageIO.getImageWritersByFormatName("jpg").next();
+                try (var ios = ImageIO.createImageOutputStream(baos)) {
+                    writer.setOutput(ios);
+                    var param = writer.getDefaultWriteParam();
+                    if (param.canWriteCompressed()) {
+                        param.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
+                        param.setCompressionQuality(0.65f);
+                    }
+                    writer.write(null, new javax.imageio.IIOImage(image, null, null), param);
+                } finally {
+                    writer.dispose();
+                }
+                String b64 = Base64.getEncoder().encodeToString(baos.toByteArray());
+                out.add("data:image/jpeg;base64," + b64);
+                log.info("OCR page {} rendered bytes≈{}", page, baos.size());
+            }
+        } catch (Exception ex) {
+            log.error("PDF page render failed: {}", ex.getMessage());
+        }
+        return out;
+    }
+
+    private static BufferedImage scaleDown(BufferedImage src, int maxSide) {
+        int w = src.getWidth();
+        int h = src.getHeight();
+        int max = Math.max(w, h);
+        if (max <= maxSide) return src;
+        double scale = (double) maxSide / max;
+        int nw = Math.max(1, (int) Math.round(w * scale));
+        int nh = Math.max(1, (int) Math.round(h * scale));
+        BufferedImage out = new BufferedImage(nw, nh, BufferedImage.TYPE_INT_RGB);
+        var g = out.createGraphics();
+        g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.drawImage(src, 0, 0, nw, nh, null);
+        g.dispose();
+        return out;
     }
 
     /**

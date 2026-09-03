@@ -27,9 +27,15 @@
         .learning-hub-toolbar {
             display: flex;
             flex-wrap: wrap;
-            align-items: center;
-            gap: 10px 16px;
+            align-items: flex-end;
+            gap: 12px 16px;
             margin-bottom: 16px;
+        }
+        .learning-hub-toolbar .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 140px;
         }
         .learning-hub-toolbar label {
             font-size: 0.85rem;
@@ -44,12 +50,21 @@
             border: 1px solid var(--border);
             background: var(--surface-elevated);
             color: var(--text);
-            min-width: 140px;
+            min-width: 160px;
+        }
+        .learning-hub-toolbar .field-chapter { flex: 1 1 220px; min-width: 200px; }
+        .learning-hub-toolbar .field-chapter select { width: 100%; min-width: 0; }
+        .learning-chapter-status {
+            margin: -6px 0 14px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            min-height: 1.2em;
         }
         .learning-hub-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 14px;
+            margin-top: 18px;
         }
         .learning-hub-card {
             display: block;
@@ -68,35 +83,56 @@
         .learning-hub-card h4 { margin: 0 0 6px; font-size: 1rem; color: var(--text); }
         .learning-hub-card p { margin: 0; font-size: 0.85rem; color: var(--text-muted); line-height: 1.45; }
         .learning-hub-card .learning-hub-icon { font-size: 1.35rem; margin-bottom: 8px; display: block; }
-        .learning-hub-voice {
-            grid-column: 1 / -1;
-            padding: 0;
-            border: none;
-            background: transparent;
-        }
-        .learning-hub-voice details.classroom-details {
+        .learning-explain-shell {
             border: 1px solid var(--border);
             border-radius: 14px;
-            padding: 12px 14px;
+            padding: 14px 14px 8px;
             background: var(--surface-elevated);
         }
-        .learning-hub-voice summary {
-            cursor: pointer;
-            font-weight: 700;
-            font-size: 0.95rem;
-            color: var(--text);
-            list-style: none;
+        .learning-explain-shell .classroom-embed-layout .panel { min-height: 0; }
+        .followup-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
         }
-        .learning-hub-voice summary::-webkit-details-marker { display: none; }
-        .learning-hub-voice summary::before {
-            content: '▸ ';
-            display: inline-block;
-            transition: transform 0.15s;
+        .followup-chips:empty { display: none; }
+        .followup-chip {
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 7px 12px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            cursor: pointer;
+        }
+        .followup-chip:hover {
+            border-color: var(--primary);
             color: var(--primary);
         }
-        .learning-hub-voice details[open] summary::before { transform: rotate(90deg); }
-        .learning-hub-voice .classroom-embed-shell { margin-top: 12px; }
-        .learning-hub-voice .classroom-embed-layout .panel { min-height: 0; }
+        .followup-hint {
+            font-size: 0.86rem;
+            color: var(--text-muted);
+            margin-top: 12px;
+            line-height: 1.45;
+        }
+        .followup-hint:empty { display: none; }
+        .learning-teaching-banner {
+            margin: 0 0 12px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            font-size: 0.88rem;
+            color: var(--text);
+            line-height: 1.4;
+        }
+        .learning-teaching-banner strong { font-weight: 700; }
+        .learning-teaching-banner .sub { color: var(--text-muted); font-size: 0.82rem; margin-top: 2px; }
+        .learning-source-note { font-size: 0.8rem; color: var(--text-muted); }
+        .learning-prefs { display: flex; flex-wrap: wrap; gap: 12px 16px; margin-bottom: 12px; }
     </style>
 </head>
 <body class="app-layout">
@@ -106,20 +142,77 @@
     <div class="layout-header">
         <div>
             <h2>Learning</h2>
-            <p class="layout-lead">One place for reading and quizzes.</p>
+            <p class="layout-lead">Teaching conversation — pick class, subject, chapter, then ask follow-ups naturally.</p>
         </div>
     </div>
 
     <section id="learning-hub" class="learning-hub" aria-labelledby="learning-hub-title">
-        <h3 id="learning-hub-title">Learning hub</h3>
-        <p class="learning-hub-lead">Choose a grade to match one class, or leave <strong>Open</strong> for any grade.</p>
+        <h3 id="learning-hub-title">Explain in class</h3>
+        <p class="learning-hub-lead">
+            Choose <strong>class</strong>, <strong>subject</strong>, and a <strong>chapter</strong>.
+            The AI keeps conversation context so you can ask “why?”, “who?”, “what next?” without repeating the topic.
+        </p>
         <div class="learning-hub-toolbar">
-            <label for="learningGradeSelect">Grade</label>
-            <select id="learningGradeSelect" aria-label="Grade for preparation">
-                <option value="">Open (any grade)</option>
-                <option th:each="g : ${gradeOptions}" th:value="${g.code}" th:text="${g.label}">Grade</option>
-            </select>
+            <div class="field">
+                <label for="learningGradeSelect">Class</label>
+                <select id="learningGradeSelect" aria-label="Class / grade">
+                    <option value="">Open (any class)</option>
+                    <option th:each="g : ${gradeOptions}" th:value="${g.code}" th:text="${g.label}">Grade</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="learningSubjectSelect">Subject</label>
+                <select id="learningSubjectSelect" aria-label="Subject">
+                    <option value="">Any subject</option>
+                    <option value="GENERAL">General</option>
+                    <option value="ENGLISH">English</option>
+                    <option value="HINDI">Hindi</option>
+                    <option value="MATH">Math</option>
+                    <option value="SCIENCE">Science</option>
+                    <option value="PHYSICS">Physics</option>
+                    <option value="CHEMISTRY">Chemistry</option>
+                    <option value="BIOLOGY">Biology</option>
+                    <option value="HISTORY">History</option>
+                    <option value="GEOGRAPHY">Geography</option>
+                    <option value="CIVICS">Civics</option>
+                    <option value="SOCIAL">Social Studies</option>
+                    <option value="EVS">EVS</option>
+                    <option value="COMPUTER">Computer</option>
+                    <option value="SANSKRIT">Sanskrit</option>
+                </select>
+            </div>
+            <div class="field field-chapter">
+                <label for="learningChapterSelect">Chapter / topic</label>
+                <select id="learningChapterSelect" aria-label="Chapter or topic from Class PDFs">
+                    <option value="">Select a chapter…</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="learningLanguageSelect">Language</label>
+                <select id="learningLanguageSelect" aria-label="Answer language">
+                    <option value="auto">Auto</option>
+                    <option value="en">English</option>
+                    <option value="hi">Hindi</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="learningLevelSelect">Level</label>
+                <select id="learningLevelSelect" aria-label="Explanation level">
+                    <option value="simple">Simple</option>
+                    <option value="detailed">Detailed</option>
+                </select>
+            </div>
         </div>
+        <p class="learning-chapter-status" id="learningChapterStatus" aria-live="polite"></p>
+        <div class="learning-teaching-banner" id="learningTeachingBanner" style="display:none;" aria-live="polite">
+            <strong id="learningTeachingTitle">Teaching</strong>
+            <div class="sub" id="learningTeachingSub"></div>
+        </div>
+
+        <div class="learning-explain-shell">
+            <div th:replace="~{fragments/classroom-embed :: embed}"></div>
+        </div>
+
         <div class="learning-hub-grid" id="learningNavGrid">
             <a href="#" class="learning-hub-card" id="learningLinkReading"
                th:data-path-reading="@{/reading}">
@@ -132,6 +225,11 @@
                 <span class="learning-hub-icon" aria-hidden="true">❓</span>
                 <h4>Quiz</h4>
                 <p>Open quiz section.</p>
+            </a>
+            <a th:href="@{/teacher/materials}" class="learning-hub-card" id="learningLinkMaterials">
+                <span class="learning-hub-icon" aria-hidden="true">📄</span>
+                <h4>Class PDFs</h4>
+                <p>Upload grade PDFs and build embeddings for easy explanations.</p>
             </a>
         </div>
     </section>
@@ -147,53 +245,371 @@
 <script th:src="@{/js/mic.js}"></script>
 <script th:src="@{/js/learning-grade-context.js}"></script>
 <script>
-(function syncLearningGrade() {
-    var K = 'sarva.prepareGrade';
-    var sel = document.getElementById('learningGradeSelect');
+(function learningExplainFlow() {
+    var GRADE_K = 'sarva.prepareGrade';
+    var SUBJECT_K = 'sarva.prepareSubject';
+    var LANG_K = 'sarva.learningLanguage';
+    var LEVEL_K = 'sarva.learningLevel';
+    var gradeSel = document.getElementById('learningGradeSelect');
+    var subjectSel = document.getElementById('learningSubjectSelect');
+    var chapterSel = document.getElementById('learningChapterSelect');
+    var langSel = document.getElementById('learningLanguageSelect');
+    var levelSel = document.getElementById('learningLevelSelect');
+    var statusEl = document.getElementById('learningChapterStatus');
+    var banner = document.getElementById('learningTeachingBanner');
+    var bannerTitle = document.getElementById('learningTeachingTitle');
+    var bannerSub = document.getElementById('learningTeachingSub');
     var reading = document.getElementById('learningLinkReading');
     var quiz = document.getElementById('learningLinkQuiz');
+    var explainForm = document.getElementById('explainForm');
+    var readyUrl = '/teacher/materials/api/ready';
+    var lastChapterTitle = '';
+    var conversationId = null;
+    var lastMaterialKey = '';
 
-    function gradeQuery() {
-        if (!sel) return '';
-        var v = (sel.value || '').trim();
-        return v === '' ? '' : ('?grade=' + encodeURIComponent(v));
+    if (explainForm) explainForm.setAttribute('data-learning-mode', 'true');
+
+    function gradeValue() {
+        return gradeSel && (gradeSel.value || '').trim() ? gradeSel.value.trim() : '';
+    }
+    function subjectValue() {
+        return subjectSel && (subjectSel.value || '').trim() ? subjectSel.value.trim() : '';
+    }
+    function langValue() {
+        return langSel && langSel.value ? langSel.value : 'auto';
+    }
+    function levelValue() {
+        return levelSel && levelSel.value ? levelSel.value : 'simple';
     }
 
-    function updateLinks() {
-        var q = gradeQuery();
+    function syncHiddenFields() {
+        var g = gradeValue();
+        var s = subjectValue();
+        var mid = chapterSel && chapterSel.value ? chapterSel.value.trim() : '';
+        var pg = document.getElementById('inputPrepareGrade');
+        var ps = document.getElementById('inputPrepareSubject');
+        var pm = document.getElementById('inputPrepareMaterialId');
+        var ct = document.getElementById('inputChapterTitle');
+        var lang = document.getElementById('inputLanguage');
+        var lvl = document.getElementById('inputExplanationLevel');
+        var cid = document.getElementById('inputLearningConversationId');
+        if (pg) pg.value = g;
+        if (ps) ps.value = s;
+        if (pm) pm.value = mid;
+        if (ct) ct.value = lastChapterTitle || '';
+        if (lang) lang.value = langValue();
+        if (lvl) lvl.value = levelValue();
+        if (cid) cid.value = conversationId ? String(conversationId) : '';
+        try {
+            if (g) localStorage.setItem(GRADE_K, g); else localStorage.removeItem(GRADE_K);
+            if (s) localStorage.setItem(SUBJECT_K, s); else localStorage.removeItem(SUBJECT_K);
+            localStorage.setItem(LANG_K, langValue());
+            localStorage.setItem(LEVEL_K, levelValue());
+        } catch (e) {}
+        if (typeof window.syncPrepareGradeToFormAndBanners === 'function') {
+            window.syncPrepareGradeToFormAndBanners();
+        }
+        updateTeachingBanner();
+        var topic = document.getElementById('topicInput');
+        if (topic) {
+            topic.placeholder = lastChapterTitle
+                ? ('Ask anything about “' + lastChapterTitle + '”…')
+                : 'Ask anything about this topic…';
+        }
+        var label = document.getElementById('classroomPanelLabel');
+        if (label) label.innerHTML = '<i class="fa-solid fa-comments"></i>&nbsp; Teaching conversation';
+    }
+
+    function updateTeachingBanner() {
+        if (!banner) return;
+        if (!lastChapterTitle && !gradeValue() && !subjectValue()) {
+            banner.style.display = 'none';
+            return;
+        }
+        banner.style.display = '';
+        if (bannerTitle) {
+            bannerTitle.textContent = lastChapterTitle
+                ? ('Teaching: ' + lastChapterTitle)
+                : 'Teaching conversation';
+        }
+        if (bannerSub) {
+            var bits = [];
+            if (gradeValue()) bits.push('Class ' + gradeValue());
+            if (subjectValue()) bits.push(subjectValue());
+            if (lastChapterTitle) bits.push(lastChapterTitle);
+            bits.push(langValue() === 'hi' ? 'Hindi' : (langValue() === 'en' ? 'English' : 'Auto language'));
+            bits.push(levelValue() === 'detailed' ? 'Detailed' : 'Simple');
+            bannerSub.textContent = bits.join(' · ');
+        }
+    }
+
+    function updateNavLinks() {
+        var g = gradeValue();
         if (reading) {
             var pr = reading.getAttribute('data-path-reading') || '/reading';
             var params = new URLSearchParams();
-            if (sel && (sel.value || '').trim() !== '') {
-                params.set('grade', sel.value.trim());
-            }
+            if (g) params.set('grade', g);
             params.set('mode', 'search');
             var qs = params.toString();
             reading.setAttribute('href', pr + (qs ? '?' + qs : ''));
         }
         if (quiz) {
             var pq = quiz.getAttribute('data-path-quiz') || '/quiz/teacher';
-            quiz.setAttribute('href', pq + q);
-        }
-        try {
-            if (sel && (sel.value || '').trim() !== '') localStorage.setItem(K, sel.value.trim());
-            else localStorage.removeItem(K);
-        } catch (e) {}
-        var pg = document.getElementById('inputPrepareGrade');
-        if (pg) pg.value = (sel && sel.value) ? sel.value : '';
-        if (typeof window.syncPrepareGradeToFormAndBanners === 'function') {
-            window.syncPrepareGradeToFormAndBanners();
+            quiz.setAttribute('href', pq + (g ? ('?grade=' + encodeURIComponent(g)) : ''));
         }
     }
 
-    if (!sel) return;
-    try {
-        var v = localStorage.getItem(K);
-        if (v !== null && v !== '') sel.value = v;
-    } catch (e) {}
-    updateLinks();
-    sel.addEventListener('change', updateLinks);
+    function setStatus(msg) {
+        if (statusEl) statusEl.textContent = msg || '';
+    }
+
+    function resetConversationForScope() {
+        var key = [gradeValue(), subjectValue(), chapterSel && chapterSel.value].join('|');
+        if (key !== lastMaterialKey) {
+            conversationId = null;
+            lastMaterialKey = key;
+            var cid = document.getElementById('inputLearningConversationId');
+            if (cid) cid.value = '';
+            var box = document.getElementById('followupChips');
+            if (box) box.innerHTML = '';
+            var hint = document.getElementById('followupHint');
+            if (hint) hint.textContent = '';
+            var src = document.getElementById('learningSourceNote');
+            if (src) { src.style.display = 'none'; src.textContent = ''; }
+        }
+    }
+
+    function fillChapterOptions(items, keepId) {
+        if (!chapterSel) return;
+        chapterSel.innerHTML = '';
+        var opt0 = document.createElement('option');
+        opt0.value = '';
+        opt0.textContent = items.length ? 'Select a chapter…' : 'No indexed chapters yet';
+        chapterSel.appendChild(opt0);
+        items.forEach(function (m) {
+            var o = document.createElement('option');
+            o.value = String(m.id);
+            o.textContent = (m.title || ('PDF #' + m.id))
+                + (m.subject ? (' · ' + m.subject) : '')
+                + (m.chunkCount != null ? (' (' + m.chunkCount + ' chunks)') : '');
+            o.setAttribute('data-title', m.title || '');
+            o.setAttribute('data-subject', m.subject || '');
+            chapterSel.appendChild(o);
+        });
+        if (keepId) {
+            chapterSel.value = String(keepId);
+            if (chapterSel.value !== String(keepId)) chapterSel.value = '';
+        }
+    }
+
+    function loadChapters() {
+        var g = gradeValue();
+        var s = subjectValue();
+        var keep = chapterSel ? chapterSel.value : '';
+        setStatus('Loading chapters…');
+        var q = new URLSearchParams();
+        if (g) q.set('grade', g);
+        if (s) q.set('subject', s);
+        var url = readyUrl + (q.toString() ? ('?' + q.toString()) : '');
+        return fetch(url, { credentials: 'same-origin' })
+            .then(function (r) { return r.ok ? r.json() : []; })
+            .then(function (items) {
+                if (!Array.isArray(items)) items = [];
+                fillChapterOptions(items, keep);
+                if (!items.length) {
+                    setStatus(g || s
+                        ? 'No READY Class PDFs for this filter. Upload under Class PDFs.'
+                        : 'Upload a Class PDF and wait until status is READY.');
+                } else {
+                    setStatus(items.length + ' chapter' + (items.length === 1 ? '' : 's') + ' ready.');
+                }
+                onChapterChange(false);
+            })
+            .catch(function () {
+                fillChapterOptions([], '');
+                setStatus('Could not load chapters. Check Class PDFs.');
+            });
+    }
+
+    function onChapterChange(autofill) {
+        lastChapterTitle = '';
+        if (chapterSel && chapterSel.selectedOptions && chapterSel.selectedOptions[0]) {
+            lastChapterTitle = chapterSel.selectedOptions[0].getAttribute('data-title') || '';
+        }
+        resetConversationForScope();
+        syncHiddenFields();
+        var topic = document.getElementById('topicInput');
+        if (autofill && topic && lastChapterTitle && !(topic.value || '').trim()) {
+            topic.value = 'Explain “' + lastChapterTitle + '” in simple language.';
+        }
+    }
+
+    function applyFollowup(label) {
+        var topic = document.getElementById('topicInput');
+        if (!topic) return;
+        // Short natural follow-up — conversation memory resolves references
+        topic.value = label;
+        if (typeof submitForm === 'function') submitForm();
+    }
+
+    window.renderLearningFollowups = function (suggestions) {
+        var box = document.getElementById('followupChips');
+        var hint = document.getElementById('followupHint');
+        if (!box) return;
+        box.innerHTML = '';
+        var chips = Array.isArray(suggestions) && suggestions.length
+            ? suggestions
+            : ['Why did this happen?', 'Give a simple example', 'Explain in easier words', 'Ask me a check question'];
+        if (hint) hint.innerHTML = '<i class="fa-solid fa-comments"></i> Ask a follow-up:';
+        chips.forEach(function (label) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'followup-chip';
+            b.textContent = label;
+            b.addEventListener('click', function () { applyFollowup(label); });
+            box.appendChild(b);
+        });
+    };
+
+    function escapeHtml(s) {
+        return String(s || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function renderLearningAnswerPanel(data, displayLabel) {
+        var panel = document.querySelector('.classroom-embed-layout .panel:last-child');
+        if (!panel) return;
+        if (data.nonEducational) {
+            panel.innerHTML = '<div class="edu-blocked-msg"><span>' + escapeHtml(data.explanation || '') + '</span></div>';
+            return;
+        }
+        var html = '';
+        html += '<div class="answer-header"><div class="topic-badge"><span class="topic-icon">💬</span><span>'
+            + escapeHtml(displayLabel || 'Explain') + '</span></div>'
+            + '<details class="read-aloud-details" id="readAloudDetails"><summary class="read-aloud-summary">'
+            + '<button type="button" class="read-aloud-btn" id="readAloudBtn"><i class="fa-solid fa-volume-high"></i> Read Aloud</button>'
+            + '</summary></details></div>';
+        html += '<div class="answer-cards">';
+        if (data.keyPointSection) {
+            html += '<details class="classroom-details" open><summary><i class="fa-solid fa-key" style="color:var(--primary);margin-right:8px;"></i><strong>Key points</strong></summary>'
+                + '<div class="section-text">' + escapeHtml(data.keyPointSection) + '</div></details>';
+        }
+        if (data.explanationSection) {
+            html += '<details class="classroom-details" open><summary><i class="fa-solid fa-book-open" style="color:var(--primary);margin-right:8px;"></i><strong>Detailed explanation</strong></summary>'
+                + '<div class="section-text">' + escapeHtml(data.explanationSection) + '</div></details>';
+        }
+        if (data.exampleSection) {
+            html += '<details class="classroom-details"><summary><i class="fa-solid fa-lightbulb" style="color:var(--primary);margin-right:8px;"></i><strong>Example</strong></summary>'
+                + '<div class="section-text">' + escapeHtml(data.exampleSection) + '</div></details>';
+        }
+        if (!data.keyPointSection && !data.explanationSection && !data.exampleSection) {
+            html += '<div class="answer-card card-explain">' + escapeHtml(data.explanation || '') + '</div>';
+        }
+        html += '</div>';
+        panel.innerHTML = html;
+        var setText = function (id, val) {
+            var el = document.getElementById(id);
+            if (el) el.textContent = val || '';
+        };
+        setText('ttsExplain', data.explanationSection || '');
+        setText('ttsExample', data.exampleSection || '');
+        setText('ttsKey', data.keyPointSection || '');
+        setText('ttsRaw', data.explanation || '');
+        setText('hasVideo', 'false');
+        setText('hasWikiGif', 'false');
+        if (typeof window.reinitVoiceUI === 'function') window.reinitVoiceUI();
+        var src = document.getElementById('learningSourceNote');
+        if (src) {
+            if (data.sourceNote) {
+                src.style.display = '';
+                src.textContent = data.sourceNote;
+            } else {
+                src.style.display = 'none';
+                src.textContent = '';
+            }
+        }
+        window.renderLearningFollowups(data.followUps || []);
+    }
+
+    window.submitLearningAsk = async function () {
+        var topicInput = document.getElementById('topicInput');
+        var q = topicInput ? (topicInput.value || '').trim() : '';
+        if (!q) return;
+        syncHiddenFields();
+        var mid = chapterSel && chapterSel.value ? Number(chapterSel.value) : null;
+        var payload = {
+            question: q,
+            grade: gradeValue() || null,
+            subject: subjectValue() || null,
+            materialId: mid || null,
+            chapterTitle: lastChapterTitle || null,
+            language: langValue(),
+            explanationLevel: levelValue(),
+            conversationId: conversationId
+        };
+        var ctrl = new AbortController();
+        var timeoutId = setTimeout(function () { ctrl.abort(); }, 90000);
+        try {
+            var res = await fetch('/api/learning/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+                credentials: 'same-origin',
+                body: JSON.stringify(payload),
+                signal: ctrl.signal
+            });
+            clearTimeout(timeoutId);
+            if (!res.ok) {
+                var ms = document.getElementById('micStatus');
+                if (ms) { ms.textContent = 'Request failed (' + res.status + '). Try again.'; ms.className = 'mic-status'; }
+                return;
+            }
+            var data = await res.json();
+            if (data.conversationId) conversationId = data.conversationId;
+            syncHiddenFields();
+            renderLearningAnswerPanel(data, q);
+            if (topicInput) topicInput.value = q;
+        } catch (err) {
+            clearTimeout(timeoutId);
+            var ms2 = document.getElementById('micStatus');
+            if (ms2) {
+                ms2.textContent = (err && err.name === 'AbortError')
+                    ? 'Taking too long. Please try again.'
+                    : 'Something went wrong. Check the network and try again.';
+                ms2.className = 'mic-status';
+            }
+        }
+    };
+
+    if (gradeSel) {
+        try { var gv = localStorage.getItem(GRADE_K); if (gv) gradeSel.value = gv; } catch (e) {}
+        gradeSel.addEventListener('change', function () {
+            updateNavLinks(); syncHiddenFields(); loadChapters();
+        });
+    }
+    if (subjectSel) {
+        try { var sv = localStorage.getItem(SUBJECT_K); if (sv) subjectSel.value = sv; } catch (e) {}
+        subjectSel.addEventListener('change', function () { syncHiddenFields(); loadChapters(); });
+    }
+    if (langSel) {
+        try { var lv = localStorage.getItem(LANG_K); if (lv) langSel.value = lv; } catch (e) {}
+        langSel.addEventListener('change', syncHiddenFields);
+    }
+    if (levelSel) {
+        try { var lev = localStorage.getItem(LEVEL_K); if (lev) levelSel.value = lev; } catch (e) {}
+        levelSel.addEventListener('change', syncHiddenFields);
+    }
+    if (chapterSel) {
+        chapterSel.addEventListener('change', function () { onChapterChange(true); });
+    }
+
+    updateNavLinks();
+    syncHiddenFields();
+    loadChapters();
 })();
+
 (function learningTabFromQuery() {
     var tab = new URLSearchParams(window.location.search).get('tab');
     if (tab === 'quiz') {

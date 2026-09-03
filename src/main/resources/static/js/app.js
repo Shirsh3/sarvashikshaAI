@@ -66,6 +66,15 @@ async function submitForm() {
     }
 
     try {
+        if (typeof window.submitLearningAsk === 'function'
+                && document.getElementById('explainForm')
+                && document.getElementById('explainForm').getAttribute('data-learning-mode') === 'true') {
+            await window.submitLearningAsk({
+                topicInput, displayLabelBefore, micStatus, sendBtn, sendLabel, spinner, dots, ph
+            });
+            return;
+        }
+
         const formEl = document.getElementById('explainForm');
         const fd = new FormData(formEl);
         let g = '';
@@ -75,6 +84,12 @@ async function submitForm() {
             const pg = document.getElementById('inputPrepareGrade');
             g = pg && pg.value ? pg.value.trim() : '';
         }
+        const ps = document.getElementById('inputPrepareSubject');
+        if (ps && ps.value) fd.set('prepareSubject', ps.value.trim());
+        else fd.delete('prepareSubject');
+        const pm = document.getElementById('inputPrepareMaterialId');
+        if (pm && (pm.value || '').trim()) fd.set('prepareMaterialId', pm.value.trim());
+        else fd.delete('prepareMaterialId');
         if (topicInput && topicInput.dataset && topicInput.dataset.fullPrompt) {
             let full = topicInput.dataset.fullPrompt;
             if (g && !/\bGrade\s*\d+/.test(full)) {
@@ -90,7 +105,7 @@ async function submitForm() {
 
         // POST then follow the server's redirect back to /  — browser URL never changes
         const ctrl = new AbortController();
-        const timeoutMs = 25000;
+        const timeoutMs = 60000;
         const timeoutId = setTimeout(() => ctrl.abort(), timeoutMs);
         const res  = await fetch('/explain', {
             method:   'POST',
@@ -163,6 +178,9 @@ async function submitForm() {
         const ttsRaw = (document.getElementById('ttsRaw')?.textContent || '').trim();
         const hasAnswer = !!ttsRaw || !!document.querySelector('.answer-header') || !!document.querySelector('.answer-cards');
         if (hasAnswer) {
+            if (typeof window.renderLearningFollowups === 'function') {
+                try { window.renderLearningFollowups(); } catch (_) {}
+            }
             if (typeof window.onAiExplainLoaded === 'function') {
                 try { window.onAiExplainLoaded(); } catch (_) {}
             }

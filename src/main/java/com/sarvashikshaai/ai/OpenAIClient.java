@@ -30,19 +30,60 @@ public class OpenAIClient {
     private final String quizModel;
     private final String quizCoverModel;
     private final String quizCoverImageSize;
+    private final String embeddingModel;
 
     public OpenAIClient(@Qualifier("openAiWebClient") WebClient webClient,
                         @Qualifier("openAiTeachingModel") String teachingModel,
                         @Qualifier("openAiAssemblyModel") String assemblyModel,
                         @Qualifier("openAiQuizModel") String quizModel,
                         @Value("${openai.model.quiz-cover:dall-e-3}") String quizCoverModel,
-                        @Value("${openai.quiz.cover-image.size:1792x1024}") String quizCoverImageSize) {
+                        @Value("${openai.quiz.cover-image.size:1792x1024}") String quizCoverImageSize,
+                        @Value("${openai.model.embedding:text-embedding-3-small}") String embeddingModel) {
         this.webClient = webClient;
         this.teachingModel = teachingModel;
         this.assemblyModel = assemblyModel;
         this.quizModel = quizModel;
         this.quizCoverModel = quizCoverModel;
         this.quizCoverImageSize = quizCoverImageSize;
+        this.embeddingModel = embeddingModel;
+    }
+
+    /**
+     * Creates an embedding vector for RAG retrieval (official OpenAI embeddings API).
+     */
+    public float[] createEmbedding(String text) {
+        String input = text == null ? "" : text.trim();
+        if (input.isEmpty()) {
+            return new float[0];
+        }
+        // Keep request size bounded for API safety
+        if (input.length() > 8000) {
+            input = input.substring(0, 8000);
+        }
+        Map<String, Object> body = new HashMap<>();
+        body.put("model", embeddingModel);
+        body.put("input", input);
+
+        JsonNode response = webClient.post()
+                .uri("/embeddings")
+                .bodyValue(body)
+                .retrieve()
+                .bodyToMono(JsonNode.class)
+                .onErrorResume(ex -> Mono.error(new IllegalStateException("Failed to call OpenAI Embeddings API", ex)))
+                .block();
+
+        if (response == null || !response.path("data").isArray() || response.path("data").isEmpty()) {
+            throw new IllegalStateException("OpenAI Embeddings API returned no data");
+        }
+        JsonNode arr = response.path("data").get(0).path("embedding");
+        if (!arr.isArray() || arr.isEmpty()) {
+            throw new IllegalStateException("OpenAI Embeddings API returned empty embedding");
+        }
+        float[] out = new float[arr.size()];
+        for (int i = 0; i < arr.size(); i++) {
+            out[i] = (float) arr.get(i).asDouble();
+        }
+        return out;
     }
 
     public String generateTeachingCompletion(String prompt) {
@@ -77,8 +118,10 @@ public class OpenAIClient {
                 IMPORTANT:
                 - If the query is a school subject/topic/question, quiz, homework, exam, lesson, chapter, or any curriculum learning request,
                   classify as LEARNING even if it is short, vague, or missing details.
-                - Treat names of topics (e.g. "photosynthesis", "fractions", "Mughal empire", "Miss World") as LEARNING.
-                - Only use OFF_TOPIC for clearly non-educational requests (jokes, flirting, movies unrelated to study, etc.).
+                - Treat school topic names (e.g. "photosynthesis", "fractions", "Mughal empire", "Quit India Movement") as LEARNING.
+                - Treat requests about celebrities' looks, figure, body, beauty, attractiveness, gossip, or rating people as OFF_TOPIC
+                  (e.g. "Explain Aishwarya Rai figure", "Rate actresses", "Who is hotter").
+                - Only use OFF_TOPIC for clearly non-educational requests (jokes, flirting, celebrity looks, gossip, etc.).
 
                 Respond with ONLY one word: LEARNING or OFF_TOPIC or UNSAFE.
 
@@ -94,6 +137,55 @@ public class OpenAIClient {
         } catch (Exception ex) {
             return QueryCategory.LEARNING;
         }
+    }
+
+    /**
+     * OCR / text extraction from a page image (scanned textbook PDFs).
+     */
+    public String extractTextFromImage(String imageDataUri) {
+        String prompt = """
+                Extract all readable textbook text from this page image.
+                Keep headings and paragraph order.
+                Return plain text only — no markdown, no commentary.
+                If the page is blank or unreadable, return an empty string.
+                """;
+        Map<String, Object> request = Map.of(
+                "model", "gpt-4o-mini",
+                "temperature", STRICT_TEMPERATURE,
+                "top_p", STRICT_TOP_P,
+                "messages", List.of(
+                        Map.of(
+                                "role", "user",
+                                "content", List.of(
+                                        Map.of("type", "text", "text", prompt),
+                                        Map.of("type", "image_url", "image_url", Map.of("url", imageDataUri))
+                                )
+                        )
+                )
+        );
+
+        JsonNode response = webClient.post()
+                .uri("/chat/completions")
+                .bodyValue(request)
+                .retrieve()
+                .bodyToMono(JsonNode.class)
+                .onErrorResume(ex -> {
+                    String detail = ex.getMessage();
+                    Throwable c = ex.getCause();
+                    if (c != null && c.getMessage() != null) detail = detail + " | " + c.getMessage();
+                    log.warn("OpenAI OCR Vision error: {}", detail);
+                    return Mono.error(new IllegalStateException("Failed to call OpenAI Vision API: " + detail, ex));
+                })
+                .block();
+
+        if (response == null
+                || response.path("choices").isMissingNode()
+                || !response.path("choices").isArray()
+                || response.path("choices").isEmpty()) {
+            throw new IllegalStateException("OpenAI Vision API returned no choices");
+        }
+        String text = response.path("choices").get(0).path("message").path("content").asText("");
+        return text == null ? "" : text.trim();
     }
 
     /**
@@ -121,7 +213,13 @@ public class OpenAIClient {
                 .bodyValue(request)
                 .retrieve()
                 .bodyToMono(JsonNode.class)
-                .onErrorResume(ex -> Mono.error(new IllegalStateException("Failed to call OpenAI Vision API", ex)))
+                .onErrorResume(ex -> {
+                    String detail = ex.getMessage();
+                    Throwable c = ex.getCause();
+                    if (c != null && c.getMessage() != null) detail = detail + " | " + c.getMessage();
+                    log.warn("OpenAI Vision API error: {}", detail);
+                    return Mono.error(new IllegalStateException("Failed to call OpenAI Vision API: " + detail, ex));
+                })
                 .block();
 
         if (response == null
