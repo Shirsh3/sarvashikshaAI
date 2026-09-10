@@ -1,284 +1,270 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="generator" content="pandoc" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>Putaaka Staging — Product &amp; Technical Feedback</title>
-  <style>
-    code{white-space: pre-wrap;}
-    span.smallcaps{font-variant: small-caps;}
-    div.columns{display: flex; gap: min(4vw, 1.5em);}
-    div.column{flex: auto; overflow-x: auto;}
-    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    /* The extra [class] is a hack that increases specificity enough to
-       override a similar rule in reveal.js */
-    ul.task-list[class]{list-style: none;}
-    ul.task-list li input[type="checkbox"] {
-      font-size: inherit;
-      width: 0.8em;
-      margin: 0 0.8em 0.2em -1.6em;
-      vertical-align: middle;
-    }
-    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
-  </style>
-  <link rel="stylesheet" href="" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Putaaka Staging — Detailed Feedback</title>
 <style>
-  body { font-family: Arial, Helvetica, sans-serif; font-size: 11pt; line-height: 1.45; color: #222; max-width: 800px; margin: 40px auto; padding: 0 24px; }
-  h1 { font-size: 20pt; color: #0D9488; border-bottom: 2px solid #0D9488; padding-bottom: 8px; }
-  h2 { font-size: 14pt; color: #0F766E; margin-top: 28px; }
-  h3 { font-size: 12pt; color: #115E59; }
-  table { border-collapse: collapse; width: 100%; margin: 12px 0 20px; }
-  th, td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; vertical-align: top; }
+  :root { --ink:#1a1a1a; --muted:#5c5c5c; --line:#e5e5e5; --bg:#fafafa; --card:#fff; --accent:#0F766E; --danger:#B91C1C; --warn:#B45309; --ok:#15803D; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: Georgia, "Times New Roman", serif; color:var(--ink); background:var(--bg); line-height:1.55; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 48px 28px 96px; }
+  header { border-bottom: 2px solid var(--accent); padding-bottom: 20px; margin-bottom: 24px; }
+  h1 { font-size: 28px; margin: 0 0 8px; font-weight: 700; }
+  h2 { font-size: 20px; margin: 40px 0 12px; color: var(--accent); border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  h3 { font-size: 16px; margin: 24px 0 8px; }
+  h4 { font-size: 14px; margin: 16px 0 6px; font-family: system-ui, sans-serif; }
+  .meta { font-family: system-ui, sans-serif; font-size: 13px; color: var(--muted); }
+  .verdict { background: #FFF7ED; border-left: 4px solid var(--warn); padding: 14px 16px; margin: 20px 0; font-family: system-ui, sans-serif; font-size: 14px; }
+  .scores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; font-family: system-ui, sans-serif; }
+  .score { background: var(--card); border: 1px solid var(--line); padding: 14px; }
+  .score b { display:block; font-size: 22px; }
+  .score span { font-size: 12px; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-family: system-ui, sans-serif; font-size: 12.5px; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
   th { background: #F0FDFA; }
-  strong { color: #134E4A; }
-  hr { border: none; border-top: 1px solid #ddd; margin: 28px 0; }
-  ul, ol { margin: 8px 0 12px 22px; }
-  li { margin: 4px 0; }
-  p { margin: 8px 0; }
+  .sev-critical { color: var(--danger); font-weight: 700; }
+  .sev-high { color: var(--warn); font-weight: 700; }
+  .pass { color: var(--ok); font-weight: 600; }
+  .fail { color: var(--danger); font-weight: 600; }
+  .pill { display:inline-block; font-family: system-ui, sans-serif; font-size: 11px; padding: 2px 8px; border: 1px solid var(--line); margin: 2px 4px 2px 0; background:#fff; }
+  ul, ol { padding-left: 1.25em; }
+  li { margin: 4px 0; font-size: 14.5px; }
+  p { font-size: 15px; }
+  code { font-family: ui-monospace, Menlo, monospace; font-size: 12px; background: #f3f4f6; padding: 1px 4px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .box { background: var(--card); border: 1px solid var(--line); padding: 14px 16px; font-family: system-ui, sans-serif; font-size: 13px; }
+  .box h3 { margin-top: 0; font-size: 15px; color: var(--accent); font-family: system-ui, sans-serif; }
+  .toc { font-family: system-ui, sans-serif; font-size: 13px; background: #fff; border: 1px solid var(--line); padding: 14px 18px; margin: 16px 0 28px; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc li { margin: 3px 0; }
+  footer { margin-top: 48px; font-family: system-ui, sans-serif; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; }
+  @media (max-width: 720px) {
+    .scores, .two { grid-template-columns: 1fr; }
+  }
+  @media print { body { background:#fff; } .wrap { padding: 12px; } }
 </style>
 </head>
 <body>
-<header id="title-block-header">
-<h1 class="title">Putaaka Staging — Product &amp; Technical
-Feedback</h1>
+<div class="wrap">
+
+<header>
+  <h1>Putaaka staging — detailed feedback</h1>
+  <p class="meta">
+    Targets: <code>staging-app.putaaka.com</code> (user) · <code>/ops</code> · <code>staging-api.putaaka.com/api</code><br/>
+    Dates: 9–10 Sep 2026 · API deploy <code>accounts</code> @ 2026-09-10T11:38:51Z<br/>
+    Overall: <strong>7.2 / 10</strong> (was 6.5 after first pass) · Status: <strong>not production-ready</strong>
+  </p>
 </header>
-<h1 id="putaaka-staging-product-technical-feedback">Putaaka Staging —
-Product &amp; Technical Feedback</h1>
-<p><strong>Date:</strong> 9 Sep 2026<br />
-<strong>Scope:</strong> Staging web apps + API
-(<code>staging-app.putaaka.com</code>,
-<code>staging-api.putaaka.com</code>)<br />
-<strong>Method:</strong> Live API end-to-end checks (auth, onboarding,
-chef publish, cart/billing, ops/finance surfaces, defensive security).
-Flutter UI click-through and paid-order completion were partially
-blocked (night order window).</p>
-<hr />
-<h2 id="overall-rating-6.5-10">Overall rating: <strong>6.5 /
-10</strong></h2>
+
+<div class="verdict">
+  <strong>Verdict:</strong> End-to-end money path works on staging
+  (cart → mock pay → place order → chef accept → complete).
+  Do <em>not</em> go live until captcha/OTP stop leaking in API responses and prod hygiene
+  (dev tools, MFA, headers, Razorpay webhooks) is locked. UI looks polished; automated UI QA is limited because Flutter web is canvas-painted.
+</div>
+
+<nav class="toc">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#scores">Scores</a></li>
+    <li><a href="#how">How we tested</a></li>
+    <li><a href="#what-be">What we tested — Backend</a></li>
+    <li><a href="#what-fe">What we tested — Frontend / UI</a></li>
+    <li><a href="#results">Key results</a></li>
+    <li><a href="#defects">Defects</a></li>
+    <li><a href="#rec-be">Recommendations — Backend</a></li>
+    <li><a href="#rec-fe">Recommendations — Frontend</a></li>
+    <li><a href="#matrix">Use-case matrix</a></li>
+    <li><a href="#artifacts">Artifacts</a></li>
+  </ol>
+</nav>
+
+<h2 id="scores">1. Scores</h2>
+<div class="scores">
+  <div class="score"><b>7.2/10</b><span>Overall</span></div>
+  <div class="score"><b>7.5/10</b><span>Business fit</span></div>
+  <div class="score"><b>7.5/10</b><span>Backend / money path</span></div>
+  <div class="score"><b>7.0/10</b><span>UI visual</span></div>
+  <div class="score"><b>4.0/10</b><span>UI automation / a11y</span></div>
+  <div class="score"><b>5.5/10</b><span>Prod readiness</span></div>
+</div>
+
+<h2 id="how">2. How we tested</h2>
+
+<div class="two">
+  <div class="box">
+    <h3>Backend (API)</h3>
+    <ul>
+      <li><strong>Tooling:</strong> Python HTTPS clients against staging API (<code>be_rigorous.py</code>, ad-hoc payment/order scripts).</li>
+      <li><strong>Auth:</strong> Ops <code>POST /auth/admin-login</code>; foodie/chef via captcha → OTP → verify (using staging responses).</li>
+      <li><strong>Data setup:</strong> Created profiles on society <em>CRESCENT PARC</em>, free units; chef menu-catalogue; meal publish (when FSSAI allowed) or reused existing meals.</li>
+      <li><strong>Assertions:</strong> HTTP status, JSON shape, authZ (401/403), bill math (item + fee + GST = total), order status transitions, rate limits, missing captcha rejection.</li>
+      <li><strong>Traffic identity:</strong> Browser-like User-Agent + <code>Origin: staging-app.putaaka.com</code> (custom UA was Cloudflare-banned earlier).</li>
+      <li><strong>Not used:</strong> Exploit tooling / attack playbooks — defensive readiness only.</li>
+    </ul>
+  </div>
+  <div class="box">
+    <h3>Frontend (UI)</h3>
+    <ul>
+      <li><strong>Tooling:</strong> Playwright Chromium headless (<code>ui_probe.py</code>, <code>ui_interact.py</code>).</li>
+      <li><strong>Viewports:</strong> Desktop 1280×900 and mobile 390×844.</li>
+      <li><strong>Pages:</strong> User app root login; Ops <code>/ops</code> login; mobile equivalents.</li>
+      <li><strong>Evidence:</strong> Full-page screenshots, DOM/semantics dumps, console error capture, API traffic observed during page load.</li>
+      <li><strong>Interaction:</strong> Attempted fills via DOM selectors (failed — canvas) then mouse/keyboard coordinate + Tab attempts; OTP assist via API where possible.</li>
+      <li><strong>Visual review:</strong> Human review of screenshots for layout, branding, disabled CTA, captcha/T&amp;C presence.</li>
+      <li><strong>Limitation:</strong> Flutter paints UI to canvas — no reliable HTML inputs for automated click-through of cart/checkout.</li>
+    </ul>
+  </div>
+</div>
+
+<p><strong>Environments / timing notes</strong></p>
+<ul>
+  <li>First pass (9 Sep evening CET): payment blocked by night window <strong>11:00 PM – 5:00 AM</strong> (server IST).</li>
+  <li>Re-test (10 Sep afternoon CET / evening IST): night window clear → full payment + order lifecycle completed.</li>
+  <li>API redeployed mid-cycle to <code>accounts</code> branch; new <code>fssai_required</code> gate observed on meal create.</li>
+</ul>
+
+<h2 id="what-be">3. What we tested — Backend</h2>
+
 <table>
-<colgroup>
-<col style="width: 27%" />
-<col style="width: 31%" />
-<col style="width: 40%" />
-</colgroup>
-<thead>
-<tr>
-<th>Lens</th>
-<th style="text-align: right;">Score</th>
-<th>Summary</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Business / product fit</td>
-<td style="text-align: right;"><strong>7.5/10</strong></td>
-<td>Clear society marketplace model; GST/catalogue/ops depth is strong
-for this stage</td>
-</tr>
-<tr>
-<td>Technical foundation</td>
-<td style="text-align: right;"><strong>6.5/10</strong></td>
-<td>Solid domain APIs &amp; billing math; prod security/config still
-leaky</td>
-</tr>
-<tr>
-<td>E2E product (to money)</td>
-<td style="text-align: right;"><strong>5.5/10</strong></td>
-<td>Onboard → menu → cart works; pay → order → fulfill not fully
-proven</td>
-</tr>
-<tr>
-<td>Prod readiness</td>
-<td style="text-align: right;"><strong>4.5/10</strong></td>
-<td>Blocked by auth leakage risks + unfinished payment proof</td>
-</tr>
-</tbody>
+  <tr><th>#</th><th>Area</th><th>What was exercised</th><th>How</th><th>Result</th></tr>
+  <tr><td>B1</td><td>Health / version</td><td><code>GET /health</code>, DB connected, deploy metadata</td><td>API GET</td><td class="pass">Pass</td></tr>
+  <tr><td>B2</td><td>Captcha</td><td>Issue challenge; OTP without captcha; wrong answer</td><td>API GET/POST</td><td class="pass">Gate works</td><td></tr>
+  <tr><td>B3</td><td>Captcha security</td><td>Whether answer is in JSON</td><td>Inspect response</td><td class="fail">Fail — plaintext <code>code</code></td></tr>
+  <tr><td>B4</td><td>OTP login</td><td>send-otp + verify-otp for foodie &amp; chef phones</td><td>API POST</td><td class="pass">Pass</td></tr>
+  <tr><td>B5</td><td>OTP security</td><td>Whether OTP is in JSON</td><td>Inspect response</td><td class="fail">Fail — plaintext <code>otp</code></td></tr>
+  <tr><td>B6</td><td>Ops admin login</td><td>Username/password; roles finance+operations</td><td><code>POST /auth/admin-login</code></td><td class="pass">Pass</td></tr>
+  <tr><td>B7</td><td>Rate limits</td><td>Excessive admin login / OTP</td><td>Repeated calls</td><td class="pass">429 returned</td></tr>
+  <tr><td>B8</td><td>Onboarding</td><td>Create foodie + chef profiles on CRESCENT PARC units</td><td><code>POST /auth/create-profile</code></td><td class="pass">Pass</td></tr>
+  <tr><td>B9</td><td>AuthZ</td><td>Foodie → finance/admin; unauth → admin</td><td>GET with/without tokens</td><td class="pass">Blocked correctly</td></tr>
+  <tr><td>B10</td><td>Ops/finance surfaces</td><td>statistics, coupons, refunds, settlements, catalogue, tickets</td><td>Authenticated GETs</td><td class="pass">Reachable for ops role</td></tr>
+  <tr><td>B11</td><td>Chef catalogue</td><td>Add restaurant SERVICE dishes to menu-catalogue</td><td>POST catalogue_id</td><td class="pass">Pass</td></tr>
+  <tr><td>B12</td><td>Meal publish</td><td>Create meal (image upload, windows, price, max qty)</td><td>upload-image + POST /meals</td><td class="pass">Pass when FSSAI present; else <code>fssai_required</code></td></tr>
+  <tr><td>B13</td><td>Goods GSTIN gate</td><td>Bakery/goods dish without GSTIN</td><td>POST menu-catalogue</td><td class="pass">Blocked as designed</td></tr>
+  <tr><td>B14</td><td>Browse meals</td><td>Foodie <code>GET /meals</code> after society assign</td><td>API GET</td><td class="pass">Pass</td></tr>
+  <tr><td>B15</td><td>Cart</td><td>Add, multi-item, max qty, additive qty experiment</td><td>POST/GET/DELETE /cart</td><td class="pass">Rules work; qty semantics additive</td></tr>
+  <tr><td>B16</td><td>Billing math</td><td>item_total + platform_fee + gst_total vs total_amount</td><td>Cart bill JSON</td><td class="pass">Integrity PASS</td></tr>
+  <tr><td>B17</td><td>Coupon negative</td><td>Invalid code</td><td>POST /cart/coupon</td><td class="pass">Rejected</td></tr>
+  <tr><td>B18</td><td>Payment create</td><td>UPI/mock create during day window</td><td>POST /payments/foodie-order/create</td><td class="pass">Pass (<code>checkout_mode: mock</code>)</td></tr>
+  <tr><td>B19</td><td>Payment confirm</td><td>Confirm with payment_id</td><td>POST …/confirm</td><td class="pass">Pass</td></tr>
+  <tr><td>B20</td><td>Place order</td><td>POST /orders with payment_id</td><td>API POST</td><td class="pass">ORD-… placed</td></tr>
+  <tr><td>B21</td><td>Chef lifecycle</td><td>accepted → preparing → ready → ready_for_pickup → completed</td><td>PUT /orders/{id}/status</td><td class="pass">Pass</td></tr>
+  <tr><td>B22</td><td>Status history</td><td>Order of status_history entries</td><td>Inspect JSON</td><td class="fail">Unsorted / out of sequence</td></tr>
+  <tr><td>B23</td><td>Night blackout</td><td>Payment create at night</td><td>API during blackout</td><td class="pass">403 as designed</td></tr>
+  <tr><td>B24</td><td>App headers</td><td>CSP / XFO / HSTS on Flutter host</td><td>HTTP headers</td><td class="fail">Missing</td></tr>
+  <tr><td>B25</td><td>Dev tools flag</td><td>finance/check.dev_tools_enabled</td><td>API GET</td><td class="fail">Still true on staging</td></tr>
 </table>
-<p><strong>Verdict:</strong> Strong mid-stage product. <strong>Not
-prod-ready yet.</strong> Fix security leaks and prove one full paid
-order before launch.</p>
-<hr />
-<h2 id="business-feedback">Business feedback</h2>
-<h3 id="whats-working">What’s working</h3>
-<ul>
-<li>Real marketplace shape: society-gated foodies + home chefs +
-ops/finance split.</li>
-<li>Compliance-aware design: GST breakup, platform fee GST, FSSAI/GSTIN
-gates, night order blackout, max qty per order.</li>
-<li>Ops pulse already tracks pending societies, unit assignments, and
-support tickets.</li>
-</ul>
-<h3 id="risks-friction">Risks / friction</h3>
-<ul>
-<li>Chef publish path is heavy (catalogue → credentials for some dish
-types → photo → time windows). Needs guided onboarding or drop-off will
-be high.</li>
-<li>Night blackout (11:00 PM–5:00 AM) is fine as policy, but staging
-needs a controllable override for testing/releases.</li>
-<li>Ops backlog (stale/unassigned tickets, pending assignments) will
-hurt trust if present at launch.</li>
-<li>Revenue moment (payment → confirmed order) must be proven end-to-end
-before go-live confidence is high.</li>
-</ul>
-<hr />
-<h2 id="technical-feedback">Technical feedback</h2>
-<h3 id="strengths">Strengths</h3>
-<ul>
-<li>Clear API surface and role separation (foodie vs ops/finance).</li>
-<li>Auth rate limits and bot protections observed working.</li>
-<li>Billing integrity validated on a live cart:
-<ul>
-<li>Item subtotal matched unit × qty</li>
-<li>Food GST @ 5% correct</li>
-<li>Platform fee + GST @ 18% correct</li>
-<li>Grand total = items + fee + GST (<strong>PASS</strong>)</li>
-</ul></li>
-<li>Business rules enforced: max quantity per order, catalogue binding,
-image upload path validation, accepting-window vs fulfillment
-ordering.</li>
-</ul>
-<h3 id="must-fix-before-production">Must-fix before production</h3>
-<ol type="1">
-<li><strong>Critical:</strong> Captcha API must not return the plaintext
-answer.</li>
-<li><strong>Critical:</strong> OTP must not be returned in API JSON
-(SMS/app only).</li>
-<li><strong>High:</strong> Disable staging-only/dev tools in
-production.</li>
-<li><strong>High:</strong> Rotate weak ops credentials; add MFA for
-admin login.</li>
-<li><strong>Medium:</strong> Add CSP / X-Frame-Options / HSTS on the
-Flutter web host.</li>
-<li><strong>Medium:</strong> Clarify cart quantity semantics (appears
-additive, not absolute set).</li>
-</ol>
-<hr />
-<h2 id="e2e-product-status">E2E product status</h2>
-<h3 id="proven">Proven</h3>
-<ol type="1">
-<li>Ops admin login &amp; scoped access<br />
-</li>
-<li>Society / unit assignment<br />
-</li>
-<li>Foodie + chef profile creation<br />
-</li>
-<li>Chef catalogue → meal publish (with image)<br />
-</li>
-<li>Foodie browse → cart → multi-item → GST bill breakdown</li>
-</ol>
-<h3 id="not-fully-proven-this-pass">Not fully proven (this pass)</h3>
-<ol type="1">
-<li>Payment create/confirm (blocked by night order window during
-test)<br />
-</li>
-<li>Order visible to chef → accept → ready → pickup<br />
-</li>
-<li>Refund / settlement / coupon on a real paid order<br />
-</li>
-<li>Full Flutter UI journey (API-tested; not full browser click
-E2E)</li>
-</ol>
-<hr />
-<h2 id="business-use-cases-covered-in-testing">Business use cases
-covered in testing</h2>
+
+<p><strong>Backend not fully closed this pass:</strong> live Razorpay (non-mock) checkout, webhook-driven refunds, settlement payout generation on the completed order, coupon create→apply→discount math happy path, FSSAI document upload/verify UI/API deep path, operator MFA.</p>
+
+<h2 id="what-fe">4. What we tested — Frontend / UI</h2>
+
 <table>
-<colgroup>
-<col style="width: 55%" />
-<col style="width: 44%" />
-</colgroup>
-<thead>
-<tr>
-<th>Use case</th>
-<th>Status</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Ops login &amp; role access</td>
-<td>Pass</td>
-</tr>
-<tr>
-<td>Foodie OTP login + captcha gate</td>
-<td>Pass (captcha enforced; answer leakage is a security issue)</td>
-</tr>
-<tr>
-<td>Society + flat onboarding (foodie/chef)</td>
-<td>Pass</td>
-</tr>
-<tr>
-<td>Chef add dish to catalogue</td>
-<td>Pass (SERVICE/restaurant dishes)</td>
-</tr>
-<tr>
-<td>Goods/bakery requiring GSTIN</td>
-<td>Observed (blocked without GSTIN — expected rule)</td>
-</tr>
-<tr>
-<td>Meal publish with photo &amp; windows</td>
-<td>Pass</td>
-</tr>
-<tr>
-<td>Cart add / update / multi-item</td>
-<td>Pass</td>
-</tr>
-<tr>
-<td>Bulk-style qty + max-per-order</td>
-<td>Pass (enforced)</td>
-</tr>
-<tr>
-<td>Bill calculation (GST + platform fee)</td>
-<td>Pass</td>
-</tr>
-<tr>
-<td>Payment create</td>
-<td>Blocked by 11 PM–5 AM blackout</td>
-</tr>
-<tr>
-<td>Chef incoming order / fulfill</td>
-<td>Not reached</td>
-</tr>
-<tr>
-<td>Finance settlements / refunds on live order</td>
-<td>Not reached</td>
-</tr>
-<tr>
-<td>Ops ticket / assignment backlog</td>
-<td>Observed (needs cleanup)</td>
-</tr>
-</tbody>
+  <tr><th>#</th><th>Screen / area</th><th>What was checked</th><th>How</th><th>Result</th></tr>
+  <tr><td>F1</td><td>User login (desktop)</td><td>Brand, +91 phone, captcha image+input+refresh, T&amp;C checkbox, disabled Send OTP</td><td>Screenshot + visual review</td><td class="pass">Visual pass</td></tr>
+  <tr><td>F2</td><td>User login (mobile 390)</td><td>Layout stacking, captcha row usability</td><td>Playwright mobile viewport screenshot</td><td class="pass">Visual pass</td></tr>
+  <tr><td>F3</td><td>Ops login</td><td>Title, username/password, show-password, Sign in, back affordance</td><td>Screenshot + visual review</td><td class="pass">Visual pass</td></tr>
+  <tr><td>F4</td><td>Ops mobile</td><td>Form still centered / usable</td><td>Screenshot</td><td class="pass">OK</td></tr>
+  <tr><td>F5</td><td>Flutter shell load</td><td>App boots without white-screen; networkidle</td><td>Playwright load wait</td><td class="pass">Pass</td></tr>
+  <tr><td>F6</td><td>DOM automation</td><td>HTML inputs / aria for fills</td><td>querySelector dump</td><td class="fail">No inputs — canvas only</td></tr>
+  <tr><td>F7</td><td>Coordinate login attempts</td><td>Mouse/keyboard type on ops &amp; user</td><td>Approximate clicks</td><td>Inconclusive (canvas)</td></tr>
+  <tr><td>F8</td><td>Console health</td><td>pageerror / severe console errors</td><td>Playwright listeners</td><td class="pass">No uncaught page errors</td></tr>
+  <tr><td>F9</td><td>Captcha UX (visual)</td><td>Code visible, refresh icon, disabled CTA until complete</td><td>Screenshot</td><td class="pass">Good patterns</td></tr>
+  <tr><td>F10</td><td>Post-login flows</td><td>Browse, cart, checkout, chef publish, ops console modules</td><td>—</td><td>Not automated (canvas limit)</td></tr>
 </table>
-<hr />
-<h2 id="priority-recommendations">Priority recommendations</h2>
-<ol type="1">
-<li>Stop returning captcha answers and OTPs in API responses.<br />
-</li>
-<li>Production config lockdown (dev tools off, secrets rotated, MFA for
-ops).<br />
-</li>
-<li>Re-run payment → order confirm after 5:01 AM IST (or add staging
-blackout override).<br />
-</li>
-<li>Document chef onboarding
-(GSTIN/FSSAI/catalogue/photo/windows).<br />
-</li>
-<li>Clear ops backlogs before launch.<br />
-</li>
-<li>Add CI API smoke tests for cart math + authz + publish gates.<br />
-</li>
-<li>Make night-window hours configurable (env/ops setting), keep UI copy
-in sync.</li>
+
+<p><strong>Frontend not tested (click-through):</strong> foodie home/browse, meal detail, cart UI, checkout/payment UI, chef kitchen/publish wizard, ops dashboards (finance, tickets, societies), empty/error toast copy, deep link <code>/ops/*</code> routes, accessibility keyboard-only beyond Tab attempts, Privacy/Terms destination URLs.</p>
+
+<h2 id="results">5. Key results</h2>
+
+<ul>
+  <li><strong>Order:</strong> <code>ORD-20260910124328-518d</code> · ₹467.9 · mock UPI · status ended <strong>completed</strong>.</li>
+  <li><strong>Lifecycle:</strong>
+    <span class="pill">placed</span>
+    <span class="pill">accepted</span>
+    <span class="pill">preparing</span>
+    <span class="pill">ready</span>
+    <span class="pill">ready_for_pickup</span>
+    <span class="pill">completed</span>
+  </li>
+  <li><strong>Bill:</strong> 440 + 5 + 22.9 = 467.9 — integrity pass.</li>
+  <li><strong>New compliance gate:</strong> meal create returns <code>fssai_required</code> without FSSAI on chef.</li>
+  <li><strong>Captcha already in product:</strong> API + user login UI — do not rebuild; fix leakage.</li>
+</ul>
+
+<h2 id="defects">6. Defects summary</h2>
+<table>
+  <tr><th>Sev</th><th>Layer</th><th>Finding</th><th>Impact</th></tr>
+  <tr><td class="sev-critical">CRITICAL</td><td>Backend</td><td><code>/auth/captcha</code> returns plaintext <code>code</code></td><td>Bots bypass captcha</td></tr>
+  <tr><td class="sev-critical">CRITICAL</td><td>Backend</td><td><code>/auth/send-otp</code> returns plaintext <code>otp</code></td><td>OTP theft via API sniffing</td></tr>
+  <tr><td class="sev-high">HIGH</td><td>Backend</td><td><code>dev_tools_enabled=true</code></td><td>Dangerous if mirrored to prod</td></tr>
+  <tr><td class="sev-high">HIGH</td><td>Backend / Ops</td><td>Weak ops password pattern; no MFA observed</td><td>Ops account risk</td></tr>
+  <tr><td>MEDIUM</td><td>Backend</td><td>Cart quantity additive (1 then 2 → 3)</td><td>Bulk booking confusion</td></tr>
+  <tr><td>MEDIUM</td><td>Backend</td><td><code>status_history</code> unsorted / wrong sequence</td><td>Wrong timelines in apps</td></tr>
+  <tr><td>MEDIUM</td><td>Frontend host</td><td>Missing CSP / X-Frame-Options / HSTS</td><td>Browser hardening gap</td></tr>
+  <tr><td>MEDIUM</td><td>Frontend</td><td>No web semantics for automation</td><td>Hard CI UI regression</td></tr>
+  <tr><td>INFO</td><td>Backend</td><td>FSSAI required to publish meals</td><td>Document onboarding</td></tr>
+  <tr><td>INFO</td><td>Backend</td><td>Razorpay webhook not configured (refunds API flag)</td><td>Live refunds unproven</td></tr>
+</table>
+
+<h2 id="rec-be">7. Recommendations — Backend</h2>
+<ol>
+  <li><strong>Prod blocker:</strong> Never return captcha answer or OTP in API JSON. Return image/challenge only; deliver OTP via SMS. Staging may use a secure test harness, not response fields.</li>
+  <li><strong>Prod blocker:</strong> Ensure production config has <code>dev_tools_enabled=false</code>, disable <code>/finance/dev/*</code>, configure Razorpay webhooks, rotate ops credentials, enforce MFA for admin-login.</li>
+  <li>Fix <code>status_history</code> to be append-only chronological (or sort by <code>at</code> before return).</li>
+  <li>Document and enforce chef onboarding: FSSAI (+ GSTIN for goods/bakery) before publish; return clear error codes (already partly done).</li>
+  <li>Clarify cart API contract: absolute <em>set</em> vs <em>add</em> quantity; align OpenAPI/client accordingly.</li>
+  <li>Make night blackout hours configurable (env / ops setting) with staging override.</li>
+  <li>Add CI API smoke: health, captcha-required, authZ negatives, cart bill integrity, payment create (mock), place order, one status transition.</li>
+  <li>Complete live payment + refund + settlement E2E on staging with webhook verification.</li>
+  <li>Coupon happy-path tests: create → apply → max discount cap → platform-funded flags.</li>
+  <li>Clear / monitor ops pulse: stale tickets, unassigned received, pending unit assignments.</li>
 </ol>
-<hr />
-<h2 id="night-order-window-note">Night order window note</h2>
-<p>Orders are rejected between <strong>11:00 PM and 5:00 AM</strong>
-(server-side + app banner).<br />
-This is <strong>not</strong> changeable from Ops UI today — it needs a
-backend/config (and matching app string) change if you want different
-hours or a staging override.</p>
-<hr />
-<p><em>Prepared from staging API validation. No exploit details
-included. Credentials and personal test phone numbers intentionally
-omitted from this shareable version.</em></p>
+
+<h2 id="rec-fe">8. Recommendations — Frontend (Flutter web / apps)</h2>
+<ol>
+  <li><strong>QA enablement:</strong> Turn on Flutter web semantics on staging (<code>SemanticsBinding.instance.ensureSemantics()</code>) or ship an <code>integration_test</code> / Patrol suite — canvas-only blocks Playwright CI.</li>
+  <li>Keep captcha UI (already present); ensure refresh works, errors map from <code>captcha_required</code> / incorrect code, and Send OTP stays disabled until phone + captcha + T&amp;C valid.</li>
+  <li>Verify Privacy Policy / Terms of Service links open the correct pages (not tested beyond presence).</li>
+  <li>Improve captcha accessibility: contrast, optional audio/alt text for the challenge.</li>
+  <li>Ops login: clear wrong-password messaging, lockout countdown after 429, optional “forgot password” path if product requires it.</li>
+  <li>Manual or integration_test coverage for: foodie browse → cart → checkout; chef publish wizard (catalogue → photo → windows → FSSAI prompts); ops finance/tickets modules.</li>
+  <li>Surface cart quantity rules in UI (replace vs add) consistent with API.</li>
+  <li>Order timeline UI must not trust unsorted <code>status_history</code> — sort client-side until backend fixed.</li>
+  <li>Ask hosting/Cloudflare to add CSP, X-Frame-Options, HSTS on the Flutter static host.</li>
+  <li>Mobile regression: re-check captcha row and long kitchen names on small widths after publish flows land.</li>
+</ol>
+
+<h2 id="matrix">9. Use-case matrix</h2>
+<table>
+  <tr><th>Business use case</th><th>Backend</th><th>Frontend</th></tr>
+  <tr><td>Ops login &amp; roles</td><td class="pass">Pass</td><td class="pass">Visual pass</td></tr>
+  <tr><td>Foodie OTP + captcha</td><td>Pass (leakage defect)</td><td class="pass">Visual pass</td></tr>
+  <tr><td>Society / flat onboarding</td><td class="pass">Pass</td><td>Not click-automated</td></tr>
+  <tr><td>Chef catalogue + meal publish</td><td class="pass">Pass (FSSAI gate)</td><td>Not click-automated</td></tr>
+  <tr><td>Browse / cart / GST bill</td><td class="pass">Pass</td><td>Not click-automated</td></tr>
+  <tr><td>Payment + place order</td><td class="pass">Pass (mock)</td><td>Not click-automated</td></tr>
+  <tr><td>Chef accept → complete</td><td class="pass">Pass</td><td>Not click-automated</td></tr>
+  <tr><td>Refunds / settlements (live)</td><td>Not fully closed</td><td>Not tested</td></tr>
+  <tr><td>Coupon happy path</td><td>Partial</td><td>Not tested</td></tr>
+</table>
+
+<h2 id="artifacts">10. Artifacts &amp; scripts</h2>
+<ul>
+  <li><code>putaaka-e2e/artifacts/ui/*.png</code> — UI screenshots</li>
+  <li><code>putaaka-e2e/artifacts/payment_place_order.json</code> — pay → place</li>
+  <li><code>putaaka-e2e/artifacts/order_lifecycle.json</code> — final order</li>
+  <li><code>putaaka-e2e/artifacts/be_rigorous_report.json</code> — BE findings</li>
+  <li><code>putaaka-e2e/be_rigorous.py</code>, <code>ui_probe.py</code>, <code>ui_interact.py</code></li>
+  <li><code>PUTAAKA_Feedback_GoogleDocs.docx</code> — Drive upload</li>
+  <li>Cursor canvas: <code>putaaka-staging-feedback.canvas.tsx</code></li>
+</ul>
+
+<footer>
+  Shareable stakeholder document · No passwords or raw OTPs · Defensive security review only · Generated from staging validation 9–10 Sep 2026
+</footer>
+
+</div>
 </body>
 </html>
